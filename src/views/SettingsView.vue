@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { 
   NCard, 
   NSpace, 
@@ -12,6 +12,8 @@ import {
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
+import { request } from '@/api'
+import { UserInfoResponse } from '@/api/types'
 
 const message = useMessage()
 const { currentLang } = useI18n()
@@ -28,6 +30,23 @@ const formValue = ref<SettingsForm>({
   currentPassword: '',
   newPassword: '',
   confirmPassword: ''
+})
+
+const userInfo = ref<UserInfoResponse['data']>()
+
+const fetchUserInfo = async () => {
+  try {
+    const response = await request.get<UserInfoResponse>('/user/info')
+    if (response.status === 'success') {
+      userInfo.value = response.data
+    }
+  } catch (error) {
+    console.error('获取用户信息失败:', error)
+  }
+}
+
+onMounted(() => {
+  fetchUserInfo()
 })
 
 const handleActivate = () => {

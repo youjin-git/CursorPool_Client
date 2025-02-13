@@ -1,3 +1,5 @@
+import 'vue-router'
+
 declare module 'vue-router' {
   export declare function createRouter(options: RouterOptions): Router
 
@@ -56,4 +58,9 @@ declare module 'vue-router' {
   }
 
   export declare function useRouter(): Router
+
+  interface RouteMeta {
+    // 在这里定义你的路由元信息类型
+    requiresAuth?: boolean
+  }
 }

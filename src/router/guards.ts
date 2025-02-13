@@ -1,13 +1,16 @@
-import type { Router } from 'vue-router'
+import type { Router, RouteLocationNormalized, NavigationGuardNext } from 'vue-router'
 
 export function setupRouterGuards(router: Router) {
-  (router as any).beforeEach((to: any, _from: any, next: any) => {
-    // 检查是否已登录
-    const isLoggedIn = localStorage.getItem('token')
+  router.beforeEach((
+    to: RouteLocationNormalized,
+    _from: RouteLocationNormalized,
+    next: NavigationGuardNext
+  ) => {
+    const apiKey = localStorage.getItem('api_key')
     
-    if (to.name !== 'login' && !isLoggedIn) {
+    if (to.name !== 'login' && !apiKey) {
       next({ name: 'login' })
-    } else if (to.name === 'login' && isLoggedIn) {
+    } else if (to.name === 'login' && apiKey) {
       next({ name: 'dashboard' })
     } else {
       next()

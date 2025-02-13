@@ -53,7 +53,7 @@ const contentMarginLeft = computed(() => collapsed.value ? '64px' : '240px')
 </script>
 
 <template>
-  <n-layout position="absolute">
+  <n-layout has-sider style="height: 100vh">
     <n-layout-sider
       bordered
       collapse-mode="width"
@@ -65,6 +65,7 @@ const contentMarginLeft = computed(() => collapsed.value ? '64px' : '240px')
       @expand="collapsed = false"
       :native-scrollbar="false"
       position="absolute"
+      style="height: 100vh"
     >
       <div class="logo">
         <h2 v-if="!collapsed">Cursor Pool</h2>
@@ -84,7 +85,7 @@ const contentMarginLeft = computed(() => collapsed.value ? '64px' : '240px')
     </n-layout-sider>
     <n-layout 
       :native-scrollbar="false" 
-      content-style="padding: 24px;"
+      content-style="padding: 24px; min-height: 100vh"
       :style="{ marginLeft: contentMarginLeft }"
     >
       <router-view />
