@@ -1,5 +1,5 @@
 import { ref, watch } from 'vue'
-import { darkTheme, lightTheme } from 'naive-ui'
+import { darkTheme } from 'naive-ui'
 import type { GlobalTheme } from 'naive-ui'
 
 // 从 localStorage 读取初始主题
