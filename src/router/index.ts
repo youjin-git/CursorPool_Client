@@ -1,7 +1,7 @@
-import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '../layouts/MainLayout.vue'
 
-const routes: RouteRecordRaw[] = [
+const routes = [
   {
     path: '/',
     component: MainLayout,

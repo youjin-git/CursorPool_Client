@@ -9,8 +9,12 @@ import {
   useMessage
 } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
+import { h } from 'vue'
+import { useI18n } from '../locales'
+import { messages } from '../locales/messages'
 
 const message = useMessage()
+const { currentLang } = useI18n()
 
 interface Account {
   id: number
@@ -30,49 +34,63 @@ const accounts = ref<Account[]>([
 
 const columns: DataTableColumns<Account> = [
   {
-    title: '邮箱',
+    title: () => messages[currentLang.value].account.email,
     key: 'email'
   },
   {
-    title: '状态',
-    key: 'status'
+    title: () => messages[currentLang.value].account.status,
+    key: 'status',
+    render: (row) => messages[currentLang.value].account[row.status]
   },
   {
-    title: '最后使用时间',
+    title: () => messages[currentLang.value].account.lastUsed,
     key: 'lastUsed'
   },
   {
-    title: '操作',
+    title: () => messages[currentLang.value].account.actions,
     key: 'actions',
-    render(row) {
-      return (
-        <NSpace>
-          <NButton size="small" onClick={() => handleSwitch(row)}>
-            切换到此账户
-          </NButton>
-          <NButton size="small" type="error" onClick={() => handleDelete(row)}>
-            删除
-          </NButton>
-        </NSpace>
-      )
+    render: (row) => {
+      return h(NSpace, null, {
+        default: () => [
+          h(
+            NButton,
+            {
+              size: 'small',
+              onClick: () => handleSwitch(row)
+            },
+            { default: () => messages[currentLang.value].account.switchTo }
+          ),
+          h(
+            NButton,
+            {
+              size: 'small',
+              type: 'error',
+              onClick: () => handleDelete(row)
+            },
+            { default: () => messages[currentLang.value].account.delete }
+          )
+        ]
+      })
     }
   }
 ]
 
 const handleSwitch = (account: Account) => {
-  message.success(`切换到账户: ${account.email}`)
+  message.success(
+    messages[currentLang.value].message.switchSuccess.replace('{email}', account.email)
+  )
 }
 
 const handleDelete = (account: Account) => {
   accounts.value = accounts.value.filter(a => a.id !== account.id)
-  message.success('删除成功')
+  message.success(messages[currentLang.value].message.deleteSuccess)
 }
 
 const newAccount = ref('')
 
 const handleAdd = () => {
   if (!newAccount.value) {
-    message.warning('请输入账户邮箱')
+    message.warning(messages[currentLang.value].message.pleaseInputEmail)
     return
   }
   
@@ -84,22 +102,25 @@ const handleAdd = () => {
   })
   
   newAccount.value = ''
-  message.success('添加成功')
+  message.success(messages[currentLang.value].message.addSuccess)
 }
 </script>
 
 <template>
   <n-space vertical :size="24">
-    <n-card title="添加账户">
+    <n-card :title="messages[currentLang].account.addAccount">
       <n-space>
-        <n-input v-model:value="newAccount" placeholder="请输入账户邮箱" />
+        <n-input
+          v-model:value="newAccount"
+          :placeholder="messages[currentLang].account.inputEmail"
+        />
         <n-button type="primary" @click="handleAdd">
-          添加
+          {{ messages[currentLang].account.add }}
         </n-button>
       </n-space>
     </n-card>
     
-    <n-card title="账户列表">
+    <n-card :title="messages[currentLang].account.accountList">
       <n-data-table
         :columns="columns"
         :data="accounts"

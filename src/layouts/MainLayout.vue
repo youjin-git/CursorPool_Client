@@ -1,66 +1,87 @@
 <script setup lang="ts">
-import { NLayout, NLayoutSider, NLayoutContent, NMenu } from 'naive-ui'
-import { ref } from 'vue'
+import { NLayout, NLayoutSider, NLayoutContent, NMenu, NIcon } from 'naive-ui'
+import { ref, computed } from 'vue'
 import { RouterView, useRouter } from 'vue-router'
 import { 
-  DashboardOutlined, 
-  SettingsOutlined,
-  UserOutlined,
-  HistoryOutlined 
-} from '@vicons/antd'
+  HomeSharp, 
+  SettingsSharp,
+  PersonSharp,
+  TimeSharp 
+} from '@vicons/ionicons5'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import { Component, h } from 'vue'
+import LanguageSwitch from '../components/LanguageSwitch.vue'
+import { useI18n } from '../locales'
+import { messages } from '../locales/messages'
 
 const router = useRouter()
-const menuOptions = [
+const { currentLang } = useI18n()
+
+function renderIcon(icon: Component) {
+  return () => h(NIcon, null, { default: () => h(icon) })
+}
+
+const menuOptions = computed(() => [
   {
-    label: '概览',
+    label: messages[currentLang.value].menu.dashboard,
     key: 'dashboard',
-    icon: DashboardOutlined,
+    icon: renderIcon(HomeSharp),
     path: '/'
   },
   {
-    label: '账户管理',
+    label: messages[currentLang.value].menu.account,
     key: 'account',
-    icon: UserOutlined,
+    icon: renderIcon(PersonSharp),
     path: '/account'
   },
   {
-    label: '操作记录',
+    label: messages[currentLang.value].menu.history,
     key: 'history',
-    icon: HistoryOutlined,
+    icon: renderIcon(TimeSharp),
     path: '/history'
   },
   {
-    label: '设置',
+    label: messages[currentLang.value].menu.settings,
     key: 'settings',
-    icon: SettingsOutlined,
+    icon: renderIcon(SettingsSharp),
     path: '/settings'
   }
-]
+])
 
 const handleMenuClick = (key: string) => {
-  const menuItem = menuOptions.find(item => item.key === key)
+  const menuItem = menuOptions.value.find(item => item.key === key)
   if (menuItem) {
     router.push(menuItem.path)
   }
 }
+
+const collapsed = ref(true)
+const contentMarginLeft = computed(() => collapsed.value ? '64px' : '240px')
 </script>
 
 <template>
-  <n-layout has-sider>
+  <n-layout position="absolute">
     <n-layout-sider
       bordered
       collapse-mode="width"
       :collapsed-width="64"
       :width="240"
+      :collapsed="collapsed"
       show-trigger
-      class="sider"
+      @collapse="collapsed = true"
+      @expand="collapsed = false"
+      :native-scrollbar="false"
+      position="absolute"
     >
       <div class="logo">
-        <h2>Cursor Pool</h2>
+        <h2 v-if="!collapsed">Cursor Pool</h2>
+        <h2 v-else>CP</h2>
       </div>
       <n-menu
         :options="menuOptions"
+        :collapsed="collapsed"
+        :collapsed-width="64"
+        :collapsed-icon-size="22"
         :default-value="menuOptions[0].key"
         @update:value="handleMenuClick"
       />
@@ -68,21 +89,26 @@ const handleMenuClick = (key: string) => {
         <theme-toggle />
       </div>
     </n-layout-sider>
-    <n-layout-content content-style="padding: 24px;">
+    <n-layout 
+      :native-scrollbar="false" 
+      content-style="padding: 24px;"
+      :style="{ marginLeft: contentMarginLeft }"
+    >
       <router-view />
-    </n-layout-content>
+    </n-layout>
   </n-layout>
 </template>
 
 <style scoped>
-.sider {
-  height: 100vh;
-  position: relative;
-}
-
 .logo {
   padding: 16px;
   text-align: center;
+}
+
+.logo h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  white-space: nowrap;
 }
 
 .sider-footer {
@@ -92,5 +118,7 @@ const handleMenuClick = (key: string) => {
   right: 0;
   display: flex;
   justify-content: center;
+  padding: 0 16px;
+  z-index: 1;
 }
 </style> 
