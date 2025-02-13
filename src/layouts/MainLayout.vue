@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutSider, NMenu, NIcon, NButton } from 'naive-ui'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { 
@@ -28,13 +28,18 @@ const appWindow = new Window('main')
 // 创建系统托盘
 let tray: TrayIcon | null = null
 
+// 清理托盘图标
+async function cleanupTray() {
+  if (tray) {
+    await tray.close()
+    tray = null
+  }
+}
+
 async function setupTray() {
   try {
-    // 清理旧的托盘图标
-    if (tray) {
-      await tray.close()
-      tray = null
-    }
+    // 先清理可能存在的托盘图标
+    await cleanupTray()
 
     const items = [
       await MenuItem.new({
@@ -75,19 +80,29 @@ async function setupTray() {
       icon: iconData,
       tooltip: 'Cursor Pool',
       menu: trayMenu,
-      showMenuOnLeftClick: false
+      showMenuOnLeftClick: false,
+      action: (event) => {
+        switch (event.type) {
+          case 'Click':
+            if (event.button === 'Left' && event.buttonState === 'Up') {
+              appWindow.show()
+              appWindow.unminimize()
+              appWindow.setFocus()
+              // 确保窗口在最前面
+              appWindow.setAlwaysOnTop(true)
+                .then(() => {
+                  // 短暂延迟后取消置顶，这样可以确保窗口被用户看到
+                  setTimeout(() => {
+                    appWindow.setAlwaysOnTop(false)
+                  }, 100)
+                })
+            }
+            break
+        }
+      }
     })
 
-    // 左键点击事件
-    appWindow.listen('tray-click', () => {
-      appWindow.show()
-      appWindow.unminimize()
-    })
-
-    // 右键点击事件
-    appWindow.listen('tray-right-click', () => {
-      trayMenu.popup()
-    })
+    // 注册托盘事件监听
   } catch (error) {
     console.error('设置系统托盘时出错:', error)
   }
@@ -98,12 +113,17 @@ onMounted(() => {
   setupTray()
 })
 
-onUnmounted(async () => {
-  if (tray) {
-    await tray.close()
-    tray = null
-  }
+// 组件卸载前清理托盘图标
+onBeforeUnmount(() => {
+  cleanupTray()
 })
+
+// 监听热重载事件
+if (import.meta.hot) {
+  import.meta.hot.on('vite:beforeUpdate', () => {
+    cleanupTray()
+  })
+}
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -154,13 +174,17 @@ const closeWindow = () => appWindow.close()
     <!-- 可拖动区域 -->
     <div class="drag-region"></div>
 
-    <!-- 自定义窗口控制按钮 -->
+    <!-- 窗口控制按钮 -->
     <div class="window-controls">
-      <n-button text @click="minimizeWindow">
-        <n-icon :component="RemoveOutline" />
+      <n-button text @click="minimizeWindow" class="control-button">
+        <template #icon>
+          <n-icon :component="RemoveOutline" />
+        </template>
       </n-button>
-      <n-button text @click="closeWindow">
-        <n-icon :component="Close" />
+      <n-button text @click="closeWindow" class="control-button">
+        <template #icon>
+          <n-icon :component="Close" />
+        </template>
       </n-button>
     </div>
 
@@ -245,6 +269,16 @@ const closeWindow = () => appWindow.close()
   display: flex;
   gap: 8px;
   padding: 8px;
-  background-color: rgba(255, 255, 255, 0.8); /* 可选：背景色 */
+}
+
+/* 控制按钮样式 */
+.control-button {
+  color: var(--n-text-color) !important;
+  transition: color 0.3s ease;
+}
+
+.control-button:hover {
+  color: var(--n-text-color-hover) !important;
+  background-color: var(--n-color-hover) !important;
 }
 </style>
