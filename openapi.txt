@@ -1,0 +1,96 @@
+Cursor Auth API 文档
+
+基础信息:
+- 基础URL: https://auth.52ai.org/api
+- 认证方式: Bearer Token (需要认证的接口在Header中添加 Authorization: Bearer {api_key})
+- 响应格式: JSON
+
+1. 用户类 API
+
+1.1 登录/注册 [POST /user/login]
+请求:
+{
+    "username": "string",  // 4-20位字母、数字、下划线
+    "password": "string"   // 6-20位任意字符
+}
+响应:
+{
+    "status": "success" | "error",
+    "api_key": "string",  // 仅成功时返回
+    "message": "string"
+}
+
+1.2 激活卡密 [POST /user/activate]
+请求:
+{
+    "api_key": "string",
+    "code": "string"      // 卡密号
+}
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {            // 仅成功时返回
+        "expire_time": number,  // 过期时间戳
+        "level": number,        // 会员等级
+        "daily_count": number   // 每日可用次数
+    }
+}
+
+1.3 修改密码 [POST /user/change_password]
+请求:
+{
+    "api_key": "string",
+    "old_password": "string",
+    "new_password": "string"    // 6-20位任意字符
+}
+响应:localStorage
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {                   // 仅成功时返回
+        "api_key": "string"     // 新的API密钥
+    }
+}
+
+1.4 获取用户信息 [GET /user/info]
+请求头:
+Authorization: Bearer {api_key}
+
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {            // 仅成功时返回
+        "daily_count": number,      // 每日可用次数
+        "daily_used_count": number, // 今日已用次数
+        "expire_time": number,      // 过期时间戳
+        "level": number            // 会员等级
+    }
+}
+
+2. 账户类 API
+
+2.1 获取账户 [GET /account/get]
+请求头:
+Authorization: Bearer {api_key}
+
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {            // 仅成功时返回
+        "email": "string",       // Cursor账号
+        "token": "string",       // Cursor Token
+        "daily_used": number,    // 今日已用次数
+        "daily_limit": number    // 每日可用次数
+    }
+}
+
+错误码说明:
+- 未授权访问: 未提供或提供了无效的Authorization头
+- 无效的访问令牌: 提供的api_key无效
+- 账号已被禁用: 用户账号状态异常
+- 会员已过期: 用户会员已过期
+- 每日使用次数已达上限: 超过了每日可用次数限制
+- 暂无可用账户: 系统中没有可用的账户

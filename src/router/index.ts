@@ -12,11 +12,6 @@ const routes = [
         component: () => import('../views/DashboardView.vue')
       },
       {
-        path: 'account',
-        name: 'account',
-        component: () => import('../views/AccountView.vue')
-      },
-      {
         path: 'history',
         name: 'history',
         component: () => import('../views/HistoryView.vue')

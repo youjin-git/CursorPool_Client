@@ -6,7 +6,6 @@ import { useRouter } from 'vue-router'
 import { 
   HomeSharp, 
   SettingsSharp,
-  PersonSharp,
   TimeSharp 
 } from '@vicons/ionicons5'
 import ThemeToggle from '../components/ThemeToggle.vue'
@@ -27,12 +26,6 @@ const menuOptions = computed(() => [
     key: 'dashboard',
     icon: renderIcon(HomeSharp),
     path: '/'
-  },
-  {
-    label: messages[currentLang.value].menu.account,
-    key: 'account',
-    icon: renderIcon(PersonSharp),
-    path: '/account'
   },
   {
     label: messages[currentLang.value].menu.history,

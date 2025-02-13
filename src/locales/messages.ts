@@ -2,7 +2,6 @@ export const messages = {
   'zh-CN': {
     menu: {
       dashboard: '概览',
-      account: '账户管理',
       history: '操作记录',
       settings: '设置'
     },
@@ -29,21 +28,6 @@ export const messages = {
       confirmPassword: '确认新密码',
       about: '关于'
     },
-    account: {
-      title: '账户管理',
-      addAccount: '添加账户',
-      accountList: '账户列表',
-      email: '邮箱',
-      status: '状态',
-      lastUsed: '最后使用时间',
-      actions: '操作',
-      switchTo: '切换到此账户',
-      delete: '删除',
-      inputEmail: '请输入账户邮箱',
-      add: '添加',
-      active: '活跃',
-      inactive: '未使用'
-    },
     history: {
       title: '操作记录',
       filter: '筛选',
@@ -68,7 +52,6 @@ export const messages = {
   'en-US': {
     menu: {
       dashboard: 'Dashboard',
-      account: 'Account',
       history: 'History',
       settings: 'Settings'
     },
@@ -95,21 +78,6 @@ export const messages = {
       confirmPassword: 'Confirm Password',
       about: 'About'
     },
-    account: {
-      title: 'Account Management',
-      addAccount: 'Add Account',
-      accountList: 'Account List',
-      email: 'Email',
-      status: 'Status',
-      lastUsed: 'Last Used',
-      actions: 'Actions',
-      switchTo: 'Switch To',
-      delete: 'Delete',
-      inputEmail: 'Please input email',
-      add: 'Add',
-      active: 'Active',
-      inactive: 'Inactive'
-    },
     history: {
       title: 'Operation History',
       filter: 'Filter',
@@ -134,7 +102,6 @@ export const messages = {
   'ja-JP': {
     menu: {
       dashboard: 'ダッシュボード',
-      account: 'アカウント',
       history: '履歴',
       settings: '設定'
     },
@@ -161,21 +128,6 @@ export const messages = {
       confirmPassword: '新しいパスワード確認',
       about: 'バージョン情報'
     },
-    account: {
-      title: 'アカウント管理',
-      addAccount: 'アカウント追加',
-      accountList: 'アカウント一覧',
-      email: 'メールアドレス',
-      status: 'ステータス',
-      lastUsed: '最終使用日時',
-      actions: '操作',
-      switchTo: '切り替え',
-      delete: '削除',
-      inputEmail: 'メールアドレスを入力',
-      add: '追加',
-      active: 'アクティブ',
-      inactive: '非アクティブ'
-    },
     history: {
       title: '操作履歴',
       filter: 'フィルター',
@@ -200,7 +152,6 @@ export const messages = {
   'fr-FR': {
     menu: {
       dashboard: 'Tableau de bord',
-      account: 'Compte',
       history: 'Historique',
       settings: 'Paramètres'
     },
@@ -227,21 +178,6 @@ export const messages = {
       confirmPassword: 'Confirmer le mot de passe',
       about: 'À propos'
     },
-    account: {
-      title: 'Gestion de compte',
-      addAccount: 'Ajouter un compte',
-      accountList: 'Liste des comptes',
-      email: 'E-mail',
-      status: 'Statut',
-      lastUsed: 'Dernière utilisation',
-      actions: 'Actions',
-      switchTo: 'Basculer vers',
-      delete: 'Supprimer',
-      inputEmail: 'Veuillez saisir l\'e-mail',
-      add: 'Ajouter',
-      active: 'Actif',
-      inactive: 'Inactif'
-    },
     history: {
       title: 'Historique des opérations',
       filter: 'Filtrer',
@@ -266,7 +202,6 @@ export const messages = {
   'de-DE': {
     menu: {
       dashboard: 'Übersicht',
-      account: 'Konto',
       history: 'Verlauf',
       settings: 'Einstellungen'
     },
@@ -293,21 +228,6 @@ export const messages = {
       confirmPassword: 'Passwort bestätigen',
       about: 'Über'
     },
-    account: {
-      title: 'Kontoverwaltung',
-      addAccount: 'Konto hinzufügen',
-      accountList: 'Kontoliste',
-      email: 'E-Mail',
-      status: 'Status',
-      lastUsed: 'Zuletzt verwendet',
-      actions: 'Aktionen',
-      switchTo: 'Wechseln zu',
-      delete: 'Löschen',
-      inputEmail: 'E-Mail eingeben',
-      add: 'Hinzufügen',
-      active: 'Aktiv',
-      inactive: 'Inaktiv'
-    },
     history: {
       title: 'Operationsverlauf',
       filter: 'Filter',
@@ -332,7 +252,6 @@ export const messages = {
   'ko-KR': {
     menu: {
       dashboard: '대시보드',
-      account: '계정',
       history: '기록',
       settings: '설정'
     },
@@ -359,21 +278,6 @@ export const messages = {
       confirmPassword: '비밀번호 확인',
       about: '정보'
     },
-    account: {
-      title: '계정 관리',
-      addAccount: '계정 추가',
-      accountList: '계정 목록',
-      email: '이메일',
-      status: '상태',
-      lastUsed: '마지막 사용',
-      actions: '작업',
-      switchTo: '전환',
-      delete: '삭제',
-      inputEmail: '이메일을 입력하세요',
-      add: '추가',
-      active: '활성',
-      inactive: '비활성'
-    },
     history: {
       title: '작업 기록',
       filter: '필터',
@@ -398,7 +302,6 @@ export const messages = {
   'ru-RU': {
     menu: {
       dashboard: 'Обзор',
-      account: 'Аккаунт',
       history: 'История',
       settings: 'Настройки'
     },
@@ -425,21 +328,6 @@ export const messages = {
       confirmPassword: 'Подтвердить пароль',
       about: 'О программе'
     },
-    account: {
-      title: 'Управление аккаунтом',
-      addAccount: 'Добавить аккаунт',
-      accountList: 'Список аккаунтов',
-      email: 'Email',
-      status: 'Статус',
-      lastUsed: 'Последнее использование',
-      actions: 'Действия',
-      switchTo: 'Переключиться',
-      delete: 'Удалить',
-      inputEmail: 'Введите email',
-      add: 'Добавить',
-      active: 'Активный',
-      inactive: 'Неактивный'
-    },
     history: {
       title: 'История операций',
       filter: 'Фильтр',
@@ -464,7 +352,6 @@ export const messages = {
   'es-AR': {
     menu: {
       dashboard: 'Panel',
-      account: 'Cuenta',
       history: 'Historial',
       settings: 'Configuración'
     },
@@ -490,21 +377,6 @@ export const messages = {
       newPassword: 'Nueva contraseña',
       confirmPassword: 'Confirmar contraseña',
       about: 'Acerca de'
-    },
-    account: {
-      title: 'Gestión de cuenta',
-      addAccount: 'Agregar cuenta',
-      accountList: 'Lista de cuentas',
-      email: 'Correo electrónico',
-      status: 'Estado',
-      lastUsed: 'Último uso',
-      actions: 'Acciones',
-      switchTo: 'Cambiar a',
-      delete: 'Eliminar',
-      inputEmail: 'Ingrese correo electrónico',
-      add: 'Agregar',
-      active: 'Activo',
-      inactive: 'Inactivo'
     },
     history: {
       title: 'Historial de operaciones',
