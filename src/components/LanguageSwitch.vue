@@ -2,7 +2,6 @@
 import { NButton, NDropdown } from 'naive-ui'
 import { useI18n } from '../locales'
 import { locales, type Language } from '../locales'
-import { h } from 'vue'
 
 const { currentLang, setLanguage } = useI18n()
 

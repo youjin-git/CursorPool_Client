@@ -54,4 +54,6 @@ declare module 'vue-router' {
     append?: boolean
     replace?: boolean
   }
+
+  export declare function useRouter(): Router
 }

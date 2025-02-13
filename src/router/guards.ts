@@ -1,7 +1,7 @@
-import { Router } from 'vue-router'
+import type { Router } from 'vue-router'
 
 export function setupRouterGuards(router: Router) {
-  router.beforeEach((to, from, next) => {
+  (router as any).beforeEach((to: any, _from: any, next: any) => {
     // 检查是否已登录
     const isLoggedIn = localStorage.getItem('token')
     
@@ -13,4 +13,4 @@ export function setupRouterGuards(router: Router) {
       next()
     }
   })
-} 
+}

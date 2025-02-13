@@ -10,8 +10,9 @@ import {
   NSpace
 } from 'naive-ui'
 import { useRouter } from 'vue-router'
+import type { Router } from 'vue-router'
 
-const router = useRouter()
+const router = useRouter() as unknown as Router
 const message = useMessage()
 
 interface FormState {
@@ -28,8 +29,7 @@ const formValue = ref<FormState>({
   password: '',
 })
 
-// 检查用户是否存在的防抖函数
-let checkTimeout: NodeJS.Timeout
+let checkTimeout: ReturnType<typeof setTimeout>
 const checkUserExistence = async (email: string) => {
   if (!email) return
   

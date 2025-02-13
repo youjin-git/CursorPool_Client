@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { NLayout, NLayoutSider, NLayoutContent, NMenu, NIcon } from 'naive-ui'
+import { NLayout, NLayoutSider, NMenu, NIcon } from 'naive-ui'
 import { ref, computed } from 'vue'
-import { RouterView, useRouter } from 'vue-router'
+import type { Router } from 'vue-router'
+import { useRouter } from 'vue-router'
 import { 
   HomeSharp, 
   SettingsSharp,
@@ -10,11 +11,10 @@ import {
 } from '@vicons/ionicons5'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import { Component, h } from 'vue'
-import LanguageSwitch from '../components/LanguageSwitch.vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 
-const router = useRouter()
+const router = useRouter() as unknown as Router
 const { currentLang } = useI18n()
 
 function renderIcon(icon: Component) {
