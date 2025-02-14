@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutSider, NMenu, NIcon, NButton } from 'naive-ui'
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { 
@@ -15,115 +15,12 @@ import { Component, h } from 'vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
-import { TrayIcon } from '@tauri-apps/api/tray'
-import { Menu, MenuItem } from '@tauri-apps/api/menu'
-import { Image } from '@tauri-apps/api/image'
 
 const router = useRouter() as unknown as Router
 const { currentLang } = useI18n()
 
 // 获取当前窗口实例
 const appWindow = new Window('main')
-
-// 创建系统托盘
-let tray: TrayIcon | null = null
-
-// 清理托盘图标
-async function cleanupTray() {
-  if (tray) {
-    await tray.close()
-    tray = null
-  }
-}
-
-async function setupTray() {
-  try {
-    // 先清理可能存在的托盘图标
-    await cleanupTray()
-
-    const items = [
-      await MenuItem.new({
-        text: '一键换号',
-        action: () => console.log('一键换号')
-      }),
-      await MenuItem.new({
-        text: '换号',
-        action: () => console.log('换号')
-      }),
-      await MenuItem.new({
-        text: '换机器码',
-        action: () => console.log('换机器码')
-      }),
-      await MenuItem.new({
-        text: '打开界面',
-        action: () => {
-          appWindow.show()
-          appWindow.unminimize()
-        }
-      }),
-      await MenuItem.new({
-        text: '退出',
-        action: () => appWindow.close()
-      })
-    ]
-
-    // 创建菜单
-    const trayMenu = await Menu.new({
-      items: items
-    })
-
-    // 加载图标数据
-    const iconData = await Image.fromPath('icons/32x32.png')
-
-    // 创建系统托盘图标
-    tray = await TrayIcon.new({
-      icon: iconData,
-      tooltip: 'Cursor Pool',
-      menu: trayMenu,
-      showMenuOnLeftClick: false,
-      action: (event) => {
-        switch (event.type) {
-          case 'Click':
-            if (event.button === 'Left' && event.buttonState === 'Up') {
-              appWindow.show()
-              appWindow.unminimize()
-              appWindow.setFocus()
-              // 确保窗口在最前面
-              appWindow.setAlwaysOnTop(true)
-                .then(() => {
-                  // 短暂延迟后取消置顶，这样可以确保窗口被用户看到
-                  setTimeout(() => {
-                    appWindow.setAlwaysOnTop(false)
-                  }, 100)
-                })
-            }
-            break
-        }
-      }
-    })
-
-    // 注册托盘事件监听
-  } catch (error) {
-    console.error('设置系统托盘时出错:', error)
-  }
-}
-
-// 使用生命周期钩子来管理托盘图标
-onMounted(() => {
-  setupTray()
-})
-
-// 组件卸载前清理托盘图标
-onBeforeUnmount(() => {
-  cleanupTray()
-})
-
-// 监听热重载事件
-if (import.meta.hot) {
-  import.meta.hot.on('vite:beforeUpdate', () => {
-    cleanupTray()
-  })
-}
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -133,40 +30,40 @@ const menuOptions = computed(() => [
   {
     label: messages[currentLang.value].menu.dashboard,
     key: 'dashboard',
-    icon: renderIcon(HomeSharp),
-    path: '/'
+    icon: renderIcon(HomeSharp)
   },
   {
     label: messages[currentLang.value].menu.history,
     key: 'history',
-    icon: renderIcon(TimeSharp),
-    path: '/history'
+    icon: renderIcon(TimeSharp)
   },
   {
     label: messages[currentLang.value].menu.settings,
     key: 'settings',
-    icon: renderIcon(SettingsSharp),
-    path: '/settings'
+    icon: renderIcon(SettingsSharp)
   }
 ])
 
-const handleMenuClick = (key: string) => {
-  const menuItem = menuOptions.value.find(item => item.key === key)
-  if (menuItem) {
-    router.push(menuItem.path)
-  }
+function handleMenuClick(key: string) {
+  router.push(`/${key}`)
 }
 
 const collapsed = ref(true)
 const contentMarginLeft = computed(() => collapsed.value ? '64px' : '240px')
 
 // 窗口控制函数
-const minimizeWindow = async () => {
+async function minimizeWindow() {
   await appWindow.minimize()
-  await appWindow.hide() // 隐藏窗口
 }
 
-const closeWindow = () => appWindow.close()
+async function closeWindow() {
+  await appWindow.hide()
+}
+
+async function quitApp() {
+  await appWindow.close()
+}
+
 </script>
 
 <template>
