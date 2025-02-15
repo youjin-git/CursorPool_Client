@@ -1,9 +1,10 @@
 [package]
 name = "cursor-pool"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "Cursor Pool App"
+authors = ["Cloxl"]
 edition = "2021"
+rust-version = "1.60"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -15,11 +16,25 @@ name = "cursor_pool_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "2.0.0-alpha.12", features = [] }
 
 [dependencies]
-tauri = { version = "2.0.0", features = ["tray-icon", "image-png"] }
-tauri-plugin-opener = "2"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+tauri = { version = "2.0.0-alpha.18", features = ["tray-icon", "image-png"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+reqwest = { version = "0.11", features = ["json"] }
+tokio = { version = "1.35.1", features = ["full", "test-util"] }
+rusqlite = { version = "0.30.0", features = ["bundled"] }
+uuid = { version = "1.6.1", features = ["v4"] }
+sha2 = "0.10.8"
+rand = "0.8.5"
+hex = "0.4.3"
+sysinfo = "0.30"
+dotenv = "0.15"
+lazy_static = "1.4.0"
 
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.52", features = ["Win32_Foundation", "Win32_System_Threading"] }
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]
