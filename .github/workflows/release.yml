@@ -41,9 +41,23 @@ jobs:
         if: matrix.platform == 'windows-latest'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
         run: |
-          gh release upload ${{ github.event.release.tag_name }} "./src-tauri/target/release/bundle/msi/*.msi" --clobber
-          gh release upload ${{ github.event.release.tag_name }} "./src-tauri/target/release/bundle/nsis/*.exe" --clobber
+          if [ -f src-tauri/target/release/bundle/msi/*.msi ]; then
+            for file in src-tauri/target/release/bundle/msi/*.msi; do
+              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
+            done
+          else
+            echo "No MSI file found"
+          fi
+          
+          if [ -f src-tauri/target/release/bundle/nsis/*.exe ]; then
+            for file in src-tauri/target/release/bundle/nsis/*.exe; do
+              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
+            done
+          else
+            echo "No EXE file found"
+          fi
 
       - name: Update release notes
         if: matrix.platform == 'windows-latest'
