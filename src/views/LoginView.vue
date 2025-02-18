@@ -6,12 +6,12 @@ import {
   NFormItem, 
   NInput, 
   NButton, 
-  useMessage,
+  useMessage
 } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import type { Router } from 'vue-router'
-import { login } from '@/api'
-import { LoginResponse } from '@/api/types'
+import { LoginResponse, ApiResponse } from '@/api/types'
+import { invoke } from '@tauri-apps/api/core'
 
 const router = useRouter() as unknown as Router
 const message = useMessage()
@@ -32,14 +32,22 @@ const formValue = ref<FormState>({
 const handleSubmit = async () => {
   try {
     loading.value = true
-    const response: LoginResponse = await login(formValue.value.username, formValue.value.password)
+    const response = await invoke<ApiResponse<LoginResponse>>('login', {
+      username: formValue.value.username,
+      password: formValue.value.password
+    })
     
-    if (response.status === 'success') {
-      localStorage.setItem('token', response.api_key)
+    if (response.status === 'success' && response.data?.api_key) {
+      localStorage.setItem('api_key', response.data.api_key)
+      localStorage.setItem('username', formValue.value.username)
       message.success('登录成功')
+      
+      // 发送事件通知 DashboardView 刷新数据
+      window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
+      
       router.push('/')
     } else {
-      throw new Error(response.message)
+      throw new Error(response.message || '登录失败')
     }
   } catch (error) {
     const err = error as Error
@@ -90,11 +98,14 @@ const handleSubmit = async () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  background-color: #f0f2f5;
 }
 
 .login-card {
   width: 100%;
   max-width: 400px;
 }
-</style> 
+
+:deep(.n-card) {
+  background: var(--n-color);
+}
+</style>

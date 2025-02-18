@@ -13,7 +13,7 @@
     "windows": [
       {
         "title": "cursor-pool",
-        "width": 800,
+        "width": 860,
         "height": 600,
         "decorations": false,
         "minimizable": true,

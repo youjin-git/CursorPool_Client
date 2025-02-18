@@ -8,6 +8,10 @@ const routes = [
     children: [
       {
         path: '',
+        redirect: '/dashboard'
+      },
+      {
+        path: 'dashboard',
         name: 'dashboard',
         component: () => import('../views/DashboardView.vue')
       },
@@ -35,4 +39,4 @@ const router = createRouter({
   routes
 })
 
-export default router 
+export default router

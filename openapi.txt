@@ -7,65 +7,99 @@ Cursor Auth API 文档
 
 1. 用户类 API
 
-1.1 登录/注册 [POST /user/login]
+1.1 检查用户 [POST /user/check]
+请求:
+{
+    "username": "string"  // 4-20位字母、数字、下划线
+}
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {
+        "exists": boolean,     // 用户是否存在
+        "need_code": boolean   // 是否需要验证码
+    }
+}
+
+1.2 发送验证码 [POST /user/send_code]
+请求:
+{
+    "username": "string"  // 4-20位字母、数字、下划线
+}
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {
+        "expire_in": number  // 验证码有效期(秒)
+    }
+}
+
+1.3 登录/注册 [POST /user/login]
 请求:
 {
     "username": "string",  // 4-20位字母、数字、下划线
-    "password": "string"   // 6-20位任意字符
-}
-响应:
-{
-    "status": "success" | "error",
-    "api_key": "string",  // 仅成功时返回
-    "message": "string"
-}
-
-1.2 激活卡密 [POST /user/activate]
-请求:
-{
-    "api_key": "string",
-    "code": "string"      // 卡密号
+    "password": "string",  // 6-20位任意字符
+    "device_id": "string", // 设备唯一标识
+    "sms_code": "string"   // 验证码，仅新用户注册时需要
 }
 响应:
 {
     "status": "success" | "error",
     "message": "string",
-    "data": {            // 仅成功时返回
-        "expire_time": number,  // 过期时间戳
-        "level": number,        // 会员等级
-        "daily_count": number   // 每日可用次数
+    "data": {
+        "api_key": "string"  // API密钥
     }
 }
 
-1.3 修改密码 [POST /user/change_password]
-请求:
-{
-    "api_key": "string",
-    "old_password": "string",
-    "new_password": "string"    // 6-20位任意字符
-}
-响应:localStorage
-{
-    "status": "success" | "error",
-    "message": "string",
-    "data": {                   // 仅成功时返回
-        "api_key": "string"     // 新的API密钥
-    }
-}
-
-1.4 获取用户信息 [GET /user/info]
+1.4 激活卡密 [POST /user/activate]
 请求头:
 Authorization: Bearer {api_key}
-
+请求:
+{
+    "code": "string"  // 卡密号
+}
 响应:
 {
     "status": "success" | "error",
     "message": "string",
-    "data": {            // 仅成功时返回
+    "data": {
+        "expire_time": number,  // 过期时间戳
+        "level": number        // 会员等级
+    }
+}
+
+1.5 修改密码 [POST /user/change_password]
+请求头:
+Authorization: Bearer {api_key}
+请求:
+{
+    "old_password": "string",
+    "new_password": "string"  // 6-20位任意字符
+}
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {
+        "api_key": "string"  // 新的API密钥
+    }
+}
+
+1.6 获取用户信息 [GET /user/info]
+请求头:
+Authorization: Bearer {api_key}
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {
         "daily_count": number,      // 每日可用次数
         "daily_used_count": number, // 今日已用次数
         "expire_time": number,      // 过期时间戳
-        "level": number            // 会员等级
+        "level": number,           // 会员等级
+        "is_expired": boolean      // 是否已过期
     }
 }
 
@@ -74,12 +108,11 @@ Authorization: Bearer {api_key}
 2.1 获取账户 [GET /account/get]
 请求头:
 Authorization: Bearer {api_key}
-
 响应:
 {
     "status": "success" | "error",
     "message": "string",
-    "data": {            // 仅成功时返回
+    "data": {
         "email": "string",       // Cursor账号
         "token": "string",       // Cursor Token
         "daily_used": number,    // 今日已用次数
@@ -87,10 +120,55 @@ Authorization: Bearer {api_key}
     }
 }
 
+3. 系统类 API
+
+3.1 获取版本信息 [GET /version]
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {
+        "version": "string",
+        "force_update": boolean,
+        "download_url": "string",
+        "change_log": "string"
+    }
+}
+
+3.2 获取公告信息 [GET /public/info]
+响应:
+{
+    "status": "success" | "error",
+    "message": "string",
+    "data": {
+        "duration": number,       // 公告显示时长(秒)
+        "type": "string",        // 公告类型
+        "closeable": boolean,    // 是否可关闭
+        "props": {
+            "title": "string",
+            "description": "string"
+        },
+        "actions": [             // 操作按钮
+            {
+                "type": "string",
+                "text": "string",
+                "url": "string"
+            }
+        ]
+    }
+}
+
 错误码说明:
-- 未授权访问: 未提供或提供了无效的Authorization头
-- 无效的访问令牌: 提供的api_key无效
-- 账号已被禁用: 用户账号状态异常
-- 会员已过期: 用户会员已过期
-- 每日使用次数已达上限: 超过了每日可用次数限制
-- 暂无可用账户: 系统中没有可用的账户
+- 400: 请求参数错误（验证码错误、用户已存在等）
+- 401: 未授权（密码错误、设备未授权等）
+- 403: 禁止访问（会员已过期等）
+- 404: 资源不存在（用户不存在等）
+- 429: 请求过多（使用次数超限、无可用账户等）
+- 500: 服务器错误
+
+注意事项:
+1. 新用户注册需要先获取验证码
+2. 所有时间戳均为 Unix 时间戳（秒）
+3. 设备ID用于设备绑定，不可随意更改
+4. API key 在修改密码后会更新
+5. 每个接口都会返回统一格式的响应

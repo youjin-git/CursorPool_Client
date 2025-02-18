@@ -11,6 +11,7 @@ import {
   RemoveOutline
 } from '@vicons/ionicons5'
 import ThemeToggle from '../components/ThemeToggle.vue'
+import LoginOverlay from '../components/LoginOverlay.vue'
 import { Component, h } from 'vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
@@ -21,6 +22,15 @@ const { currentLang } = useI18n()
 
 // 获取当前窗口实例
 const appWindow = new Window('main')
+
+// 登录状态管理
+const isLoggedIn = ref(!!localStorage.getItem('api_key'))
+const showLoginOverlay = computed(() => !isLoggedIn.value)
+
+// 处理登录成功
+function handleLoginSuccess() {
+  isLoggedIn.value = true
+}
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -49,7 +59,7 @@ function handleMenuClick(key: string) {
 }
 
 const collapsed = ref(true)
-const contentMarginLeft = computed(() => collapsed.value ? '64px' : '240px')
+const contentMarginLeft = computed(() => collapsed.value ? '64px' : '200px')
 
 // 窗口控制函数
 async function minimizeWindow() {
@@ -60,16 +70,18 @@ async function closeWindow() {
   await appWindow.hide()
 }
 
-async function quitApp() {
-  await appWindow.close()
-}
-
 </script>
 
 <template>
   <n-layout has-sider style="height: 100vh">
     <!-- 可拖动区域 -->
     <div class="drag-region"></div>
+
+    <!-- 登录遮罩 -->
+    <login-overlay
+      v-if="showLoginOverlay"
+      @login-success="handleLoginSuccess"
+    />
 
     <!-- 窗口控制按钮 -->
     <div class="window-controls">
@@ -89,7 +101,7 @@ async function quitApp() {
       bordered
       collapse-mode="width"
       :collapsed-width="64"
-      :width="240"
+      :width="200"
       :collapsed="collapsed"
       show-trigger
       @collapse="collapsed = true"
@@ -99,8 +111,8 @@ async function quitApp() {
       style="height: 100vh; -webkit-app-region: drag"
     >
       <div class="logo">
-        <h2 v-if="!collapsed">Cursor Pool</h2>
-        <h2 v-else>CP</h2>
+        <h2 v-if="!collapsed" style="user-select: none;">Cursor Pool</h2>
+        <h2 v-else style="user-select: none;">CP</h2>
       </div>
       <n-menu
         :options="menuOptions"
@@ -117,7 +129,7 @@ async function quitApp() {
     </n-layout-sider>
     <n-layout 
       :native-scrollbar="false" 
-      content-style="padding: 24px; min-height: 100vh"
+      content-style="padding: 40px 24px 24px 24px; min-height: 100vh"
       :style="{ marginLeft: contentMarginLeft }"
     >
       <router-view />

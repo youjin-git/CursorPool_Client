@@ -1,38 +1,35 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { NCard, NDataTable, NSpace, NDatePicker } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
+import type { OperationRecord } from '../types/history'
 
 const { currentLang } = useI18n()
 
-interface OperationRecord {
-  id: number
-  type: string
-  detail: string
-  timestamp: string
-  operator: string
+const records = ref<OperationRecord[]>([])
+const dateRange = ref<[number, number] | null>(null)
+
+// 加载历史记录
+const loadHistory = () => {
+  const history = JSON.parse(localStorage.getItem('operation_history') || '[]')
+  records.value = history
 }
 
-const records = ref<OperationRecord[]>([
-  {
-    id: 1,
-    type: '账户切换',
-    detail: '切换到账户: test@example.com',
-    timestamp: '2024-03-20 12:00:00',
-    operator: 'System'
-  },
-  {
-    id: 2,
-    type: '机器码修改',
-    detail: '修改机器码: XXXX-XXXX-XXXX-XXXX',
-    timestamp: '2024-03-20 12:01:00',
-    operator: 'System'
-  }
-])
+// 监听历史记录更新
+const handleHistoryUpdate = () => {
+  loadHistory()
+}
 
-const dateRange = ref<[number, number] | null>(null)
+onMounted(() => {
+  loadHistory()
+  window.addEventListener('history_updated', handleHistoryUpdate)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('history_updated', handleHistoryUpdate)
+})
 
 const columns: DataTableColumns<OperationRecord> = [
   {

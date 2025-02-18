@@ -19,6 +19,5 @@ impl Default for ApiClient {
 
 // 从环境变量获取基础 URL
 pub fn get_base_url() -> String {
-    std::env::var("CURSOR_POOL_API_URL")
-        .unwrap_or_else(|_| "http://127.0.0.1:11451/api".to_string())
+    "https://auth.52ai.org/api".to_string()
 }

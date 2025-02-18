@@ -10,11 +10,21 @@ pub struct ApiResponse<T> {
 }
 
 // 用户信息
+// #[derive(Debug, Serialize, Deserialize)]
+// pub struct UserInfo {
+//     pub username: String,
+//     pub email: Option<String>,
+//     pub activated: bool,
+// }
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserInfo {
+    pub daily_count: i32,
+    pub daily_used_count: i32,
+    pub expire_time: i64,
+    pub level: i32,
+    pub is_expired: bool,
     pub username: String,
-    pub email: Option<String>,
-    pub activated: bool,
 }
 
 // 账户信息
@@ -82,6 +92,13 @@ pub struct ActivateRequest {
     pub code: String,
 }
 
+// 激活响应
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ActivateResponse {
+    pub expire_time: i64,
+    pub level: i32,
+}
+
 // 修改密码请求
 #[derive(Debug, Serialize)]
 pub struct ChangePasswordRequest {
@@ -140,4 +157,43 @@ pub struct UsageInfo {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserInfoResponse {
     pub models: Vec<GptModelUsage>,
+}
+
+// Cursor 用户信息响应
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CursorUserInfo {
+    pub email: String,
+    pub email_verified: bool,
+    pub name: String,
+    pub sub: String,
+    pub updated_at: String,
+    pub picture: Option<String>,
+}
+
+// Cursor 模型使用情况
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CursorModelUsage {
+    #[serde(rename = "numRequests")]
+    pub num_requests: i32,
+    #[serde(rename = "numRequestsTotal")]
+    pub num_requests_total: i32,
+    #[serde(rename = "numTokens")]
+    pub num_tokens: i32,
+    #[serde(rename = "maxRequestUsage")]
+    pub max_request_usage: Option<i32>,
+    #[serde(rename = "maxTokenUsage")]
+    pub max_token_usage: Option<i32>,
+}
+
+// Cursor 使用情况响应
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CursorUsageInfo {
+    #[serde(rename = "gpt-4")]
+    pub gpt4: CursorModelUsage,
+    #[serde(rename = "gpt-3.5-turbo")]
+    pub gpt35: CursorModelUsage,
+    #[serde(rename = "gpt-4-32k")]
+    pub gpt4_32k: CursorModelUsage,
+    #[serde(rename = "startOfMonth")]
+    pub start_of_month: String,
 }

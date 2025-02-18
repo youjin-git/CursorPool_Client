@@ -1,4 +1,3 @@
-mod reset;
 pub mod commands;
 
 pub use commands::{

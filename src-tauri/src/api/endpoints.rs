@@ -55,7 +55,16 @@ pub async fn login(
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    // 先解析为 ApiResponse<LoginResponse>
+    let api_response: ApiResponse<LoginResponse> = response.json().await.map_err(|e| e.to_string())?;
+    
+    // 如果状态不是成功，返回错误
+    if api_response.status != "success" {
+        return Err(api_response.message);
+    }
+    
+    // 从 ApiResponse 中提取 LoginResponse
+    api_response.data.ok_or_else(|| "No login data received".to_string())
 }
 
 #[tauri::command]
@@ -79,7 +88,7 @@ pub async fn activate(
     client: State<'_, super::client::ApiClient>,
     api_key: String,
     code: String,
-) -> Result<ApiResponse<()>, String> {
+) -> Result<ApiResponse<ActivateResponse>, String> {
     let response = client
         .0
         .post(format!("{}/user/activate", get_base_url()))
@@ -154,7 +163,7 @@ pub async fn get_usage(
     client: State<'_, super::client::ApiClient>,
     user_id: String,
     token: String,
-) -> Result<ApiResponse<UsageInfo>, String> {
+) -> Result<ApiResponse<CursorUsageInfo>, String> {
     let response = client
         .0
         .get(format!("https://www.cursor.com/api/usage?user={}", user_id))
@@ -163,7 +172,13 @@ pub async fn get_usage(
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    let usage_info = response.json().await.map_err(|e| e.to_string())?;
+    
+    Ok(ApiResponse {
+        status: "success".to_string(),
+        message: "获取使用情况成功".to_string(),
+        data: Some(usage_info),
+    })
 }
 
 #[tauri::command]
@@ -171,7 +186,7 @@ pub async fn get_user_info_cursor(
     client: State<'_, super::client::ApiClient>,
     user_id: String,
     token: String,
-) -> Result<ApiResponse<UserInfoResponse>, String> {
+) -> Result<ApiResponse<CursorUserInfo>, String> {
     let response = client
         .0
         .get("https://www.cursor.com/api/auth/me")
@@ -180,7 +195,13 @@ pub async fn get_user_info_cursor(
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    let user_info = response.json().await.map_err(|e| e.to_string())?;
+    
+    Ok(ApiResponse {
+        status: "success".to_string(),
+        message: "获取用户信息成功".to_string(),
+        data: Some(user_info),
+    })
 }
 
 #[tauri::command]

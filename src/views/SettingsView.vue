@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { 
   NCard, 
   NSpace, 
@@ -7,14 +7,17 @@ import {
   NFormItem, 
   NInput, 
   NButton,
+  NInputGroup,
   useMessage
 } from 'naive-ui'
+import { useRouter } from 'vue-router'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
-import { request } from '@/api'
-import { UserInfoResponse } from '@/api/types'
+import { changePassword, activate } from '@/api'
+import { addHistoryRecord } from '../utils/history'
 
+const router = useRouter()
 const message = useMessage()
 const { currentLang } = useI18n()
 
@@ -32,34 +35,37 @@ const formValue = ref<SettingsForm>({
   confirmPassword: ''
 })
 
-const userInfo = ref<UserInfoResponse['data']>()
+const loading = ref(false)
 
-const fetchUserInfo = async () => {
-  try {
-    const response = await request.get<UserInfoResponse>('/user/info')
-    if (response.status === 'success') {
-      userInfo.value = response.data
-    }
-  } catch (error) {
-    console.error('获取用户信息失败:', error)
-  }
-}
-
-onMounted(() => {
-  fetchUserInfo()
-})
-
-const handleActivate = () => {
+const handleActivate = async () => {
   if (!formValue.value.activationCode) {
     message.warning(messages[currentLang.value].message.pleaseInputActivationCode)
     return
   }
-  // TODO: 激活码兑换逻辑
-  message.success(messages[currentLang.value].message.activationSuccess)
-  formValue.value.activationCode = ''
+
+  loading.value = true
+  try {
+    const apiKey = localStorage.getItem('api_key')
+    if (!apiKey) {
+      throw new Error('未找到 API Key')
+    }
+
+    await activate(apiKey, formValue.value.activationCode)
+    message.success(messages[currentLang.value].message.activationSuccess)
+    addHistoryRecord(
+      '激活码兑换',
+      '成功兑换激活码'
+    )
+    formValue.value.activationCode = ''
+  } catch (error) {
+    console.error('激活失败:', error)
+    message.error(messages[currentLang.value].message.activationFailed)
+  } finally {
+    loading.value = false
+  }
 }
 
-const handlePasswordChange = () => {
+const handlePasswordChange = async () => {
   if (!formValue.value.currentPassword || !formValue.value.newPassword || !formValue.value.confirmPassword) {
     message.warning(messages[currentLang.value].message.pleaseInputPassword)
     return
@@ -68,11 +74,37 @@ const handlePasswordChange = () => {
     message.error(messages[currentLang.value].message.passwordNotMatch)
     return
   }
-  // TODO: 修改密码逻辑
-  message.success(messages[currentLang.value].message.passwordChangeSuccess)
-  formValue.value.currentPassword = ''
-  formValue.value.newPassword = ''
-  formValue.value.confirmPassword = ''
+
+  loading.value = true
+  try {
+    const apiKey = localStorage.getItem('api_key')
+    if (!apiKey) {
+      throw new Error('未找到 API Key')
+    }
+
+    await changePassword(apiKey, formValue.value.currentPassword, formValue.value.newPassword)
+    message.success(messages[currentLang.value].message.passwordChangeSuccess)
+    addHistoryRecord(
+      '密码修改',
+      '成功修改密码'
+    )
+    formValue.value.currentPassword = ''
+    formValue.value.newPassword = ''
+    formValue.value.confirmPassword = ''
+    
+    await handleLogout()
+  } catch (error) {
+    message.error(messages[currentLang.value].message.passwordChangeFailed)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleLogout = async () => {
+  localStorage.removeItem('api_key')
+  await router.push('/dashboard')
+  window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
+  window.location.reload()
 }
 </script>
 
@@ -88,28 +120,40 @@ const handlePasswordChange = () => {
       <n-form
         :model="formValue"
         label-placement="left"
-        label-width="100"
+        label-width="120"
         require-mark-placement="right-hanging"
       >
-        <n-form-item :label="messages[currentLang].settings.activationCode">
-          <n-space>
+        <n-form-item
+          :label="messages[currentLang].settings.activationCode"
+          path="activationCode"
+        >
+          <n-input-group style="width: 360px">
             <n-input
               v-model:value="formValue.activationCode"
               :placeholder="messages[currentLang].settings.activationCode"
-              style="width: 240px"
+              size="large"
+            />
+            <n-button
+              type="primary"
+              @click="handleActivate"
+              :loading="loading"
+              size="large"
             >
-              <template #suffix>
-                <n-button
-                  type="primary"
-                  secondary
-                  size="small"
-                  @click="handleActivate"
-                >
-                  {{ messages[currentLang].settings.activate }}
-                </n-button>
-              </template>
-            </n-input>
-          </n-space>
+              {{ messages[currentLang].settings.activate }}
+            </n-button>
+          </n-input-group>
+        </n-form-item>
+
+        <n-form-item>
+          <div style="padding-left: 40px">
+            <n-button
+              type="error"
+              @click="handleLogout"
+              size="large"
+            >
+              登出账户
+            </n-button>
+          </div>
         </n-form-item>
       </n-form>
     </n-card>
@@ -158,7 +202,7 @@ const handlePasswordChange = () => {
 
     <n-card :title="messages[currentLang].settings.about">
       <p>Cursor Pool v0.1.0</p>
-      <p>© 2024 All Rights Reserved</p>
+      <p> 2024 All Rights Reserved</p>
     </n-card>
   </n-space>
-</template> 
+</template>

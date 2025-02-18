@@ -2,7 +2,7 @@
 name = "cursor-pool"
 version = "0.1.0"
 description = "Cursor Pool App"
-authors = ["Cloxl"]
+authors = ["Sanyela"]
 edition = "2021"
 rust-version = "1.60"
 
