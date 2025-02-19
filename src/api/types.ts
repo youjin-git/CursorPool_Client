@@ -7,22 +7,20 @@ export interface ApiResponse<T> {
 
 // 用户信息
 export interface UserInfo {
-  daily_count: number
-  daily_used_count: number
+  total_count: number
+  used_count: number
   expire_time: number
   level: number
   is_expired: boolean
   username: string
-  email?: string
-  activated: boolean
 }
 
 // 账户信息
 export interface AccountInfo {
   email: string
   token: string
-  dailyUsed: number
-  dailyLimit: number
+  used_count: number
+  total_limit: number
 }
 
 // 账户详细信息
@@ -30,8 +28,6 @@ export interface AccountDetail {
   email: string
   user_id: string
   token: string
-  daily_used: number
-  daily_limit: number
 }
 
 // 登录请求

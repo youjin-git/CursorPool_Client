@@ -8,10 +8,16 @@ import {
   NButton, 
   useMessage,
   NSpace,
-  NAutoComplete
+  NAutoComplete,
+  NTag
 } from 'naive-ui'
 import { checkUser, sendCode, login } from '../api'
 import type { LoginRequest } from '../api/types'
+import type { SelectOption } from 'naive-ui'
+import { h } from 'vue'
+import { useI18n } from '../locales'
+import { messages } from '../locales/messages'
+import type { HTMLAttributes } from 'vue'
 
 const message = useMessage()
 const loading = ref(false)
@@ -27,67 +33,135 @@ const formData = ref({
 // 邮箱验证正则
 const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
 
-// 邮箱提供商分组
+// 邮箱提供商配置
 const emailProviders = [
   {
     label: 'Google',
-    domain: 'gmail.com'
+    domain: 'gmail.com',
+    color: 'error'
   },
   {
     label: '腾讯',
-    domain: ['qq.com', 'foxmail.com']
+    domain: 'qq.com',
+    color: 'success'
   },
   {
-    label: 'Microsoft',
-    domain: ['outlook.com', 'hotmail.com']
+    label: '腾讯',
+    domain: 'foxmail.com',
+    color: 'success'
   },
   {
     label: '网易',
-    domain: '163.com'
+    domain: '163.com',
+    color: 'warning'
+  },
+  {
+    label: 'Microsoft',
+    domain: 'outlook.com',
+    color: 'info'
   }
 ]
 
-// 邮箱自动完成选项
+// 渲染邮箱选项标签
+const renderLabel = (option: SelectOption) => {
+  const domain = option.value?.toString().split('@')[1]
+  const provider = emailProviders.find(p => p.domain === domain)
+  
+  return [
+    option.label as string,
+    ' ',
+    h(NTag, {
+      size: 'small',
+      type: (provider?.color || 'default') as 'error' | 'success' | 'warning' | 'info' | 'default' | 'primary'
+    }, { default: () => provider?.label || '邮箱' })
+  ]
+}
+
+// 添加邮箱输入状态
+const emailInputStatus = computed(() => {
+  const email = formData.value.username
+  if (!email) return undefined
+  if (!emailRegex.test(email)) return 'error'
+  const domain = email.split('@')[1]
+  if (domain && !emailProviders.some(p => p.domain === domain)) return 'warning'
+  return undefined
+})
+
+// 添加邮箱输入状态和提示信息
+const emailInputFeedback = computed(() => {
+  const email = formData.value.username
+  if (!email) return ''
+  if (!emailRegex.test(email)) {
+    return messages[currentLang.value].login.emailInvalid
+  }
+  const domain = email.split('@')[1]
+  if (domain && !emailProviders.some(p => p.domain === domain)) {
+    return messages[currentLang.value].login.emailUnsupported
+  }
+  return ''
+})
+
+// 修改邮箱自动完成选项
 const emailOptions = computed(() => {
   const inputValue = formData.value.username
-  const username = inputValue.split('@')[0]
+  const atIndex = inputValue.lastIndexOf('@')
   
+  // 只有当用户输入@后才显示选项
+  if (atIndex === -1) return []
+  
+  const username = inputValue.substring(0, atIndex)
   if (!username) return []
   
   return emailProviders.map(provider => ({
-    type: 'group',
-    label: provider.label,
-    key: provider.label,
-    children: Array.isArray(provider.domain)
-      ? provider.domain.map(domain => ({
-          label: `${username}@${domain}`,
-          value: `${username}@${domain}`
-        }))
-      : [{
-          label: `${username}@${provider.domain}`,
-          value: `${username}@${provider.domain}`
-        }]
+    label: `${username}@${provider.domain}`,
+    value: `${username}@${provider.domain}`
   }))
 })
+
+// 处理邮箱选择
+function handleEmailSelect(value: string) {
+  if (value && isValidEmail(value)) {
+    formData.value.username = value
+  }
+}
 
 // 验证邮箱格式
 function isValidEmail(email: string): boolean {
   if (!emailRegex.test(email)) return false
   const domain = email.split('@')[1]
-  return emailProviders.some(provider => 
-    Array.isArray(provider.domain)
-      ? provider.domain.includes(domain)
-      : provider.domain === domain
-  )
+  return emailProviders.some(provider => provider.domain === domain)
 }
 
 // 检查用户是否存在的防抖定时器
 let checkUserTimer: number | null = null
 
-// 监听用户名变化
+// 添加注册模式状态
+const isRegisterMode = ref(false)
+
+// 计算标题
+const formTitle = computed(() => messages[currentLang.value].login[isRegisterMode.value ? 'registerButton' : 'title'])
+
+// 计算按钮文本
+const buttonText = computed(() => messages[currentLang.value].login[isRegisterMode.value ? 'registerButton' : 'loginButton'])
+
+// 切换模式
+function toggleMode() {
+  isRegisterMode.value = !isRegisterMode.value
+  // 清空表单
+  formData.value = {
+    username: '',
+    password: '',
+    sms_code: '',
+  }
+  // 注册模式下直接显示验证码框
+  showVerifyCode.value = isRegisterMode.value
+}
+
+// 修改监听用户名变化的逻辑
 watch(() => formData.value.username, async (newValue) => {
   if (!newValue || !isValidEmail(newValue)) {
-    showVerifyCode.value = false
+    // 注册模式下保持验证码框显示
+    showVerifyCode.value = isRegisterMode.value
     return
   }
   
@@ -96,9 +170,27 @@ watch(() => formData.value.username, async (newValue) => {
   checkUserTimer = setTimeout(async () => {
     try {
       const result = await checkUser(newValue)
-      showVerifyCode.value = !result.exists || result.need_code
+      
+      // 如果是注册模式,当用户存在时自动切换到登录
+      if (isRegisterMode.value && result.exists) {
+        message.info(messages[currentLang.value].login.userExists)
+        isRegisterMode.value = false
+        showVerifyCode.value = result.need_code
+      }
+      // 如果是登录模式,当用户不存在时只提示
+      else if (!isRegisterMode.value && !result.exists) {
+        message.error(messages[currentLang.value].login.userNotExists)
+        showVerifyCode.value = false
+      } 
+      // 其他情况
+      else {
+        // 注册模式始终显示验证码,登录模式根据need_code决定
+        showVerifyCode.value = isRegisterMode.value || result.need_code
+      }
     } catch (error) {
       console.error('Check user failed:', error)
+      // 发生错误时,注册模式下保持验证码框显示
+      showVerifyCode.value = isRegisterMode.value
     }
   }, 500)
 })
@@ -130,15 +222,36 @@ async function handleSendCode() {
   }
 }
 
-// 登录
-async function handleLogin() {
+// 添加密码验证正则
+const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/
+
+// 添加密码输入状态
+const passwordInputStatus = computed(() => {
+  const password = formData.value.password
+  if (!password) return undefined
+  if (!passwordRegex.test(password)) return 'error'
+  return undefined
+})
+
+// 添加密码输入状态和提示信息
+const passwordInputFeedback = computed(() => {
+  const password = formData.value.password
+  if (!password) return ''
+  if (!passwordRegex.test(password)) {
+    return messages[currentLang.value].login.passwordInvalid
+  }
+  return ''
+})
+
+// 修改处理提交的逻辑，添加密码验证
+async function handleSubmit() {
   if (!formData.value.username || !isValidEmail(formData.value.username)) {
-    message.error('请输入有效的邮箱地址')
+    message.error(messages[currentLang.value].login.emailError)
     return
   }
 
-  if (!formData.value.password) {
-    message.error('请输入密码')
+  if (!formData.value.password || !passwordRegex.test(formData.value.password)) {
+    message.error(messages[currentLang.value].login.passwordInvalid)
     return
   }
 
@@ -156,71 +269,121 @@ async function handleLogin() {
     const result = await login(loginParams)
     if (result.api_key) {
       localStorage.setItem('api_key', result.api_key)
-      message.success('登录成功')
-      // 触发登录成功事件
+      message.success(messages[currentLang.value].login.loginSuccess)
       emit('login-success')
     } else {
-      message.error('登录失败：未获取到API密钥')
+      message.error(messages[currentLang.value].login.loginFailed)
     }
   } catch (error) {
-    message.error('登录失败：' + (error instanceof Error ? error.message : '未知错误'))
+    message.error(messages[currentLang.value].login.loginFailed + ': ' + (error instanceof Error ? error.message : ''))
   } finally {
     loading.value = false
   }
 }
 
 const emit = defineEmits(['login-success'])
+
+const { currentLang } = useI18n()
+
+// 定义自定义输入属性类型
+interface CustomInputProps extends HTMLAttributes {
+  autocomplete?: string
+  'data-form-type'?: string
+  'data-lpignore'?: string
+}
+
+// 定义输入属性
+const inputProps = {
+  autocomplete: 'off',
+  'data-form-type': 'other',
+  'data-lpignore': 'true'
+} as CustomInputProps
 </script>
 
 <template>
+  <!-- 添加一个隐藏的假表单来欺骗浏览器的自动填充 -->
+  <form style="display: none" aria-hidden="true">
+    <input type="text" />
+    <input type="email" />
+    <input type="password" />
+  </form>
+
   <div class="login-overlay">
-    <n-card title="登录" class="login-card">
+    <n-card :title="formTitle" class="login-card">
       <n-form>
-        <n-form-item label="邮箱">
+        <n-form-item :label="messages[currentLang].login.emailPlaceholder">
           <n-auto-complete
             v-model:value="formData.username"
             :options="emailOptions"
-            placeholder="请输入邮箱"
+            :status="emailInputStatus"
+            :placeholder="messages[currentLang].login.emailPlaceholder"
+            :render-label="renderLabel"
             :disabled="loading"
+            @select="handleEmailSelect"
+            :clear-after-select="false"
+            autocomplete="off"
+            :input-props="inputProps"
           />
+          <template #feedback>
+            {{ emailInputFeedback }}
+          </template>
         </n-form-item>
         
-        <n-form-item label="密码">
+        <n-form-item 
+          :label="messages[currentLang].login.passwordPlaceholder"
+          :status="passwordInputStatus"
+        >
           <n-input 
             v-model:value="formData.password"
             type="password"
-            placeholder="请输入密码"
+            :placeholder="messages[currentLang].login.passwordPlaceholder"
             :disabled="loading"
           />
+          <template #feedback>
+            {{ passwordInputFeedback }}
+          </template>
         </n-form-item>
 
-        <n-form-item v-if="showVerifyCode" label="验证码">
+        <n-form-item v-if="showVerifyCode" :label="messages[currentLang].login.smsCodePlaceholder">
           <n-space>
             <n-input 
               v-model:value="formData.sms_code"
-              placeholder="请输入验证码"
+              :placeholder="messages[currentLang].login.smsCodePlaceholder"
               :disabled="loading"
             />
             <n-button 
               :disabled="loading || countDown > 0 || !isValidEmail(formData.username)"
               @click="handleSendCode"
+              secondary
             >
-              {{ countDown > 0 ? `${countDown}s` : '发送验证码' }}
+              {{ countDown > 0 ? messages[currentLang].login.resendCode.replace('{seconds}', countDown.toString()) : messages[currentLang].login.sendCode }}
             </n-button>
           </n-space>
         </n-form-item>
 
-        <n-form-item>
+        <n-space vertical :size="12">
           <n-button 
             type="primary" 
             block 
-            @click="handleLogin"
+            @click="handleSubmit"
             :loading="loading"
             :disabled="!isValidEmail(formData.username)"
           >
-            登录
+            {{ buttonText }}
           </n-button>
-        </n-form-item>
+
+          <n-button 
+            quaternary 
+            block
+            @click="toggleMode"
+            :disabled="loading"
+          >
+            {{ isRegisterMode 
+              ? messages[currentLang].login.hasAccount 
+              : `${messages[currentLang].login.noAccount} ${messages[currentLang].login.register}`
+            }}
+          </n-button>
+        </n-space>
       </n-form>
     </n-card>
   </div>
@@ -263,5 +426,27 @@ const emit = defineEmits(['login-success'])
 
 :deep(.n-input-wrapper) {
   user-select: text;
+}
+
+:deep(.n-form-item-feedback-wrapper) {
+  min-height: 20px;
+}
+
+:deep(.n-form-item-feedback) {
+  color: var(--n-feedback-text-color);
+  font-size: 12px;
+}
+
+/* 添加以下样式来进一步防止自动填充 */
+:deep(.n-input__input-el) {
+  /* 禁用 webkit 浏览器的自动填充样式 */
+  &:-webkit-autofill,
+  &:-webkit-autofill:hover,
+  &:-webkit-autofill:focus,
+  &:-webkit-autofill:active {
+    -webkit-box-shadow: 0 0 0 30px var(--n-color) inset !important;
+    -webkit-text-fill-color: var(--n-text-color) !important;
+    transition: background-color 5000s ease-in-out 0s;
+  }
 }
 </style>

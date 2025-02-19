@@ -19,8 +19,8 @@ pub struct ApiResponse<T> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserInfo {
-    pub daily_count: i32,
-    pub daily_used_count: i32,
+    pub total_count: i32,
+    pub used_count: i32,
     pub expire_time: i64,
     pub level: i32,
     pub is_expired: bool,
@@ -32,8 +32,8 @@ pub struct UserInfo {
 pub struct AccountInfo {
     pub email: String,
     pub token: String,
-    pub daily_used: i32,
-    pub daily_limit: i32,
+    pub used_count: i32,
+    pub total_limit: i32,
 }
 
 // 账户详细信息
@@ -42,8 +42,6 @@ pub struct AccountDetail {
     pub email: String,
     pub user_id: String,
     pub token: String,
-    pub daily_used: i32,
-    pub daily_limit: i32,
 }
 
 // 登录请求

@@ -1,5 +1,7 @@
 name: Release Build
+
 on:
+  workflow_dispatch:
   release:
     types: [created]
 
@@ -7,68 +9,53 @@ permissions:
   contents: write
 
 jobs:
-  release:
+  publish-tauri:
     strategy:
       fail-fast: false
       matrix:
-        platform: [windows-latest]
-        
+        include:
+          - platform: 'macos-14'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'windows-latest'
+            args: ''
+
     runs-on: ${{ matrix.platform }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install Node.js
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-        
-      - name: Install dependencies (Windows only)
-        if: matrix.platform == 'windows-latest'
-        run: |
-          rustup target add x86_64-pc-windows-msvc
-          
-      - name: Install frontend dependencies
-        run: npm install
-        
-      - name: Build the app
-        run: npm run tauri build
-        
-      - name: Upload Windows build artifacts
-        if: matrix.platform == 'windows-latest'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        shell: bash
-        run: |
-          if [ -f src-tauri/target/release/bundle/msi/*.msi ]; then
-            for file in src-tauri/target/release/bundle/msi/*.msi; do
-              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
-            done
-          else
-            echo "No MSI file found"
-          fi
-          
-          if [ -f src-tauri/target/release/bundle/nsis/*.exe ]; then
-            for file in src-tauri/target/release/bundle/nsis/*.exe; do
-              gh release upload ${{ github.event.release.tag_name }} "$file" --clobber
-            done
-          else
-            echo "No EXE file found"
-          fi
+          node-version: '20'
+          cache: 'npm'
 
-      - name: Update release notes
-        if: matrix.platform == 'windows-latest'
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || matrix.platform == 'macos-14' && 'aarch64-apple-darwin' || '' }}
+
+      - name: Install dependencies (macOS)
+        if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-14'
+        run: |
+          brew install openssl@3
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh release edit ${{ github.event.release.tag_name }} --notes "
-          ## Windows 安装包
-          - MSI 安装包 (推荐): [cursor-pool_${{ github.event.release.tag_name }}_x64.msi]
-          - EXE 安装包: [cursor-pool_${{ github.event.release.tag_name }}_x64-setup.exe]
-          
-          ## 更新内容
-          ${{ github.event.release.body }}
-          " 
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: ${{ github.ref_name }}
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
+

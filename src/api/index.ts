@@ -93,9 +93,9 @@ export async function getUserInfoCursor(userId: string, token: string): Promise<
     }
 }
 
-export async function getUsage(userId: string, token: string): Promise<UsageInfo> {
+export async function getUsage(token: string): Promise<UsageInfo> {
     try {
-        const response = await invoke<ApiResponse<UsageInfo>>('get_usage', { userId, token })
+        const response = await invoke<ApiResponse<UsageInfo>>('get_usage', { token })
         return handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to get usage info')
@@ -158,8 +158,12 @@ export async function resetMachineIdOnly(): Promise<void> {
 
 export async function switchAccount(email: string, token: string): Promise<void> {
     try {
-        await invoke('switch_account', { email, token })
+        const result = await invoke<boolean>('switch_account', { email, token })
+        if (result !== true) {
+            throw new Error('切换账户失败')
+        }
     } catch (error) {
+        console.error('Switch account error:', error)
         throw new ApiError(error instanceof Error ? error.message : 'Failed to switch account')
     }
 }

@@ -6,6 +6,8 @@ pub mod utils;
 pub mod auth;
 pub mod cursor_reset;
 pub mod tray;
+pub mod test;
+pub mod test_process;
 
 pub use cursor_reset::{
     reset_machine_id_only,

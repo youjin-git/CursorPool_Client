@@ -45,6 +45,10 @@ export const messages = {
       newVersion: '最新版本',
       later: '稍后更新',
       downloadNow: '立即下载',
+      unusedCreditsWarning: '使用提醒',
+      unusedCreditsMessage: '您还有 {count} 次高级模型使用次数未使用，确定要切换账号吗？',
+      confirmSwitch: '确认切换',
+      cancelSwitch: '取消'
     },
     login: {
       title: '登录',
@@ -59,7 +63,15 @@ export const messages = {
       emailError: '请输入有效的邮箱地址',
       passwordError: '请输入密码',
       loginSuccess: '登录成功',
-      loginFailed: '登录失败'
+      loginFailed: '登录失败',
+      noAccount: '还没有账户？',
+      register: '立即注册',
+      hasAccount: '已有账户？去登录',
+      userExists: '该邮箱已注册，已切换到登录模式',
+      userNotExists: '该邮箱未注册，请先注册账户',
+      emailInvalid: '请输入有效的邮箱地址',
+      emailUnsupported: '暂不支持该邮箱域名',
+      passwordInvalid: '密码必须包含至少8个字符，包括大小写字母和数字',
     },
     settings: {
       activation: '激活码兑换',
@@ -140,6 +152,10 @@ export const messages = {
       newVersion: '最新版本',
       later: '稍后更新',
       downloadNow: '立即下载',
+      unusedCreditsWarning: 'Usage Reminder',
+      unusedCreditsMessage: 'You still have {count} advanced model usage credits left. Are you sure you want to switch accounts?',
+      confirmSwitch: 'Confirm',
+      cancelSwitch: 'Cancel'
     },
     login: {
       title: 'Login',
@@ -154,7 +170,15 @@ export const messages = {
       emailError: 'Please enter a valid email address',
       passwordError: 'Please enter your password',
       loginSuccess: 'Login successful',
-      loginFailed: 'Login failed'
+      loginFailed: 'Login failed',
+      noAccount: 'No account?',
+      register: 'Register Now',
+      hasAccount: 'Already have an account? Login',
+      userExists: 'This email is registered, switched to login mode',
+      userNotExists: 'This email is not registered, please register first',
+      emailInvalid: 'Please enter a valid email address',
+      emailUnsupported: 'This email domain is not supported',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: 'Activation',
@@ -235,6 +259,10 @@ export const messages = {
       newVersion: '最新バージョン',
       later: '後で更新',
       downloadNow: '今すぐダウンロード',
+      unusedCreditsWarning: '使用確認',
+      unusedCreditsMessage: 'まだ {count} 回の高度なモデル使用回数が残っています。アカウントを切り替えてもよろしいですか？',
+      confirmSwitch: '確認',
+      cancelSwitch: 'キャンセル'
     },
     login: {
       title: 'ログイン',
@@ -249,7 +277,15 @@ export const messages = {
       emailError: '有効なメールアドレスを入力してください',
       passwordError: 'パスワードを入力してください',
       loginSuccess: 'ログイン成功',
-      loginFailed: 'ログイン失敗'
+      loginFailed: 'ログイン失敗',
+      noAccount: 'アカウントをお持ちでない方は',
+      register: 'こちらから登録',
+      hasAccount: '既にアカウントをお持ちの方は',
+      userExists: 'このメールアドレスは既に登録されています。ログインモードに切り替えます',
+      userNotExists: 'このメールアドレスは未登録です。先に登録してください',
+      emailInvalid: '有効なメールアドレスを入力してください',
+      emailUnsupported: 'このメールドメインは現在サポートされていません',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: 'アクティベーション',
@@ -330,6 +366,10 @@ export const messages = {
       newVersion: 'Nouvelle version',
       later: 'Mettre à jour plus tard',
       downloadNow: 'Télécharger maintenant',
+      unusedCreditsWarning: 'Rappel d\'utilisation',
+      unusedCreditsMessage: 'Il vous reste {count} crédits d\'utilisation du modèle avancé. Êtes-vous sûr de vouloir changer de compte ?',
+      confirmSwitch: 'Confirmer',
+      cancelSwitch: 'Annuler'
     },
     login: {
       title: 'Connexion',
@@ -344,7 +384,15 @@ export const messages = {
       emailError: 'Veuillez entrer une adresse e-mail valide',
       passwordError: 'Veuillez entrer votre mot de passe',
       loginSuccess: 'Connexion réussie',
-      loginFailed: 'Connexion échouée'
+      loginFailed: 'Connexion échouée',
+      noAccount: 'Pas de compte ?',
+      register: 'S\'inscrire maintenant',
+      hasAccount: 'Vous avez déjà un compte ? Connectez-vous',
+      userExists: 'Cet email est déjà enregistré, passage en mode connexion',
+      userNotExists: 'Cet email n\'est pas enregistré, veuillez vous inscrire d\'abord',
+      emailInvalid: 'Veuillez entrer une adresse e-mail valide',
+      emailUnsupported: 'Ce domaine e-mail n\'est pas supporté',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: 'Activation',
@@ -439,7 +487,15 @@ export const messages = {
       emailError: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
       passwordError: 'Bitte geben Sie Ihr Passwort ein',
       loginSuccess: 'Anmeldung erfolgreich',
-      loginFailed: 'Anmeldung fehlgeschlagen'
+      loginFailed: 'Anmeldung fehlgeschlagen',
+      noAccount: 'Kein Konto?',
+      register: 'Jetzt registrieren',
+      hasAccount: 'Sie haben bereits ein Konto? Anmelden',
+      userExists: 'Diese E-Mail ist bereits registriert, Wechsel zum Anmeldemodus',
+      userNotExists: 'Diese E-Mail ist nicht registriert, bitte registrieren Sie sich zuerst',
+      emailInvalid: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
+      emailUnsupported: 'Dieser E-Mail-Domain ist derzeit keine Unterstützung verfügbar',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: 'Aktivierung',
@@ -534,7 +590,15 @@ export const messages = {
       emailError: '유효한 이메일 주소를 입력하세요',
       passwordError: '비밀번호를 입력하세요',
       loginSuccess: '로그인 성공',
-      loginFailed: '로그인 실패'
+      loginFailed: '로그인 실패',
+      noAccount: '계정이 없으신가요?',
+      register: '지금 가입하기',
+      hasAccount: '이미 계정이 있으신가요? 로그인',
+      userExists: '이메일이 이미 등록되어 있습니다. 로그인 모드로 전환합니다',
+      userNotExists: '등록되지 않은 이메일입니다. 먼저 회원가입을 해주세요',
+      emailInvalid: '유효한 이메일 주소를 입력하세요',
+      emailUnsupported: '이 이메일 도메인은 현재 지원되지 않습니다',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: '활성화',
@@ -629,7 +693,15 @@ export const messages = {
       emailError: 'Введите действительный адрес электронной почты',
       passwordError: 'Введите пароль',
       loginSuccess: 'Вход успешен',
-      loginFailed: 'Вход не удался'
+      loginFailed: 'Вход не удался',
+      noAccount: 'Нет аккаунта?',
+      register: 'Зарегистрироваться сейчас',
+      hasAccount: 'Уже есть аккаунт? Войти',
+      userExists: 'Этот email уже зарегистрирован, переключение в режим входа',
+      userNotExists: 'Этот email не зарегистрирован, пожалуйста, зарегистрируйтесь',
+      emailInvalid: 'Введите действительный адрес электронной почты',
+      emailUnsupported: 'Этот email-домен не поддерживается',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: 'Активация',
@@ -724,7 +796,15 @@ export const messages = {
       emailError: 'Ingrese una dirección de correo electrónico válida',
       passwordError: 'Ingrese su contraseña',
       loginSuccess: 'Iniciar sesión exitoso',
-      loginFailed: 'Iniciar sesión fallido'
+      loginFailed: 'Iniciar sesión fallido',
+      noAccount: '¿No tienes cuenta?',
+      register: 'Regístrate ahora',
+      hasAccount: '¿Ya tienes cuenta? Iniciar sesión',
+      userExists: 'Este correo ya está registrado, cambio a modo de inicio de sesión',
+      userNotExists: 'Este correo no está registrado, por favor regístrese primero',
+      emailInvalid: 'Ingrese una dirección de correo electrónico válida',
+      emailUnsupported: 'Este dominio de correo electrónico no es compatible',
+      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
       activation: 'Activación',

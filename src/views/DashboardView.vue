@@ -10,7 +10,7 @@ import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/a
 import { addHistoryRecord } from '../utils/history'
 
 // 本地版本号
-const LOCAL_VERSION = '0.1.0'
+const LOCAL_VERSION = '0.2.0'
 
 // 版本检查的时间间隔（毫秒）
 const VERSION_CHECK_INTERVAL = 3 * 60 * 60 * 1000 // 3小时
@@ -82,7 +82,11 @@ const levelMap: Record<number, { name: string; type: 'default' | 'info' | 'succe
 
 // 普通账户使用量百分比
 const accountUsagePercentage = computed(() => {
-  return 100  // 始终返回 100%
+  if (!deviceInfo.value.userInfo?.total_count) return 0
+  return getUsagePercentage(
+    deviceInfo.value.userInfo.used_count,
+    deviceInfo.value.userInfo.total_count
+  )
 })
 
 // Cursor高级模型使用量百分比
@@ -137,7 +141,7 @@ async function fetchCursorInfo() {
     }
 
     const userInfoData = await getUserInfoCursor(userId, token)
-    const usageData = await getUsage(userId, token)
+    const usageData = await getUsage(token)
     
     deviceInfo.value.cursorInfo = {
       userInfo: userInfoData,
@@ -165,8 +169,45 @@ const handleMachineCodeChange = async () => {
   }
 }
 
-// 处理账户切换
+// 添加新的 ref
+const showUnusedCreditsModal = ref(false)
+const unusedCredits = ref(0)
+const pendingAction = ref<'account' | 'quick' | null>(null)
+
+// 检查未使用的积分
+const checkUnusedCredits = () => {
+  const gpt4Usage = deviceInfo.value.cursorInfo.usage?.['gpt-4']
+  if (gpt4Usage && gpt4Usage.maxRequestUsage) {
+    const remaining = gpt4Usage.maxRequestUsage - gpt4Usage.numRequests
+    if (remaining > 140) {
+      unusedCredits.value = remaining
+      showUnusedCreditsModal.value = true
+      return true
+    }
+  }
+  return false
+}
+
+// 修改账户切换处理函数
 const handleAccountSwitch = async () => {
+  if (checkUnusedCredits()) {
+    pendingAction.value = 'account'
+    return
+  }
+  await executeAccountSwitch()
+}
+
+// 修改一键切换处理函数
+const handleQuickChange = async () => {
+  if (checkUnusedCredits()) {
+    pendingAction.value = 'quick'
+    return
+  }
+  await executeQuickChange()
+}
+
+// 实际执行账户切换的函数
+const executeAccountSwitch = async () => {
   try {
     const apiKey = localStorage.getItem('api_key')
     if (!apiKey) {
@@ -174,7 +215,6 @@ const handleAccountSwitch = async () => {
       return
     }
 
-    // 先获取账户信息
     const accountInfo = await getAccount(apiKey)
     
     if (!accountInfo.email || !accountInfo.token) {
@@ -182,14 +222,10 @@ const handleAccountSwitch = async () => {
       return
     }
 
-    // 保存到本地存储
     localStorage.setItem('cache.cursor.userId', accountInfo.user_id)
     localStorage.setItem('cache.cursor.token', accountInfo.token)
-    console.log(accountInfo.user_id);
     
-    // 调用切换账户
     await switchAccount(accountInfo.email, accountInfo.token)
-
     message.success(i18n.value.dashboard.accountChangeSuccess)
     addHistoryRecord(
       '账户切换',
@@ -206,10 +242,10 @@ const handleAccountSwitch = async () => {
   }
 }
 
-// 一键切换
-const handleQuickChange = async () => {
+// 实际执行一键切换的函数
+const executeQuickChange = async () => {
   try {
-    await handleAccountSwitch()
+    await executeAccountSwitch()
     await handleMachineCodeChange()
     message.success(i18n.value.dashboard.changeSuccess)
     addHistoryRecord(
@@ -219,6 +255,23 @@ const handleQuickChange = async () => {
   } catch (error) {
     message.error(i18n.value.dashboard.changeFailed)
   }
+}
+
+// 处理确认切换
+const handleConfirmSwitch = async () => {
+  showUnusedCreditsModal.value = false
+  if (pendingAction.value === 'account') {
+    await executeAccountSwitch()
+  } else if (pendingAction.value === 'quick') {
+    await executeQuickChange()
+  }
+  pendingAction.value = null
+}
+
+// 处理取消切换
+const handleCancelSwitch = () => {
+  showUnusedCreditsModal.value = false
+  pendingAction.value = null
 }
 
 const copyText = (text: string) => {
@@ -395,6 +448,30 @@ onMounted(async () => {
       <n-grid-item style="display: grid;">
         <n-card :title="i18n.dashboard.usageStats" style="height: 100%; user-select: none;">
           <n-space vertical :size="24" style="height: 100%; justify-content: space-around;">
+            <!-- 账户使用统计 -->
+            <n-space vertical :size="8">
+              <n-space justify="space-between">
+                <span>CP积分使用量</span>
+                <n-space :size="0">
+                  <n-number-animation 
+                    :from="0" 
+                    :to="(deviceInfo.userInfo?.used_count || 0) * 150"
+                    :duration="1000"
+                  />
+                  <span>/{{ (deviceInfo.userInfo?.total_count || 0) * 150 }}</span>
+                </n-space>
+              </n-space>
+              <n-progress
+                type="line"
+                status="success"
+                :percentage="accountUsagePercentage"
+                :show-indicator="false"
+                :height="12"
+                :border-radius="6"
+                :processing="loading"
+              />
+            </n-space>
+
             <!-- Cursor GPT-4 使用统计 -->
             <n-space vertical :size="8">
               <n-space justify="space-between">
@@ -448,29 +525,6 @@ onMounted(async () => {
               />
             </n-space>
 
-            <!-- 账户使用统计 -->
-            <n-space vertical :size="8">
-              <n-space justify="space-between">
-                <span>CC账户使用量</span>
-                <n-space :size="0">
-                  <n-number-animation 
-                    :from="0" 
-                    :to="deviceInfo.userInfo?.daily_used_count || 0"
-                    :duration="1000"
-                  />
-                  <span>/{{ i18n.dashboard.unlimited }}</span>
-                </n-space>
-              </n-space>
-              <n-progress
-                type="line"
-                status="success"
-                :percentage="accountUsagePercentage"
-                :show-indicator="false"
-                :height="12"
-                :border-radius="6"
-                :processing="loading"
-              />
-            </n-space>
           </n-space>
         </n-card>
       </n-grid-item>
@@ -522,6 +576,29 @@ onMounted(async () => {
           </n-button>
         </n-space>
       </n-space>
+    </n-modal>
+
+    <!-- 添加未使用积分提醒模态框 -->
+    <n-modal
+      v-model:show="showUnusedCreditsModal"
+      preset="dialog"
+      title="使用提醒"
+      :closable="true"
+      :mask-closable="false"
+    >
+      <template #default>
+        您还有 {{ unusedCredits }} 次高级模型使用次数未使用，确定要切换账号吗？
+      </template>
+      <template #action>
+        <n-space justify="end">
+          <n-button @click="handleCancelSwitch">
+            取消
+          </n-button>
+          <n-button type="primary" @click="handleConfirmSwitch">
+            确认切换
+          </n-button>
+        </n-space>
+      </template>
     </n-modal>
   </n-space>
 </template>

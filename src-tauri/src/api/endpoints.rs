@@ -141,7 +141,7 @@ pub async fn get_account(
         .await
         .map_err(|e| e.to_string())?;
     
-    // 如果获取成功，处理 token
+    // 只返回需要的字段
     Ok(ApiResponse {
         status: account_response.status,
         message: account_response.message,
@@ -151,8 +151,6 @@ pub async fn get_account(
                 email: account_info.email,
                 user_id: parts[0].to_string(),
                 token: parts[1].to_string(),
-                daily_used: account_info.daily_used,
-                daily_limit: account_info.daily_limit,
             }
         }),
     })
@@ -161,12 +159,14 @@ pub async fn get_account(
 #[tauri::command]
 pub async fn get_usage(
     client: State<'_, super::client::ApiClient>,
-    user_id: String,
     token: String,
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
+    // 固定 user_id 不检测
+    let user_id = "user_01000000000000000000000000";
+    
     let response = client
         .0
-        .get(format!("https://www.cursor.com/api/usage?user={}", user_id))
+        .get("https://www.cursor.com/api/usage")
         .header("Cookie", format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token))
         .send()
         .await
