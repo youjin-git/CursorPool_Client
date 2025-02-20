@@ -7,10 +7,9 @@ pub mod auth;
 pub mod cursor_reset;
 pub mod tray;
 pub mod test;
-pub mod test_process;
 
 pub use cursor_reset::{
-    reset_machine_id_only,
+    reset_machine_id,
     switch_account,
     get_current_account,
     get_machine_ids,

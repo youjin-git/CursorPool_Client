@@ -3,9 +3,23 @@ use std::fs;
 use rusqlite::Connection;
 use crate::utils::paths::AppPaths;
 use crate::utils::id_generator::generate_new_ids;
+use crate::utils::ProcessManager;
+use std::thread;
 
 #[tauri::command]
-pub async fn reset_machine_id_only() -> Result<bool, String> {
+pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查Cursor进程
+    if !force_kill && process_manager.is_cursor_running() {
+        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+    }
+
+    // 如果force_kill为true，则强制终止Cursor进程
+    if force_kill {
+        process_manager.kill_cursor_processes()?;
+    }
+
     let paths = AppPaths::new()?;
     let new_ids = generate_new_ids();
 
@@ -47,8 +61,21 @@ pub async fn reset_machine_id_only() -> Result<bool, String> {
 #[tauri::command]
 pub async fn switch_account(
     email: String,
-    token: String
+    token: String,
+    force_kill: bool
 ) -> Result<bool, String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查Cursor进程
+    if !force_kill && process_manager.is_cursor_running() {
+        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+    }
+
+    // 如果force_kill为true，则强制终止Cursor进程
+    if force_kill {
+        process_manager.kill_cursor_processes()?;
+    }
+
     let paths = AppPaths::new()?;
 
     // 更新 storage.json
@@ -143,6 +170,24 @@ pub fn get_machine_ids() -> Result<Value, String> {
     }
 
     Ok(result)
+}
+
+#[tauri::command]
+pub async fn kill_cursor_process() -> Result<(), String> {
+    let process_manager = ProcessManager::new();
+    
+    // 启动新线程执行关闭和重启操作
+    thread::spawn(move || {
+        process_manager.kill_and_restart_cursor()
+    });
+    
+    Ok(())
+}
+
+#[tauri::command]
+pub fn check_cursor_running() -> Result<bool, String> {
+    let process_manager = ProcessManager::new();
+    Ok(process_manager.is_cursor_running())
 }
 
 fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl AsRef<str>)]) -> Result<(), String> {

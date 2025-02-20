@@ -26,10 +26,12 @@ fn main() {
             api::send_code,
             api::get_version,
             api::get_public_info,
-            reset_machine_id_only,
+            reset_machine_id,
             switch_account,
             get_current_account,
             get_machine_ids,
+            cursor_reset::commands::check_cursor_running,
+            cursor_reset::commands::kill_cursor_process,
         ])
         .manage(api::ApiClient::default())
         .run(generate_context!())

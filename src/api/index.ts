@@ -148,23 +148,30 @@ export async function changePassword(apiKey: string, old_password: string, new_p
 }
 
 // 机器码和账户切换相关 API
-export async function resetMachineIdOnly(): Promise<void> {
+export async function resetMachineId(force_kill: boolean = false): Promise<void> {
     try {
-        await invoke<void>('reset_machine_id_only')
+        await invoke<void>('reset_machine_id', { forceKill: force_kill })
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to reset machine ID')
+        const errorMsg = error instanceof Error ? error.message : 'Failed to reset machine ID'
+        if (errorMsg.includes('Cursor进程正在运行，请先关闭Cursor')) {
+            throw new Error('请先关闭 Cursor 或选择强制终止进程')
+        }
+        throw error
     }
 }
 
-export async function switchAccount(email: string, token: string): Promise<void> {
+export async function switchAccount(email: string, token: string, force_kill: boolean = false): Promise<void> {
     try {
-        const result = await invoke<boolean>('switch_account', { email, token })
+        const result = await invoke<boolean>('switch_account', { email, token, forceKill: force_kill })
         if (result !== true) {
             throw new Error('切换账户失败')
         }
     } catch (error) {
-        console.error('Switch account error:', error)
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to switch account')
+        const errorMsg = error instanceof Error ? error.message : 'Failed to switch account'
+        if (errorMsg.includes('Cursor进程正在运行，请先关闭Cursor')) {
+            throw new Error('请先关闭 Cursor 或选择强制终止进程')
+        }
+        throw error
     }
 }
 
@@ -182,4 +189,36 @@ export async function getMachineIds(): Promise<MachineInfo> {
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to get machine IDs')
     }
+}
+
+export async function checkCursorRunning(): Promise<boolean> {
+    try {
+        return await invoke<boolean>('check_cursor_running')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to check cursor status')
+    }
+}
+
+// 添加新的 kill_cursor_process API
+export async function killCursorProcess(): Promise<void> {
+    try {
+        await invoke<void>('kill_cursor_process')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to kill cursor process')
+    }
+}
+
+// 添加 waitForCursorClose 辅助函数
+export async function waitForCursorClose(timeout = 10000): Promise<boolean> {
+    const startTime = Date.now()
+    
+    while (Date.now() - startTime < timeout) {
+        const isRunning = await checkCursorRunning()
+        if (!isRunning) {
+            return true
+        }
+        await new Promise(resolve => setTimeout(resolve, 500))
+    }
+    
+    throw new ApiError('关闭 Cursor 超时')
 }

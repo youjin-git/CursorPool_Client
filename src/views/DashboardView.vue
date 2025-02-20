@@ -4,7 +4,19 @@ import { ref, onMounted, computed } from 'vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { useMessage } from 'naive-ui'
-import { getUserInfo, resetMachineIdOnly, switchAccount, getMachineIds, getUserInfoCursor, getUsage, getAccount, getVersion } from '@/api'
+import { 
+    getUserInfo, 
+    resetMachineId, 
+    switchAccount, 
+    getMachineIds, 
+    getUserInfoCursor, 
+    getUsage, 
+    getAccount, 
+    getVersion, 
+    checkCursorRunning,
+    killCursorProcess,
+    waitForCursorClose 
+} from '@/api'
 import type { Language } from '../locales'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
 import { addHistoryRecord } from '../utils/history'
@@ -154,10 +166,17 @@ async function fetchCursorInfo() {
   }
 }
 
-// 处理机器码更换
-const handleMachineCodeChange = async () => {
+// 添加新的 ref
+const showCursorRunningModal = ref(false)
+const pendingForceKillAction = ref<{
+  type: 'machine' | 'account' | 'quick',
+  params?: any
+} | null>(null)
+
+// 修改机器码更换处理函数
+const handleMachineCodeChange = async (force_kill: boolean = false) => {
   try {
-    await resetMachineIdOnly()
+    await resetMachineId(force_kill)
     message.success(i18n.value.dashboard.machineChangeSuccess)
     addHistoryRecord(
       '机器码修改',
@@ -165,6 +184,12 @@ const handleMachineCodeChange = async () => {
     )
     await fetchMachineIds()
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    if (errorMsg === 'Cursor进程正在运行，请先关闭Cursor') {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'machine' }
+      return
+    }
     message.error(i18n.value.dashboard.machineChangeFailed)
   }
 }
@@ -176,9 +201,15 @@ const pendingAction = ref<'account' | 'quick' | null>(null)
 
 // 检查未使用的积分
 const checkUnusedCredits = () => {
-  const gpt4Usage = deviceInfo.value.cursorInfo.usage?.['gpt-4']
+  // 先检查是否有 usage 数据
+  if (!deviceInfo.value.cursorInfo.usage) {
+    return false
+  }
+
+  const gpt4Usage = deviceInfo.value.cursorInfo.usage['gpt-4']
   if (gpt4Usage && gpt4Usage.maxRequestUsage) {
     const remaining = gpt4Usage.maxRequestUsage - gpt4Usage.numRequests
+    console.log('Remaining credits:', remaining) // 添加调试日志
     if (remaining > 140) {
       unusedCredits.value = remaining
       showUnusedCreditsModal.value = true
@@ -190,24 +221,74 @@ const checkUnusedCredits = () => {
 
 // 修改账户切换处理函数
 const handleAccountSwitch = async () => {
+  // 先检查未使用的积分
   if (checkUnusedCredits()) {
     pendingAction.value = 'account'
     return
   }
+
+  // 再检查 Cursor 是否在运行
+  const isRunning = await checkCursorRunning()
+  if (isRunning) {
+    showCursorRunningModal.value = true
+    pendingForceKillAction.value = { type: 'account' }
+    return
+  }
+
   await executeAccountSwitch()
 }
 
 // 修改一键切换处理函数
 const handleQuickChange = async () => {
+  // 先检查未使用的积分
   if (checkUnusedCredits()) {
     pendingAction.value = 'quick'
     return
   }
+
+  // 再检查 Cursor 是否在运行
+  const isRunning = await checkCursorRunning()
+  if (isRunning) {
+    showCursorRunningModal.value = true
+    pendingForceKillAction.value = { type: 'quick' }
+    return
+  }
+
   await executeQuickChange()
 }
 
-// 实际执行账户切换的函数
-const executeAccountSwitch = async () => {
+// 修改确认切换函数
+const handleConfirmSwitch = async () => {
+  showUnusedCreditsModal.value = false
+  if (pendingAction.value === 'account') {
+    // 检查 Cursor 是否在运行
+    const isRunning = await checkCursorRunning()
+    if (isRunning) {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'account' }
+      return
+    }
+    await executeAccountSwitch()
+  } else if (pendingAction.value === 'quick') {
+    // 检查 Cursor 是否在运行
+    const isRunning = await checkCursorRunning()
+    if (isRunning) {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'quick' }
+      return
+    }
+    await executeQuickChange()
+  }
+  pendingAction.value = null
+}
+
+const handleCancelSwitch = () => {
+  showUnusedCreditsModal.value = false
+  pendingAction.value = null
+}
+
+// 修改账户切换执行函数
+const executeAccountSwitch = async (force_kill: boolean = false) => {
   try {
     const apiKey = localStorage.getItem('api_key')
     if (!apiKey) {
@@ -215,6 +296,15 @@ const executeAccountSwitch = async () => {
       return
     }
 
+    // 先检查 Cursor 是否在运行
+    const isRunning = await checkCursorRunning()
+    if (isRunning && !force_kill) {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'account' }
+      return
+    }
+
+    // 获取账号信息并执行实际的切换
     const accountInfo = await getAccount(apiKey)
     
     if (!accountInfo.email || !accountInfo.token) {
@@ -225,7 +315,7 @@ const executeAccountSwitch = async () => {
     localStorage.setItem('cache.cursor.userId', accountInfo.user_id)
     localStorage.setItem('cache.cursor.token', accountInfo.token)
     
-    await switchAccount(accountInfo.email, accountInfo.token)
+    await switchAccount(accountInfo.email, accountInfo.token, force_kill)
     message.success(i18n.value.dashboard.accountChangeSuccess)
     addHistoryRecord(
       '账户切换',
@@ -237,41 +327,82 @@ const executeAccountSwitch = async () => {
       fetchCursorInfo()
     ])
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    if (errorMsg === 'Cursor进程正在运行，请先关闭Cursor') {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'account' }
+      return
+    }
     console.error('切换账户失败:', error)
     message.error(i18n.value.dashboard.accountChangeFailed)
   }
 }
 
-// 实际执行一键切换的函数
-const executeQuickChange = async () => {
+// 修改一键切换执行函数
+const executeQuickChange = async (force_kill: boolean = false) => {
   try {
-    await executeAccountSwitch()
-    await handleMachineCodeChange()
-    message.success(i18n.value.dashboard.changeSuccess)
+    await executeAccountSwitch(force_kill)
+    await handleMachineCodeChange(force_kill)
     addHistoryRecord(
       '一键切换',
       '完成账户和机器码的切换'
     )
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    if (errorMsg === 'Cursor进程正在运行，请先关闭Cursor') {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'quick' }
+      return
+    }
     message.error(i18n.value.dashboard.changeFailed)
   }
 }
 
-// 处理确认切换
-const handleConfirmSwitch = async () => {
-  showUnusedCreditsModal.value = false
-  if (pendingAction.value === 'account') {
-    await executeAccountSwitch()
-  } else if (pendingAction.value === 'quick') {
-    await executeQuickChange()
-  }
-  pendingAction.value = null
+// 修改 killCursorProcess 函数
+const handleKillCursorProcess = async () => {
+    try {
+        await killCursorProcess()
+        // 开始轮询检查进程状态
+        return await waitForCursorClose()
+    } catch (error) {
+        throw new Error('关闭 Cursor 失败')
+    }
 }
 
-// 处理取消切换
-const handleCancelSwitch = () => {
-  showUnusedCreditsModal.value = false
-  pendingAction.value = null
+// 修改强制关闭处理函数
+const handleForceKill = async () => {
+    showCursorRunningModal.value = false
+    if (!pendingForceKillAction.value) return
+
+    try {
+        loading.value = true
+        message.loading('正在关闭 Cursor...', { duration: 0 })
+        
+        await handleKillCursorProcess()
+        message.destroyAll() // 清除 loading 消息
+        
+        // 根据类型执行相应操作，但不再传入 force_kill 参数
+        switch (pendingForceKillAction.value.type) {
+            case 'machine':
+                await handleMachineCodeChange()
+                message.success(i18n.value.dashboard.machineChangeSuccess + '，正在清理进程，15秒后将自动重启Cursor')
+                break
+            case 'account':
+                await executeAccountSwitch()
+                message.success(i18n.value.dashboard.accountChangeSuccess + '，正在清理进程，15秒后将自动重启Cursor')
+                break
+            case 'quick':
+                await executeQuickChange()
+                message.success(i18n.value.dashboard.changeSuccess + '，正在清理进程，15秒后将自动重启Cursor')
+                break
+        }
+    } catch (error) {
+        message.destroyAll() // 清除 loading 消息
+        message.error('操作失败：' + (error instanceof Error ? error.message : String(error)))
+    } finally {
+        loading.value = false
+        pendingForceKillAction.value = null
+    }
 }
 
 const copyText = (text: string) => {
@@ -385,6 +516,9 @@ onMounted(async () => {
     }
   })
 })
+
+// 修改按钮点击处理函数
+const handleMachineCodeClick = () => handleMachineCodeChange(false)
 </script>
 
 <template>
@@ -540,7 +674,7 @@ onMounted(async () => {
           <n-button type="primary" @click="handleAccountSwitch" :disabled="!deviceInfo.userInfo">
             {{ i18n.dashboard.changeAccount }}
           </n-button>
-          <n-button type="primary" @click="handleMachineCodeChange">
+          <n-button type="primary" @click="handleMachineCodeClick">
             {{ i18n.dashboard.changeMachineCode }}
           </n-button>
         </n-space>
@@ -578,7 +712,6 @@ onMounted(async () => {
       </n-space>
     </n-modal>
 
-    <!-- 添加未使用积分提醒模态框 -->
     <n-modal
       v-model:show="showUnusedCreditsModal"
       preset="dialog"
@@ -596,6 +729,26 @@ onMounted(async () => {
           </n-button>
           <n-button type="primary" @click="handleConfirmSwitch">
             确认切换
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 添加 Cursor 运行提醒模态框 -->
+    <n-modal
+      v-model:show="showCursorRunningModal"
+      preset="dialog"
+      title="Cursor 正在运行"
+      :closable="true"
+      :mask-closable="false"
+    >
+      <template #default>
+        检测到 Cursor 正在运行，是否强制关闭并继续操作？
+      </template>
+      <template #action>
+        <n-space justify="end">
+          <n-button @click="handleForceKill">
+            强制关闭
           </n-button>
         </n-space>
       </template>

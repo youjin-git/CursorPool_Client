@@ -8,7 +8,7 @@ use tauri::{
 };
 
 use crate::cursor_reset::{
-    reset_machine_id_only,
+    reset_machine_id,
     commands::{get_current_account, switch_account}
 };
 
@@ -75,7 +75,7 @@ pub fn setup_system_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
                     // 换机器码
                     let app_handle = app.app_handle().clone();
                     tauri::async_runtime::spawn(async move {
-                        match reset_machine_id_only().await {
+                        match reset_machine_id(true).await {
                             Ok(_) => {
                                 if let Err(e) = app_handle.emit("machine-id-changed", ()) {
                                     eprintln!("发送机器码变更事件失败: {}", e);
