@@ -24,7 +24,7 @@ const { currentLang } = useI18n()
 const appWindow = new Window('main')
 
 // 登录状态管理
-const isLoggedIn = ref(!!localStorage.getItem('api_key'))
+const isLoggedIn = ref(!!localStorage.getItem('apiKey'))
 const showLoginOverlay = computed(() => !isLoggedIn.value)
 
 // 处理登录成功

@@ -20,9 +20,8 @@ import {
 import type { Language } from '../locales'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
 import { addHistoryRecord } from '../utils/history'
-
-// 本地版本号
-const LOCAL_VERSION = '0.2.0'
+import { version } from '../../package.json'
+const LOCAL_VERSION = version
 
 // 版本检查的时间间隔（毫秒）
 const VERSION_CHECK_INTERVAL = 3 * 60 * 60 * 1000 // 3小时
@@ -59,24 +58,6 @@ const message = useMessage()
 const { currentLang } = useI18n()
 const i18n = computed(() => messages[currentLang.value as Language])
 
-// 计算剩余时间
-const getRemainingTime = (expireTime: number) => {
-  if (!expireTime) return '0分钟'
-  const now = new Date().getTime()
-  // 将秒级时间戳转换为毫秒级
-  const expireTimeMs = expireTime * 1000
-  const diff = expireTimeMs - now
-  if (diff <= 0) return '已过期'
-  
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-  if (days > 0) {
-    return `${days}天`
-  }
-  const hours = Math.floor(diff / (1000 * 60 * 60))
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-  return `${hours}小时${minutes}分钟`
-}
-
 // 计算使用量百分比
 const getUsagePercentage = (used: number, total: number) => {
   if (!total) return 0
@@ -94,10 +75,10 @@ const levelMap: Record<number, { name: string; type: 'default' | 'info' | 'succe
 
 // 普通账户使用量百分比
 const accountUsagePercentage = computed(() => {
-  if (!deviceInfo.value.userInfo?.total_count) return 0
+  if (!deviceInfo.value.userInfo?.totalCount) return 0
   return getUsagePercentage(
-    deviceInfo.value.userInfo.used_count,
-    deviceInfo.value.userInfo.total_count
+    deviceInfo.value.userInfo.usedCount,
+    deviceInfo.value.userInfo.totalCount
   )
 })
 
@@ -119,7 +100,7 @@ const cursorGpt35Percentage = computed(() => {
 // 获取用户信息
 const fetchUserInfo = async () => {
   try {
-    const apiKey = localStorage.getItem('api_key')
+    const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
       throw new Error('未找到 API Key')
     }
@@ -135,8 +116,8 @@ const fetchMachineIds = async () => {
   try {
     const result = await getMachineIds()
 
-    deviceInfo.value.machineCode = result.machine_id
-    deviceInfo.value.currentAccount = result.current_account
+    deviceInfo.value.machineCode = result.machineId
+    deviceInfo.value.currentAccount = result.currentAccount
   } catch (error) {
     console.error('获取机器码失败:', error)
   }
@@ -290,7 +271,7 @@ const handleCancelSwitch = () => {
 // 修改账户切换执行函数
 const executeAccountSwitch = async (force_kill: boolean = false) => {
   try {
-    const apiKey = localStorage.getItem('api_key')
+    const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
       message.error(i18n.value.message.pleaseInputEmail)
       return
@@ -312,7 +293,7 @@ const executeAccountSwitch = async (force_kill: boolean = false) => {
       return
     }
 
-    localStorage.setItem('cache.cursor.userId', accountInfo.user_id)
+    localStorage.setItem('cache.cursor.userId', accountInfo.userId)
     localStorage.setItem('cache.cursor.token', accountInfo.token)
     
     await switchAccount(accountInfo.email, accountInfo.token, force_kill)
@@ -433,7 +414,7 @@ const compareVersions = (v1: string, v2: string) => {
 // 检查版本更新
 const checkUpdate = async () => {
   try {
-    const apiKey = localStorage.getItem('api_key')
+    const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) return
     
     // 检查上次更新提示的时间
@@ -452,8 +433,10 @@ const checkUpdate = async () => {
     
     if (compareVersions(LOCAL_VERSION, remoteVersionInfo.version) < 0) {
       showUpdateModal.value = true
-      // 更新检查时间
-      localStorage.setItem('last_version_check_time', now.toString())
+      // 只有在非强制更新时才更新检查时间
+      if (!remoteVersionInfo.forceUpdate) {
+        localStorage.setItem('last_version_check_time', now.toString())
+      }
     }
   } catch (error) {
     console.error('检查更新失败:', error)
@@ -462,6 +445,7 @@ const checkUpdate = async () => {
 
 // 处理下载更新
 const handleDownload = () => {
+  console.log(versionInfo.value?.downloadUrl)
   if (versionInfo.value?.downloadUrl) {
     window.open(versionInfo.value.downloadUrl, '_blank')
   }
@@ -536,16 +520,10 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                     style="font-size: 14px; cursor: pointer;" 
                     @click="deviceInfo.userInfo?.username && copyText(deviceInfo.userInfo.username)"
                   >{{ deviceInfo.userInfo?.username }}</span>
-                  <n-tag :type="deviceInfo.userInfo?.is_expired ? 'error' : 'success'" size="tiny" style="transform: scale(0.9)">
-                    {{ deviceInfo.userInfo?.is_expired ? '已过期' : getRemainingTime(deviceInfo.userInfo?.expire_time || 0) }}
+                  <n-tag :type="levelMap[deviceInfo.userInfo?.level || 1].type" size="tiny" style="transform: scale(0.9)">
+                    {{ levelMap[deviceInfo.userInfo?.level || 1].name }}
                   </n-tag>
                 </n-space>
-              </n-space>
-              <n-space :size="8" style="line-height: 1.2;">
-                <span style="width: 70px">会员等级</span>
-                <n-tag :type="levelMap[deviceInfo.userInfo?.level || 1].type" size="small">
-                  {{ levelMap[deviceInfo.userInfo?.level || 1].name }}
-                </n-tag>
               </n-space>
 
               <n-divider style="margin: 0" />
@@ -589,10 +567,10 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                 <n-space :size="0">
                   <n-number-animation 
                     :from="0" 
-                    :to="(deviceInfo.userInfo?.used_count || 0) * 150"
+                    :to="(deviceInfo.userInfo?.usedCount || 0) * 150"
                     :duration="1000"
                   />
-                  <span>/{{ (deviceInfo.userInfo?.total_count || 0) * 150 }}</span>
+                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 150 }}</span>
                 </n-space>
               </n-space>
               <n-progress
@@ -612,7 +590,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                 <span>高级模型使用量</span>
                 <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">
                   <n-number-animation 
-                    :from="0" 
+                    :from="0"
                     :to="deviceInfo.cursorInfo.usage['gpt-4']?.numRequests || 0"
                     :duration="1000"
                   />
@@ -743,12 +721,12 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
       :mask-closable="false"
     >
       <template #default>
-        检测到 Cursor 正在运行，是否强制关闭并继续操作？
+        检测到 Cursor 正在运行，请保存尚未更改的项目再继续操作!
       </template>
       <template #action>
         <n-space justify="end">
-          <n-button @click="handleForceKill">
-            强制关闭
+          <n-button type="warning" @click="handleForceKill">
+            我已保存，强制关闭
           </n-button>
         </n-space>
       </template>

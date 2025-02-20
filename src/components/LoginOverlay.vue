@@ -175,7 +175,7 @@ watch(() => formData.value.username, async (newValue) => {
       if (isRegisterMode.value && result.exists) {
         message.info(messages[currentLang.value].login.userExists)
         isRegisterMode.value = false
-        showVerifyCode.value = result.need_code
+        showVerifyCode.value = result.needCode
       }
       // 如果是登录模式,当用户不存在时只提示
       else if (!isRegisterMode.value && !result.exists) {
@@ -184,8 +184,8 @@ watch(() => formData.value.username, async (newValue) => {
       } 
       // 其他情况
       else {
-        // 注册模式始终显示验证码,登录模式根据need_code决定
-        showVerifyCode.value = isRegisterMode.value || result.need_code
+        // 注册模式始终显示验证码,登录模式根据needCode决定
+        showVerifyCode.value = isRegisterMode.value || result.needCode
       }
     } catch (error) {
       console.error('Check user failed:', error)
@@ -208,7 +208,7 @@ async function handleSendCode() {
     message.success('验证码已发送')
     
     // 开始倒计时
-    countDown.value = result.expire_in
+    countDown.value = result.expireIn
     const timer = setInterval(() => {
       countDown.value--
       if (countDown.value <= 0) {
@@ -267,8 +267,8 @@ async function handleSubmit() {
     }
 
     const result = await login(loginParams)
-    if (result.api_key) {
-      localStorage.setItem('api_key', result.api_key)
+    if (result.apiKey) {
+      localStorage.setItem('apiKey', result.apiKey)
       message.success(messages[currentLang.value].login.loginSuccess)
       emit('login-success')
     } else {

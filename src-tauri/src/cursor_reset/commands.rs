@@ -49,7 +49,7 @@ pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
         let updates = vec![
             ("device_id", new_ids.get("telemetry.devDeviceId").unwrap()),
             ("mac_id", new_ids.get("telemetry.macMachineId").unwrap()),
-            ("machine_id", new_ids.get("telemetry.machineId").unwrap()),
+            ("machineId", new_ids.get("telemetry.machineId").unwrap()),
             ("sqm_id", new_ids.get("telemetry.sqmId").unwrap())
         ];
         update_database(&paths.db, &updates)?;
@@ -138,8 +138,8 @@ pub fn get_current_account() -> Result<Value, String> {
 pub fn get_machine_ids() -> Result<Value, String> {
     let paths = AppPaths::new()?;
     let mut result = json!({
-        "machine_id": "",
-        "current_account": ""
+        "machineId": "",
+        "currentAccount": ""
     });
 
     // 从数据库读取机器码和 Cursor 邮箱
@@ -150,7 +150,7 @@ pub fn get_machine_ids() -> Result<Value, String> {
                 if let Ok(mut rows) = stmt.query([]) {
                     if let Ok(Some(row)) = rows.next() {
                         if let Ok(device_id) = row.get::<_, String>(0) {
-                            result["machine_id"] = json!(device_id);
+                            result["machineId"] = json!(device_id);
                         }
                     }
                 }
@@ -161,7 +161,7 @@ pub fn get_machine_ids() -> Result<Value, String> {
                 if let Ok(mut rows) = stmt.query([]) {
                     if let Ok(Some(row)) = rows.next() {
                         if let Ok(email) = row.get::<_, String>(0) {
-                            result["current_account"] = json!(email);
+                            result["currentAccount"] = json!(email);
                         }
                     }
                 }
@@ -198,7 +198,7 @@ fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl 
         let key = match key.as_ref() {
             "device_id" => "telemetry.devDeviceId",
             "mac_id" => "telemetry.macMachineId",
-            "machine_id" => "telemetry.machineId",
+            "machineId" => "telemetry.machineId",
             "sqm_id" => "telemetry.sqmId",
             _ => key.as_ref(),
         };

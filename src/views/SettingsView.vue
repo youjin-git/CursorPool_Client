@@ -45,7 +45,7 @@ const handleActivate = async () => {
 
   loading.value = true
   try {
-    const apiKey = localStorage.getItem('api_key')
+    const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
       throw new Error('未找到 API Key')
     }
@@ -77,7 +77,7 @@ const handlePasswordChange = async () => {
 
   loading.value = true
   try {
-    const apiKey = localStorage.getItem('api_key')
+    const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
       throw new Error('未找到 API Key')
     }
@@ -101,7 +101,7 @@ const handlePasswordChange = async () => {
 }
 
 const handleLogout = async () => {
-  localStorage.removeItem('api_key')
+  localStorage.removeItem('apiKey')
   await router.push('/dashboard')
   window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
   window.location.reload()

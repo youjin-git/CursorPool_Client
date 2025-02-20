@@ -7,11 +7,11 @@ export interface ApiResponse<T> {
 
 // 用户信息
 export interface UserInfo {
-  total_count: number
-  used_count: number
-  expire_time: number
+  totalCount: number
+  usedCount: number
+  expireTime: number
   level: number
-  is_expired: boolean
+  isExpired: boolean
   username: string
 }
 
@@ -19,14 +19,14 @@ export interface UserInfo {
 export interface AccountInfo {
   email: string
   token: string
-  used_count: number
-  total_limit: number
+  usedCount: number
+  totalLimit: number
 }
 
 // 账户详细信息
 export interface AccountDetail {
   email: string
-  user_id: string
+  userId: string
   token: string
 }
 
@@ -40,7 +40,7 @@ export interface LoginRequest {
 
 // 登录响应
 export interface LoginResponse {
-  api_key?: string
+  apiKey?: string
 }
 
 // 检查用户请求
@@ -51,7 +51,7 @@ export interface CheckUserRequest {
 // 检查用户响应
 export interface CheckUserResponse {
   exists: boolean
-  need_code: boolean
+  needCode: boolean
 }
 
 // 发送验证码请求
@@ -61,7 +61,7 @@ export interface SendCodeRequest {
 
 // 发送验证码响应
 export interface SendCodeResponse {
-  expire_in: number
+  expireIn: number
 }
 
 // 激活请求
@@ -71,7 +71,7 @@ export interface ActivateRequest {
 
 // 激活响应
 export interface ActivateResponse {
-  expire_time: number
+  expireTime: number
   level: number
 }
 
@@ -129,7 +129,7 @@ export interface CursorUserInfo {
   email_verified: boolean
   name: string
   sub: string
-  updated_at: string
+  updatedAt: string
   picture: string | null
 }
 
@@ -163,6 +163,6 @@ export interface DeviceInfo {
 
 // 机器码信息
 export interface MachineInfo {
-  machine_id: string
-  current_account: string
+  machineId: string
+  currentAccount: string
 }

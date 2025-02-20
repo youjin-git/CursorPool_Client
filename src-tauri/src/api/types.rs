@@ -19,10 +19,14 @@ pub struct ApiResponse<T> {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UserInfo {
+    #[serde(rename = "totalCount")]
     pub total_count: i32,
+    #[serde(rename = "usedCount")]
     pub used_count: i32,
+    #[serde(rename = "expireTime")]
     pub expire_time: i64,
     pub level: i32,
+    #[serde(rename = "isExpired")]
     pub is_expired: bool,
     pub username: String,
 }
@@ -32,7 +36,9 @@ pub struct UserInfo {
 pub struct AccountInfo {
     pub email: String,
     pub token: String,
+    #[serde(rename = "usedCount")]
     pub used_count: i32,
+    #[serde(rename = "totalLimit")]
     pub total_limit: i32,
 }
 
@@ -40,6 +46,7 @@ pub struct AccountInfo {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AccountDetail {
     pub email: String,
+    #[serde(rename = "userId")]
     pub user_id: String,
     pub token: String,
 }
@@ -49,13 +56,16 @@ pub struct AccountDetail {
 pub struct LoginRequest {
     pub username: String,
     pub password: String,
+    #[serde(rename = "deviceId")]
     pub device_id: String,
+    #[serde(rename = "smsCode")]
     pub sms_code: Option<String>,
 }
 
 // 登录响应
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginResponse {
+    #[serde(rename = "apiKey")]
     pub api_key: Option<String>,
 }
 
@@ -69,6 +79,7 @@ pub struct CheckUserRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CheckUserResponse {
     pub exists: bool,
+    #[serde(rename = "needCode")]
     pub need_code: bool,
 }
 
@@ -81,6 +92,7 @@ pub struct SendCodeRequest {
 // 发送验证码响应
 #[derive(Debug, Serialize, Deserialize)]
 pub struct SendCodeResponse {
+    #[serde(rename = "expireIn")]
     pub expire_in: i32,
 }
 
@@ -93,6 +105,7 @@ pub struct ActivateRequest {
 // 激活响应
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ActivateResponse {
+    #[serde(rename = "expireTime")]
     pub expire_time: i64,
     pub level: i32,
 }
@@ -108,8 +121,11 @@ pub struct ChangePasswordRequest {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VersionInfo {
     pub version: String,
+    #[serde(rename = "forceUpdate")]
     pub force_update: bool,
+    #[serde(rename = "downloadUrl")]
     pub download_url: String,
+    #[serde(rename = "changeLog")]
     pub change_log: String,
 }
 
@@ -138,10 +154,15 @@ pub struct PublicInfoAction {
 // GPT 模型使用情况
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GptModelUsage {
+    #[serde(rename = "numRequests")]
     pub num_requests: i32,
+    #[serde(rename = "numRequestsTotal")]
     pub num_requests_total: i32,
+    #[serde(rename = "numTokens")]
     pub num_tokens: i32,
+    #[serde(rename = "maxRequestUsage")]
     pub max_request_usage: Option<i32>,
+    #[serde(rename = "maxTokenUsage")]
     pub max_token_usage: Option<i32>,
 }
 
@@ -161,9 +182,11 @@ pub struct UserInfoResponse {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CursorUserInfo {
     pub email: String,
+    #[serde(rename = "email_verified")]
     pub email_verified: bool,
     pub name: String,
     pub sub: String,
+    #[serde(rename = "updated_at")]
     pub updated_at: String,
     pub picture: Option<String>,
 }

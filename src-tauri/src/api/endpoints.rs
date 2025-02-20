@@ -55,8 +55,8 @@ pub async fn login(
         .await
         .map_err(|e| e.to_string())?;
 
-    // 先解析为 ApiResponse<LoginResponse>
-    let api_response: ApiResponse<LoginResponse> = response.json().await.map_err(|e| e.to_string())?;
+    let api_response: ApiResponse<LoginResponse> = response.json().await
+        .map_err(|e| e.to_string())?;
     
     // 如果状态不是成功，返回错误
     if api_response.status != "success" {
@@ -161,9 +161,7 @@ pub async fn get_usage(
     client: State<'_, super::client::ApiClient>,
     token: String,
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
-    // 固定 user_id 不检测
     let user_id = "user_01000000000000000000000000";
-    
     let response = client
         .0
         .get("https://www.cursor.com/api/usage")
@@ -172,8 +170,7 @@ pub async fn get_usage(
         .await
         .map_err(|e| e.to_string())?;
 
-    let usage_info = response.json().await.map_err(|e| e.to_string())?;
-    
+    let usage_info: CursorUsageInfo = response.json().await.map_err(|e| e.to_string())?;
     Ok(ApiResponse {
         status: "success".to_string(),
         message: "获取使用情况成功".to_string(),
@@ -194,9 +191,7 @@ pub async fn get_user_info_cursor(
         .send()
         .await
         .map_err(|e| e.to_string())?;
-
-    let user_info = response.json().await.map_err(|e| e.to_string())?;
-    
+    let user_info: CursorUserInfo = response.json().await.map_err(|e| e.to_string())?;
     Ok(ApiResponse {
         status: "success".to_string(),
         message: "获取用户信息成功".to_string(),
@@ -215,7 +210,7 @@ pub async fn get_version(
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    serde_json::from_str(&response.text().await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())
 }
 
 #[tauri::command]

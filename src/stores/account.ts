@@ -31,12 +31,12 @@ export const useAccountStore = defineStore('account', () => {
 
   // 获取用户信息
   async function fetchUserInfo() {
-    const api_key = localStorage.getItem('api_key')
-    if (!api_key) return
+    const apiKey = localStorage.getItem('apiKey')
+    if (!apiKey) return
 
     try {
       loading.value = true
-      userInfo.value = await getUserInfo(api_key)
+      userInfo.value = await getUserInfo(apiKey)
     } catch (err) {
       error.value = err instanceof Error ? err.message : '获取用户信息失败'
       throw error.value
@@ -47,16 +47,16 @@ export const useAccountStore = defineStore('account', () => {
 
   // 获取账户信息
   async function fetchAccount() {
-    const api_key = localStorage.getItem('api_key')
-    if (!api_key) return
+    const apiKey = localStorage.getItem('apiKey')
+    if (!apiKey) return
 
     try {
       loading.value = true
-      const response = await getAccount(api_key)
+      const response = await getAccount(apiKey)
       
       // 保存当前账户信息到缓存
       if (response) {
-        localStorage.setItem('cache.cursor.userId', response.user_id)
+        localStorage.setItem('cache.cursor.userId', response.userId)
         localStorage.setItem('cache.cursor.token', response.token)
       }
       
@@ -86,7 +86,7 @@ export const useAccountStore = defineStore('account', () => {
       
       // 更新本地存储
       if (currentAccount.value) {
-        localStorage.setItem('cache.cursor.userId', currentAccount.value.user_id)
+        localStorage.setItem('cache.cursor.userId', currentAccount.value.userId)
         localStorage.setItem('cache.cursor.token', currentAccount.value.token)
       }
       
