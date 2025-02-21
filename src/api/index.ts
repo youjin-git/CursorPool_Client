@@ -222,3 +222,12 @@ export async function waitForCursorClose(timeout = 10000): Promise<boolean> {
     
     throw new ApiError('关闭 Cursor 超时')
 }
+
+// 管理员权限相关 API
+export async function checkAdminPrivileges(): Promise<boolean> {
+    try {
+        return await invoke<boolean>('check_admin_privileges')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to check admin privileges')
+    }
+}

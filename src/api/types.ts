@@ -165,4 +165,10 @@ export interface DeviceInfo {
 export interface MachineInfo {
   machineId: string
   currentAccount: string
+  cursorToken: string
+}
+
+// 管理员权限检查响应
+export interface AdminPrivilegesInfo {
+  isAdmin: boolean
 }

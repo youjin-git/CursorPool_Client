@@ -166,6 +166,17 @@ pub fn get_machine_ids() -> Result<Value, String> {
                     }
                 }
             }
+
+            // 读取cursor token
+            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/refreshToken'") {
+                if let Ok(mut rows) = stmt.query([]) {
+                    if let Ok(Some(row)) = rows.next() {
+                        if let Ok(token) = row.get::<_, String>(0) {
+                            result["cursorToken"] = json!(token);
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -188,6 +199,16 @@ pub async fn kill_cursor_process() -> Result<(), String> {
 pub fn check_cursor_running() -> Result<bool, String> {
     let process_manager = ProcessManager::new();
     Ok(process_manager.is_cursor_running())
+}
+
+#[tauri::command]
+pub fn check_admin_privileges() -> Result<bool, String> {
+    crate::utils::check_admin_privileges()
+}
+
+#[tauri::command]
+pub fn request_admin_privileges(exe_path: String) -> Result<bool, String> {
+    crate::utils::privileges::request_admin_privileges(&exe_path)
 }
 
 fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl AsRef<str>)]) -> Result<(), String> {

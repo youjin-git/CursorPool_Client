@@ -6,9 +6,27 @@ use dotenv::dotenv;
 use tauri::Builder;
 use tauri::generate_handler;
 use tauri::generate_context;
+use crate::utils::privileges::{check_admin_privileges, request_admin_privileges};
+use std::env;
 
 fn main() {
     dotenv().ok();  // 加载 .env 文件
+
+    // Windows 平台下检查管理员权限
+    #[cfg(target_os = "windows")]
+    {
+        if let Ok(false) = check_admin_privileges() {
+            let exe_path = env::current_exe()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_string();
+            
+            if let Ok(true) = request_admin_privileges(&exe_path) {
+                std::process::exit(0);
+            }
+        }
+    }
+
     Builder::default()
         .setup(|app| {
             tray::setup_system_tray(app)?;
@@ -32,6 +50,7 @@ fn main() {
             get_machine_ids,
             cursor_reset::commands::check_cursor_running,
             cursor_reset::commands::kill_cursor_process,
+            cursor_reset::commands::check_admin_privileges,
         ])
         .manage(api::ApiClient::default())
         .run(generate_context!())

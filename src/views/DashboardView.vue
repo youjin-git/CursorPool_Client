@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal } from 'naive-ui'
+import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon } from 'naive-ui'
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
@@ -9,18 +9,20 @@ import {
     resetMachineId, 
     switchAccount, 
     getMachineIds, 
-    getUserInfoCursor, 
     getUsage, 
     getAccount, 
     getVersion, 
     checkCursorRunning,
     killCursorProcess,
-    waitForCursorClose 
+    waitForCursorClose,
+    checkAdminPrivileges
 } from '@/api'
 import type { Language } from '../locales'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
 import { addHistoryRecord } from '../utils/history'
 import { version } from '../../package.json'
+import { WarningOutlined } from '@vicons/antd'
+import { Window } from '@tauri-apps/api/window'
 const LOCAL_VERSION = version
 
 // 版本检查的时间间隔（毫秒）
@@ -29,6 +31,7 @@ const VERSION_CHECK_INTERVAL = 3 * 60 * 60 * 1000 // 3小时
 interface DeviceInfoState {
   machineCode: string
   currentAccount: string
+  cursorToken: string
   userInfo: UserInfo | null
   cursorInfo: {
     userInfo: CursorUserInfo | null
@@ -45,11 +48,12 @@ const formatDate = (dateStr: string) => {
 const deviceInfo = ref<DeviceInfoState>({
   machineCode: '',
   currentAccount: '',
+  cursorToken: '',
   userInfo: null,
   cursorInfo: {
     userInfo: null,
     usage: null
-  }
+  },
 })
 
 const loading = ref(true)
@@ -118,6 +122,7 @@ const fetchMachineIds = async () => {
 
     deviceInfo.value.machineCode = result.machineId
     deviceInfo.value.currentAccount = result.currentAccount
+    deviceInfo.value.cursorToken = result.cursorToken
   } catch (error) {
     console.error('获取机器码失败:', error)
   }
@@ -126,18 +131,23 @@ const fetchMachineIds = async () => {
 // 获取 Cursor 账户信息
 async function fetchCursorInfo() {
   try {
-    const userId = localStorage.getItem('cache.cursor.userId')
-    const token = localStorage.getItem('cache.cursor.token')
-    
-    if (!userId || !token) {
+    const token = deviceInfo.value.cursorToken
+    if (!token) {
+      console.error('未找到 Cursor Token')
       return
     }
 
-    const userInfoData = await getUserInfoCursor(userId, token)
     const usageData = await getUsage(token)
     
     deviceInfo.value.cursorInfo = {
-      userInfo: userInfoData,
+      userInfo: {
+        email: deviceInfo.value.currentAccount,
+        email_verified: true,
+        name: deviceInfo.value.currentAccount.split('@')[0],
+        sub: '',
+        updatedAt: new Date().toISOString(),
+        picture: null
+      },
       usage: usageData
     }
   } catch (error) {
@@ -190,7 +200,6 @@ const checkUnusedCredits = () => {
   const gpt4Usage = deviceInfo.value.cursorInfo.usage['gpt-4']
   if (gpt4Usage && gpt4Usage.maxRequestUsage) {
     const remaining = gpt4Usage.maxRequestUsage - gpt4Usage.numRequests
-    console.log('Remaining credits:', remaining) // 添加调试日志
     if (remaining > 140) {
       unusedCredits.value = remaining
       showUnusedCreditsModal.value = true
@@ -445,7 +454,6 @@ const checkUpdate = async () => {
 
 // 处理下载更新
 const handleDownload = () => {
-  console.log(versionInfo.value?.downloadUrl)
   if (versionInfo.value?.downloadUrl) {
     window.open(versionInfo.value.downloadUrl, '_blank')
   }
@@ -456,6 +464,28 @@ const handleLater = () => {
   showUpdateModal.value = false
   // 记录关闭时间
   localStorage.setItem('last_version_check_time', Date.now().toString())
+}
+
+// 添加新的 ref
+const showAdminPrivilegeModal = ref(false)
+
+// 检查管理员权限
+const checkPrivileges = async () => {
+  try {
+    const isAdmin = await checkAdminPrivileges()
+    if (!isAdmin) {
+      showAdminPrivilegeModal.value = true
+    }
+  } catch (error) {
+    console.error('检查管理员权限失败:', error)
+    message.error('检查管理员权限失败')
+  }
+}
+
+// 退出程序
+const handleExit = async () => {
+  const appWindow = new Window('main')
+  await appWindow.close()
 }
 
 // 在组件挂载时获取所有信息
@@ -470,12 +500,13 @@ onMounted(async () => {
     localStorage.removeItem('need_refresh_dashboard')
 
     loading.value = true
-    await Promise.all([
-      fetchUserInfo(),
-      fetchMachineIds(),
-      fetchCursorInfo()
-    ])
+    // 按顺序执行
+    await fetchUserInfo()
+    await fetchMachineIds()
+    await fetchCursorInfo()
+    
     await checkUpdate()
+    await checkPrivileges()
   } catch (error) {
     console.error('获取信息失败:', error)
     message.error('获取信息失败')
@@ -487,11 +518,9 @@ onMounted(async () => {
   window.addEventListener('refresh_dashboard_data', async () => {
     try {
       loading.value = true
-      await Promise.all([
-        fetchUserInfo(),
-        fetchMachineIds(),
-        fetchCursorInfo()
-      ])
+      await fetchUserInfo()
+      await fetchMachineIds()
+      await fetchCursorInfo()
     } catch (error) {
       console.error('刷新数据失败:', error)
       message.error('刷新数据失败')
@@ -567,10 +596,10 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                 <n-space :size="0">
                   <n-number-animation 
                     :from="0" 
-                    :to="(deviceInfo.userInfo?.usedCount || 0) * 150"
+                    :to="(deviceInfo.userInfo?.usedCount || 0) * 50"
                     :duration="1000"
                   />
-                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 150 }}</span>
+                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 50 }}</span>
                 </n-space>
               </n-space>
               <n-progress
@@ -729,6 +758,36 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
             我已保存，强制关闭
           </n-button>
         </n-space>
+      </template>
+    </n-modal>
+
+    <!-- 添加管理员权限提示模态框 -->
+    <n-modal
+      v-model:show="showAdminPrivilegeModal"
+      preset="dialog"
+      title="需要管理员权限"
+      :closable="false"
+      :mask-closable="false"
+      style="width: 500px"
+    >
+      <template #header>
+        <n-space align="center">
+          <n-icon size="24" color="#f0a020">
+            <warning-outlined />
+          </n-icon>
+          <span>需要管理员权限</span>
+        </n-space>
+      </template>
+      <div style="margin: 24px 0;">
+        <p>本程序需要管理员权限才能正常运行。</p>
+        <p style="margin-top: 12px; color: #999;">
+          请右键点击程序图标,选择"以管理员身份运行"后重新启动程序。
+        </p>
+      </div>
+      <template #action>
+        <n-button type="error" @click="handleExit" block>
+          退出程序
+        </n-button>
       </template>
     </n-modal>
   </n-space>

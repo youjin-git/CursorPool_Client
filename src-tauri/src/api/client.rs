@@ -19,5 +19,5 @@ impl Default for ApiClient {
 
 // 从环境变量获取基础 URL
 pub fn get_base_url() -> String {
-    "https://auth.52ai.org/api".to_string()
+    "https://160.202.247.109:444/api".to_string()
 }
