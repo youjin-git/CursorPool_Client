@@ -5,6 +5,7 @@ use crate::utils::paths::AppPaths;
 use crate::utils::id_generator::generate_new_ids;
 use crate::utils::ProcessManager;
 use std::thread;
+use crate::utils::UpdateBlocker;
 
 #[tauri::command]
 pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
@@ -209,6 +210,68 @@ pub fn check_admin_privileges() -> Result<bool, String> {
 #[tauri::command]
 pub fn request_admin_privileges(exe_path: String) -> Result<bool, String> {
     crate::utils::privileges::request_admin_privileges(&exe_path)
+}
+
+/// 禁用 Cursor 自动更新
+#[tauri::command]
+pub async fn disable_cursor_update(force_kill: bool) -> Result<(), String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查 Cursor 进程
+    if !force_kill && process_manager.is_cursor_running() {
+        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+    }
+
+    // 如果 force_kill 为 true，则强制终止 Cursor 进程
+    if force_kill {
+        process_manager.kill_cursor_processes()?;
+    }
+
+    let paths = AppPaths::new()?;
+    let blocker = UpdateBlocker::new();
+    
+    match blocker.disable_auto_update(&paths.cursor_updater) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("禁用自动更新失败: {}", e))
+    }
+}
+
+/// 恢复 Cursor 自动更新
+#[tauri::command]
+pub async fn restore_cursor_update(force_kill: bool) -> Result<(), String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查 Cursor 进程
+    if !force_kill && process_manager.is_cursor_running() {
+        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+    }
+
+    // 如果 force_kill 为 true，则强制终止 Cursor 进程
+    if force_kill {
+        process_manager.kill_cursor_processes()?;
+    }
+
+    let paths = AppPaths::new()?;
+    let blocker = UpdateBlocker::new();
+    
+    match blocker.restore_auto_update(&paths.cursor_updater) {
+        Ok(_) => Ok(()),
+        Err(e) => Err(format!("恢复自动更新失败: {}", e))
+    }
+}
+
+/// 检查 Cursor 是否被禁止更新
+#[tauri::command]
+pub fn check_update_disabled() -> Result<bool, String> {
+    let paths = AppPaths::new()?;
+    
+    // 检查更新器路径是否存在
+    if !paths.cursor_updater.exists() {
+        return Ok(false);
+    }
+
+    // 如果是文件而不是目录，说明已被禁用
+    Ok(!paths.cursor_updater.is_dir())
 }
 
 fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl AsRef<str>)]) -> Result<(), String> {

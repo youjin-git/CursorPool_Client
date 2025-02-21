@@ -231,3 +231,36 @@ export async function checkAdminPrivileges(): Promise<boolean> {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to check admin privileges')
     }
 }
+
+// Cursor 更新控制相关 API
+export async function disableCursorUpdate(force_kill: boolean = false): Promise<void> {
+    try {
+        await invoke<void>('disable_cursor_update', { forceKill: force_kill })
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Failed to disable cursor update'
+        if (errorMsg.includes('Cursor进程正在运行')) {
+            throw new Error('请先关闭 Cursor 或选择强制终止进程')
+        }
+        throw error
+    }
+}
+
+export async function restoreCursorUpdate(force_kill: boolean = false): Promise<void> {
+    try {
+        await invoke<void>('restore_cursor_update', { forceKill: force_kill })
+    } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : 'Failed to restore cursor update'
+        if (errorMsg.includes('Cursor进程正在运行')) {
+            throw new Error('请先关闭 Cursor 或选择强制终止进程')
+        }
+        throw error
+    }
+}
+
+export async function checkUpdateDisabled(): Promise<boolean> {
+    try {
+        return await invoke<boolean>('check_update_disabled')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to check update status')
+    }
+}

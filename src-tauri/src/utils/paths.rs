@@ -6,6 +6,7 @@ pub struct AppPaths {
     pub auth: PathBuf,
     pub db: PathBuf,
     pub cursor_exe: PathBuf,
+    pub cursor_updater: PathBuf,
 }
 
 impl AppPaths {
@@ -56,11 +57,32 @@ impl AppPaths {
             PathBuf::from("/usr/bin/cursor")  // Linux 默认路径
         };
 
+        // 获取 cursor-updater 路径
+        let cursor_updater = if cfg!(target_os = "windows") {
+            let local_app_data = std::env::var("LOCALAPPDATA")
+                .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
+            PathBuf::from(local_app_data).join("cursor-updater")
+        } else if cfg!(target_os = "macos") {
+            let home = std::env::var("HOME")
+                .map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
+            PathBuf::from(home)
+                .join("Library")
+                .join("Application Support")
+                .join("cursor-updater")
+        } else {
+            let home = std::env::var("HOME")
+                .map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
+            PathBuf::from(home)
+                .join(".config")
+                .join("cursor-updater")
+        };
+
         let paths = Self {
             storage: global_storage.join("storage.json"),
             auth: global_storage.join("cursor.auth.json"),
             db: global_storage.join("state.vscdb"),
             cursor_exe,
+            cursor_updater,
         };
 
         // 确保目录存在
@@ -92,5 +114,28 @@ impl AppPaths {
             .map_err(|e| format!("启动 Cursor 失败: {}", e))?;
 
         Ok(())
+    }
+
+    // 新增：检查 cursor-updater 路径
+    pub fn check_cursor_updater(&self) -> Result<(), String> {
+        if !self.cursor_updater.exists() {
+            return Err("cursor-updater 路径不存在".to_string());
+        }
+
+        if self.cursor_updater.is_file() {
+            Ok(())
+        } else if self.cursor_updater.is_dir() {
+            // 可选：列出目录内容用于调试
+            if let Ok(entries) = std::fs::read_dir(&self.cursor_updater) {
+                for entry in entries {
+                    if let Ok(entry) = entry {
+                        println!("- {:?}", entry.path());
+                    }
+                }
+            }
+            Ok(())
+        } else {
+            Err("cursor-updater 路径既不是文件也不是目录".to_string())
+        }
     }
 }

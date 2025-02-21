@@ -51,6 +51,9 @@ fn main() {
             cursor_reset::commands::check_cursor_running,
             cursor_reset::commands::kill_cursor_process,
             cursor_reset::commands::check_admin_privileges,
+            cursor_reset::commands::disable_cursor_update,
+            cursor_reset::commands::restore_cursor_update,
+            cursor_reset::commands::check_update_disabled,
         ])
         .manage(api::ApiClient::default())
         .run(generate_context!())

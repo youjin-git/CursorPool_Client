@@ -172,3 +172,8 @@ export interface MachineInfo {
 export interface AdminPrivilegesInfo {
   isAdmin: boolean
 }
+
+// Cursor 更新状态
+export interface UpdateStatus {
+  isDisabled: boolean
+}

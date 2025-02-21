@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 import { 
   NCard, 
   NSpace, 
@@ -8,13 +8,21 @@ import {
   NInput, 
   NButton,
   NInputGroup,
+  NModal,
   useMessage
 } from 'naive-ui'
 import { useRouter } from 'vue-router'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
-import { changePassword, activate } from '@/api'
+import { 
+  changePassword, 
+  activate, 
+  checkCursorRunning,
+  disableCursorUpdate,
+  restoreCursorUpdate,
+  checkUpdateDisabled
+} from '@/api'
 import { addHistoryRecord } from '../utils/history'
 
 const router = useRouter()
@@ -36,6 +44,12 @@ const formValue = ref<SettingsForm>({
 })
 
 const loading = ref(false)
+
+// 添加更新控制相关的状态
+const updateDisabled = ref(false)
+const showCursorRunningModal = ref(false)
+const pendingAction = ref<'disable' | 'restore' | null>(null)
+const updateLoading = ref(false)
 
 const handleActivate = async () => {
   if (!formValue.value.activationCode) {
@@ -106,6 +120,79 @@ const handleLogout = async () => {
   window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
   window.location.reload()
 }
+
+// 检查更新状态
+const checkUpdateStatus = async () => {
+  try {
+    updateDisabled.value = await checkUpdateDisabled()
+  } catch (error) {
+    console.error('检查更新状态失败:', error)
+  }
+}
+
+// 处理禁用更新
+const handleDisableUpdate = async (force_kill: boolean = false) => {
+  try {
+    updateLoading.value = true
+    if (!force_kill) {
+      const isRunning = await checkCursorRunning()
+      if (isRunning) {
+        showCursorRunningModal.value = true
+        pendingAction.value = 'disable'
+        return
+      }
+    }
+    
+    await disableCursorUpdate(force_kill)
+    message.success('成功禁用自动更新')
+    await checkUpdateStatus()
+    showCursorRunningModal.value = false
+    addHistoryRecord('更新控制', '禁用自动更新')
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '禁用自动更新失败')
+  } finally {
+    updateLoading.value = false
+  }
+}
+
+// 处理恢复更新
+const handleRestoreUpdate = async (force_kill: boolean = false) => {
+  try {
+    updateLoading.value = true
+    if (!force_kill) {
+      const isRunning = await checkCursorRunning()
+      if (isRunning) {
+        showCursorRunningModal.value = true
+        pendingAction.value = 'restore'
+        return
+      }
+    }
+    
+    await restoreCursorUpdate(force_kill)
+    message.success('成功恢复自动更新')
+    await checkUpdateStatus()
+    showCursorRunningModal.value = false
+    addHistoryRecord('更新控制', '恢复自动更新')
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '恢复自动更新失败')
+  } finally {
+    updateLoading.value = false
+  }
+}
+
+// 处理强制关闭
+const handleForceKill = async () => {
+  if (pendingAction.value === 'disable') {
+    await handleDisableUpdate(true)
+  } else if (pendingAction.value === 'restore') {
+    await handleRestoreUpdate(true)
+  }
+}
+
+// 在组件挂载时检查更新状态
+onMounted(async () => {
+  await checkUpdateStatus()
+})
 </script>
 
 <template>
@@ -200,9 +287,55 @@ const handleLogout = async () => {
       </n-form>
     </n-card>
 
+    <n-card title="更新控制">
+      <n-space vertical>
+        <n-space justify="space-between">
+          <span>自动更新状态：{{ updateDisabled ? '已禁用' : '已启用' }}</span>
+          <n-space>
+            <n-button 
+              type="warning" 
+              :loading="updateLoading"
+              :disabled="updateDisabled"
+              @click="handleDisableUpdate()"
+            >
+              禁用自动更新
+            </n-button>
+            <n-button 
+              type="primary"
+              :loading="updateLoading"
+              :disabled="!updateDisabled"
+              @click="handleRestoreUpdate()"
+            >
+              恢复自动更新
+            </n-button>
+          </n-space>
+        </n-space>
+      </n-space>
+    </n-card>
+
     <n-card :title="messages[currentLang].settings.about">
       <p>Cursor Pool v0.1.0</p>
       <p> 2024 All Rights Reserved</p>
     </n-card>
+
+    <!-- 添加 Cursor 运行提醒模态框 -->
+    <n-modal
+      v-model:show="showCursorRunningModal"
+      preset="dialog"
+      title="Cursor 正在运行"
+      :closable="true"
+      :mask-closable="false"
+    >
+      <template #default>
+        检测到 Cursor 正在运行，请保存尚未更改的项目再继续操作!
+      </template>
+      <template #action>
+        <n-space justify="end">
+          <n-button type="warning" @click="handleForceKill">
+            我已保存，强制关闭
+          </n-button>
+        </n-space>
+      </template>
+    </n-modal>
   </n-space>
 </template>

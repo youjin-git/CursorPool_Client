@@ -15,7 +15,8 @@ import {
     checkCursorRunning,
     killCursorProcess,
     waitForCursorClose,
-    checkAdminPrivileges
+    checkAdminPrivileges,
+    checkUpdateDisabled
 } from '@/api'
 import type { Language } from '../locales'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
@@ -488,6 +489,9 @@ const handleExit = async () => {
   await appWindow.close()
 }
 
+// 添加更新状态 ref
+const updateDisabled = ref(false)
+
 // 在组件挂载时获取所有信息
 onMounted(async () => {
   try {
@@ -507,6 +511,9 @@ onMounted(async () => {
     
     await checkUpdate()
     await checkPrivileges()
+    
+    // 检查更新状态
+    updateDisabled.value = await checkUpdateDisabled()
   } catch (error) {
     console.error('获取信息失败:', error)
     message.error('获取信息失败')
@@ -575,6 +582,12 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                   style="font-size: 14px; cursor: pointer;" 
                   @click="copyText(deviceInfo.cursorInfo.usage?.startOfMonth ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth) : '')"
                 >{{ deviceInfo.cursorInfo.usage?.startOfMonth ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth) : '未知' }}</span>
+              </n-space>
+              <n-space :size="8" style="line-height: 1.2;">
+                <span style="width: 70px">CC状态</span>
+                <n-tag :type="updateDisabled ? 'success' : 'error'" size="small">
+                  {{ updateDisabled ? '已禁用自动更新' : '未禁用自动更新' }}
+                </n-tag>
               </n-space>
               <span 
                 style="font-size: 12px; color: #999; word-break: break-all; text-align: center; cursor: pointer;" 
