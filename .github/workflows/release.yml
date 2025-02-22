@@ -1,9 +1,11 @@
-name: Release Build
+name: Release
+run-name: ${{ github.ref_name }}
 
 on:
   workflow_dispatch:
-  release:
-    types: [created]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -31,8 +33,18 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Get Version
-        id: get_version
+      - name: Get Version (Windows)
+        if: matrix.platform == 'windows-latest'
+        id: get_version_windows
+        shell: pwsh
+        run: |
+          $VERSION = (node -p "require('./package.json').version")
+          echo "version=v$VERSION" >> $env:GITHUB_OUTPUT
+
+      - name: Get Version (Unix)
+        if: matrix.platform != 'windows-latest'
+        id: get_version_unix
+        shell: bash
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=v$VERSION" >> $GITHUB_OUTPUT
@@ -55,12 +67,24 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Create Release
+        if: matrix.platform == 'macos-14'  # 只在一个平台上创建 release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_version_unix.outputs.version }}
+          release_name: ${{ steps.get_version_unix.outputs.version }}
+          draft: false
+          prerelease: false
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ steps.get_version.outputs.version }}
-          releaseName: ${{ steps.get_version.outputs.version }}
+          tagName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
+          releaseName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
