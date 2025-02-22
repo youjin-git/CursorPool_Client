@@ -311,7 +311,7 @@ const executeAccountSwitch = async (force_kill: boolean = false) => {
     message.success(i18n.value.dashboard.accountChangeSuccess)
     addHistoryRecord(
       '账户切换',
-      `切换到账户: ${accountInfo.email} 扣除150积分`
+      `切换到账户: ${accountInfo.email} 扣除50积分`
     )
     await Promise.all([
       fetchUserInfo(),
@@ -335,10 +335,6 @@ const executeQuickChange = async (force_kill: boolean = false) => {
   try {
     await executeAccountSwitch(force_kill)
     await handleMachineCodeChange(force_kill)
-    addHistoryRecord(
-      '一键切换',
-      '完成账户和机器码的切换'
-    )
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
@@ -514,8 +510,8 @@ onMounted(async () => {
     await fetchMachineIds()
     await fetchCursorInfo()
     
-    await checkUpdate()
     await checkPrivileges()
+    await checkUpdate()
     
     // 检查更新状态
     updateDisabled.value = await checkUpdateDisabled()
@@ -617,10 +613,10 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                 <n-space :size="0">
                   <n-number-animation 
                     :from="0" 
-                    :to="(deviceInfo.userInfo?.usedCount || 0) * 150"
+                    :to="(deviceInfo.userInfo?.usedCount || 0) * 50"0
                     :duration="1000"
                   />
-                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 150 }}</span>
+                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 50 }}</span>
                 </n-space>
               </n-space>
               <n-progress
@@ -748,7 +744,10 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
       :mask-closable="false"
     >
       <template #default>
-        您还有 {{ unusedCredits }} 次高级模型使用次数未使用, 确定要切换账号吗？
+        <p>您还有 {{ unusedCredits }} 次高级模型使用次数未使用</p>
+        <p style="margin-top: 12px; color: #666;">
+          {{ pendingAction === 'quick' ? '一键切换将扣除50积分' : '切换账号将扣除50积分' }}，确定要继续吗？
+        </p>
       </template>
       <template #action>
         <n-space justify="end">

@@ -10,6 +10,5 @@ pub mod tray;
 pub use cursor_reset::{
     reset_machine_id,
     switch_account,
-    get_current_account,
     get_machine_ids,
 };

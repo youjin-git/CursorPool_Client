@@ -1,6 +1,7 @@
 use std::fs;
 use std::path::Path;
 use std::io::Error;
+use std::process::Command;
 
 /// 检查文件是否是只读
 pub fn is_read_only(path: &Path) -> Result<bool, Error> {
@@ -10,17 +11,59 @@ pub fn is_read_only(path: &Path) -> Result<bool, Error> {
 
 /// 设置文件为只读
 pub fn set_read_only(path: &Path) -> Result<(), Error> {
-    let mut permissions = fs::metadata(path)?.permissions();
-    permissions.set_readonly(true);
-    fs::set_permissions(path, permissions)?;
+    if cfg!(target_os = "macos") {
+        // 使用 osascript 获取 root 权限设置只读
+        let script = format!(
+            "do shell script \"chmod a-w '{}'\" with administrator privileges",
+            path.to_string_lossy()
+        );
+
+        let output = Command::new("osascript")
+            .arg("-e")
+            .arg(script)
+            .output()
+            .map_err(|e| Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+
+        if !output.status.success() {
+            return Err(Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                format!("设置只读失败: {}", String::from_utf8_lossy(&output.stderr)),
+            ));
+        }
+    } else {
+        let mut permissions = fs::metadata(path)?.permissions();
+        permissions.set_readonly(true);
+        fs::set_permissions(path, permissions)?;
+    }
     Ok(())
 }
 
 /// 取消文件只读属性
 pub fn unset_read_only(path: &Path) -> Result<(), Error> {
-    let mut permissions = fs::metadata(path)?.permissions();
-    permissions.set_readonly(false);
-    fs::set_permissions(path, permissions)?;
+    if cfg!(target_os = "macos") {
+        // 使用 osascript 获取 root 权限取消只读
+        let script = format!(
+            "do shell script \"chmod u+w '{}'\" with administrator privileges",
+            path.to_string_lossy()
+        );
+
+        let output = Command::new("osascript")
+            .arg("-e")
+            .arg(script)
+            .output()
+            .map_err(|e| Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+
+        if !output.status.success() {
+            return Err(Error::new(
+                std::io::ErrorKind::PermissionDenied,
+                format!("取消只读失败: {}", String::from_utf8_lossy(&output.stderr)),
+            ));
+        }
+    } else {
+        let mut permissions = fs::metadata(path)?.permissions();
+        permissions.set_readonly(false);
+        fs::set_permissions(path, permissions)?;
+    }
     Ok(())
 }
 

@@ -20,7 +20,7 @@ impl UpdateBlocker {
 
         match std::env::consts::OS {
             "windows" => self.disable_windows_update(updater_path),
-            "macos" => self.disable_macos_update(updater_path),
+            "macos" => self.disable_macos_update(),
             "linux" => self.disable_linux_update(updater_path),
             _ => Err("不支持的操作系统".to_string()),
         }
@@ -196,43 +196,28 @@ impl UpdateBlocker {
     }
 
     /// macOS 平台禁用更新
-    fn disable_macos_update(&self, updater_path: &PathBuf) -> Result<(), String> {
-        // 原有的更新器处理
-        Command::new("sudo")
-            .args(&[
-                "sh",
-                "-c",
-                &format!(
-                    "rm -rf '{}' && \
-                     touch '{}' && \
-                     chmod 444 '{}'",
-                    updater_path.to_string_lossy(),
-                    updater_path.to_string_lossy(),
-                    updater_path.to_string_lossy()
-                ),
-            ])
-            .output()
-            .map_err(|e| format!("执行更新器命令失败: {}", e))?;
-
-        // 处理 app-update.yml
+    fn disable_macos_update(&self) -> Result<(), String> {
+        // 处理 app-update.yml 文件
         let app_path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app-update.yml");
         if app_path.exists() {
-            Command::new("sudo")
-                .args(&[
-                    "sh",
-                    "-c",
-                    &format!(
-                        "mv '{}' '{}.backup' 2>/dev/null || true && \
-                         touch '{}' && \
-                         chmod a-w '{}'",
-                        app_path.to_string_lossy(),
-                        app_path.to_string_lossy(),
-                        app_path.to_string_lossy(),
-                        app_path.to_string_lossy()
-                    ),
-                ])
+            // 使用 osascript 获取 root 权限处理文件
+            let script = format!(
+                "do shell script \"mv '{}' '{}.backup' && touch '{}' && chmod a-w '{}'\" with administrator privileges",
+                app_path.to_string_lossy(),
+                app_path.to_string_lossy(),
+                app_path.to_string_lossy(),
+                app_path.to_string_lossy()
+            );
+
+            let output = Command::new("osascript")
+                .arg("-e")
+                .arg(script)
                 .output()
-                .map_err(|e| format!("处理配置文件失败: {}", e))?;
+                .map_err(|e| format!("执行 osascript 失败: {}", e))?;
+
+            if !output.status.success() {
+                return Err(format!("处理配置文件失败: {}", String::from_utf8_lossy(&output.stderr)));
+            }
         }
 
         Ok(())
@@ -265,7 +250,7 @@ impl UpdateBlocker {
     pub fn restore_auto_update(&self, updater_path: &PathBuf) -> Result<(), String> {
         match std::env::consts::OS {
             "windows" => self.restore_windows_update(updater_path),
-            "macos" => self.restore_macos_update(updater_path),
+            "macos" => self.restore_macos_update(),
             "linux" => self.restore_linux_update(updater_path),
             _ => Err("不支持的操作系统".to_string()),
         }
@@ -336,48 +321,27 @@ impl UpdateBlocker {
     }
 
     /// macOS 平台恢复更新
-    fn restore_macos_update(&self, updater_path: &PathBuf) -> Result<(), String> {
-        // 恢复更新器
-        Command::new("sudo")
-            .args(&[
-                "sh",
-                "-c",
-                &format!(
-                    "rm -f '{}' && \
-                     if [ -f '{}.zip' ]; then \
-                         unzip '{}.zip' -d '{}' && \
-                         rm '{}.zip'; \
-                     fi",
-                    updater_path.to_string_lossy(),
-                    updater_path.to_string_lossy(),
-                    updater_path.to_string_lossy(),
-                    updater_path.parent().unwrap().to_string_lossy(),
-                    updater_path.to_string_lossy()
-                ),
-            ])
-            .output()
-            .map_err(|e| format!("恢复更新器失败: {}", e))?;
-
-        // 恢复 app-update.yml
+    fn restore_macos_update(&self) -> Result<(), String> {
+        // 恢复 app-update.yml 文件
         let app_path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app-update.yml");
         if app_path.exists() {
-            Command::new("sudo")
-                .args(&[
-                    "sh",
-                    "-c",
-                    &format!(
-                        "rm -f '{}' && \
-                         if [ -f '{}.backup' ]; then \
-                             mv '{}.backup' '{}'; \
-                         fi",
-                        app_path.to_string_lossy(),
-                        app_path.to_string_lossy(),
-                        app_path.to_string_lossy(),
-                        app_path.to_string_lossy()
-                    ),
-                ])
+            // 使用 osascript 获取 root 权限处理文件
+            let script = format!(
+                "do shell script \"rm -f '{}' && mv '{}.backup' '{}'\" with administrator privileges",
+                app_path.to_string_lossy(),
+                app_path.to_string_lossy(),
+                app_path.to_string_lossy()
+            );
+
+            let output = Command::new("osascript")
+                .arg("-e")
+                .arg(script)
                 .output()
-                .map_err(|e| format!("恢复配置文件失败: {}", e))?;
+                .map_err(|e| format!("执行 osascript 失败: {}", e))?;
+
+            if !output.status.success() {
+                return Err(format!("恢复配置文件失败: {}", String::from_utf8_lossy(&output.stderr)));
+            }
         }
 
         Ok(())

@@ -176,14 +176,6 @@ export async function switchAccount(email: string, token: string, force_kill: bo
     }
 }
 
-export async function getCurrentAccount(): Promise<string> {
-    try {
-        return await invoke<string>('get_current_account')
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get current account')
-    }
-}
-
 export async function getMachineIds(): Promise<MachineInfo> {
     try {
         return await invoke<MachineInfo>('get_machine_ids')

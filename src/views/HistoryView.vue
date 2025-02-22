@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import { NCard, NDataTable, NSpace, NDatePicker } from 'naive-ui'
+import { NCard, NDataTable, NSpace, NDatePicker, NButton, useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import type { OperationRecord } from '../types/history'
 
 const { currentLang, i18n } = useI18n()
+const message = useMessage()
 
 const records = ref<OperationRecord[]>([])
 const dateRange = ref<[number, number] | null>(null)
@@ -15,6 +16,19 @@ const dateRange = ref<[number, number] | null>(null)
 const loadHistory = () => {
   const history = JSON.parse(localStorage.getItem('operation_history') || '[]')
   records.value = history
+}
+
+// 清除历史记录
+const clearHistory = () => {
+  try {
+    localStorage.setItem('operation_history', '[]')
+    records.value = []
+    message.success(i18n.value.history.clearSuccess)
+    // 触发历史记录更新事件
+    window.dispatchEvent(new Event('history_updated'))
+  } catch (error) {
+    message.error(i18n.value.history.clearFailed)
+  }
 }
 
 // 监听历史记录更新
@@ -55,13 +69,20 @@ const columns: DataTableColumns<OperationRecord> = [
 <template>
   <n-space vertical :size="24">
     <n-card :title="messages[currentLang].history.filter">
-      <n-space>
+      <n-space justify="space-between">
         <n-date-picker
           v-model:value="dateRange"
           type="daterange"
           clearable
           :placeholder="i18n.history.datePlaceholder"
         />
+        <n-button 
+          type="error" 
+          @click="clearHistory"
+          :disabled="records.length === 0"
+        >
+          {{ i18n.history.clearHistory }}
+        </n-button>
       </n-space>
     </n-card>
 

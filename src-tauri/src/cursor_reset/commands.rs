@@ -98,22 +98,6 @@ pub async fn switch_account(
 }
 
 #[tauri::command]
-pub fn get_current_account() -> Result<Value, String> {
-    let paths = AppPaths::new()?;
-
-    // 从 storage.json 读取账号信息
-    if paths.storage.exists() {
-        let content = fs::read_to_string(&paths.storage)
-            .map_err(|e| format!("读取 storage.json 失败: {}", e))?;
-        let storage_content: Value = serde_json::from_str(&content)
-            .map_err(|e| format!("解析 storage.json 失败: {}", e))?;
-        Ok(storage_content)
-    } else {
-        Ok(json!({}))
-    }
-}
-
-#[tauri::command]
 pub fn get_machine_ids() -> Result<Value, String> {
     let paths = AppPaths::new()?;
     let mut result = json!({

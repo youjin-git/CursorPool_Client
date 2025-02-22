@@ -100,7 +100,10 @@ export const messages = {
       detail: '详情',
       time: '时间',
       operator: '操作者',
-      datePlaceholder: '选择日期范围'
+      datePlaceholder: '选择日期范围',
+      clearHistory: '清除历史记录',
+      clearSuccess: '历史记录已清除',
+      clearFailed: '清除历史记录失败'
     },
     message: {
       pleaseInputActivationCode: '请输入激活码',
@@ -118,13 +121,13 @@ export const messages = {
     systemControl: {
       title: '系统控制',
       hookStatus: 'Hook 状态',
-      hookApplied: '已应用',
-      hookNotApplied: '未应用',
-      applyHook: '应用 Hook',
-      restoreHook: '恢复 Hook',
+      hookApplied: '已注入客户端',
+      hookNotApplied: '不支持的客户端',
+      applyHook: '注入客户端',
+      restoreHook: '还原客户端',
       updateStatus: '自动更新状态',
-      updateDisabled: '已禁用',
-      updateEnabled: '已启用',
+      updateDisabled: '已禁用自动更新',
+      updateEnabled: '已启用自动更新',
       disableUpdate: '禁用更新',
       restoreUpdate: '恢复更新',
       clientStatus: '客户端状态',
@@ -134,7 +137,10 @@ export const messages = {
     about: {
       title: '关于',
       version: '版本',
-      copyright: '版权信息'
+      appName: 'Cursor Pool',
+      copyright: '版权所有',
+      license: '基于 MIT 协议开源，修改和分发时需保留版权信息',
+      allRightsReserved: '保留所有权利',
     },
     language: {
       title: '语言设置',
@@ -259,7 +265,10 @@ export const messages = {
       detail: 'Detail',
       time: 'Time',
       operator: 'Operator',
-      datePlaceholder: 'Select Date Range'
+      datePlaceholder: 'Select Date Range',
+      clearHistory: 'Clear History',
+      clearSuccess: 'History cleared successfully',
+      clearFailed: 'Failed to clear history'
     },
     message: {
       pleaseInputActivationCode: 'Please input activation code',
@@ -293,7 +302,10 @@ export const messages = {
     about: {
       title: 'About',
       version: 'Version',
-      copyright: 'Copyright'
+      appName: 'Cursor Pool',
+      copyright: 'Copyright',
+      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved',
     },
     language: {
       title: 'Language Settings',
@@ -418,7 +430,10 @@ export const messages = {
       detail: '詳細',
       time: '時間',
       operator: '操作者',
-      datePlaceholder: '選択日付範囲'
+      datePlaceholder: '選択日付範囲',
+      clearHistory: '履歴をクリア',
+      clearSuccess: '履歴が正常にクリアされました',
+      clearFailed: '履歴のクリアに失敗しました'
     },
     message: {
       pleaseInputActivationCode: 'アクティベーションコードを入力してください',
@@ -452,7 +467,10 @@ export const messages = {
     about: {
       title: 'バージョン情報',
       version: 'バージョン',
-      copyright: '著作権情報'
+      appName: 'Cursor Pool',
+      copyright: '著作権情報',
+      license: 'MITライセンスの下でオープンソース化。変更や配布の際は著作権表示を保持する必要があります。',
+      allRightsReserved: '全著作権所有',
     },
     language: {
       title: '言語設定',
@@ -577,7 +595,10 @@ export const messages = {
       detail: 'Détail',
       time: 'Heure',
       operator: 'Opérateur',
-      datePlaceholder: 'Sélectionner la plage de dates'
+      datePlaceholder: 'Sélectionner la plage de dates',
+      clearHistory: 'Vider l\'historique',
+      clearSuccess: 'Historique vidé avec succès',
+      clearFailed: 'Échec de la vidage de l\'historique'
     },
     message: {
       pleaseInputActivationCode: 'Veuillez saisir le code d\'activation',
@@ -611,7 +632,10 @@ export const messages = {
     about: {
       title: 'À propos',
       version: 'Version',
-      copyright: 'Copyright'
+      appName: 'Cursor Pool',
+      copyright: 'Copyright',
+      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved',
     },
     language: {
       title: 'Paramètres de langue',
@@ -725,7 +749,10 @@ export const messages = {
       detail: 'Detail',
       time: 'Zeit',
       operator: 'Benutzer',
-      datePlaceholder: 'Datumsbereich auswählen'
+      datePlaceholder: 'Datumsbereich auswählen',
+      clearHistory: 'Verlauf löschen',
+      clearSuccess: 'Verlauf erfolgreich gelöscht',
+      clearFailed: 'Verlauf löschen fehlgeschlagen'
     },
     message: {
       pleaseInputActivationCode: 'Bitte Aktivierungscode eingeben',
@@ -759,7 +786,10 @@ export const messages = {
     about: {
       title: 'Über',
       version: 'Version',
-      copyright: 'Copyright'
+      appName: 'Cursor Pool',
+      copyright: 'Copyright',
+      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved',
     },
     language: {
       title: 'Spracheinstellungen',
@@ -873,7 +903,10 @@ export const messages = {
       detail: '상세',
       time: '시간',
       operator: '작업자',
-      datePlaceholder: '날짜 범위 선택'
+      datePlaceholder: '날짜 범위 선택',
+      clearHistory: '기록 지우기',
+      clearSuccess: '기록이 성공적으로 지워졌습니다',
+      clearFailed: '기록 지우기 실패'
     },
     message: {
       pleaseInputActivationCode: '활성화 코드를 입력해주세요',
@@ -907,7 +940,10 @@ export const messages = {
     about: {
       title: '정보',
       version: '버전',
-      copyright: '저작권 정보'
+      appName: 'Cursor Pool',
+      copyright: '저작권 정보',
+      license: 'MIT 라이센스를 기반으로 오픈소스화되었습니다. 수정 또는 배포 시 저작권 표시를 유지해야 합니다.',
+      allRightsReserved: '전 저작권 보유',
     },
     language: {
       title: '언어 설정',
@@ -1021,7 +1057,10 @@ export const messages = {
       detail: 'Подробности',
       time: 'Время',
       operator: 'Оператор',
-      datePlaceholder: 'Выберите период'
+      datePlaceholder: 'Выберите период',
+      clearHistory: 'Очистить историю',
+      clearSuccess: 'История успешно очищена',
+      clearFailed: 'Не удалось очистить историю'
     },
     message: {
       pleaseInputActivationCode: 'Пожалуйста, введите код активации',
@@ -1055,7 +1094,10 @@ export const messages = {
     about: {
       title: 'О программе',
       version: 'Версия',
-      copyright: 'Copyright'
+      appName: 'Cursor Pool',
+      copyright: 'Copyright',
+      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved',      
     },
     language: {
       title: 'Язык',
@@ -1169,7 +1211,10 @@ export const messages = {
       detail: 'Detalle',
       time: 'Hora',
       operator: 'Operador',
-      datePlaceholder: 'Seleccionar rango de fechas'
+      datePlaceholder: 'Seleccionar rango de fechas',
+      clearHistory: 'Limpiar historial',
+      clearSuccess: 'Historial borrado exitosamente',
+      clearFailed: 'Error al borrar historial'
     },
     message: {
       pleaseInputActivationCode: 'Por favor ingrese el código de activación',
@@ -1203,7 +1248,10 @@ export const messages = {
     about: {
       title: 'Acerca de',
       version: 'Versión',
-      copyright: 'Copyright'
+      appName: 'Cursor Pool',
+      copyright: 'Copyright',
+      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved',
     },
     language: {
       title: 'Configuración de idioma',

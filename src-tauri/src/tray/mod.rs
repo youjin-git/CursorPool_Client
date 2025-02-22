@@ -7,10 +7,7 @@ use tauri::{
     tray::TrayIconBuilder
 };
 
-use crate::cursor_reset::{
-    reset_machine_id,
-    commands::{get_current_account, switch_account}
-};
+use crate::cursor_reset::reset_machine_id;
 
 fn show_and_focus_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {

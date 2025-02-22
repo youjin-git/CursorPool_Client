@@ -27,6 +27,7 @@ import {
   restoreHook
 } from '@/api'
 import { addHistoryRecord } from '../utils/history'
+import { version } from '../../package.json'
 
 const router = useRouter()
 const message = useMessage()
@@ -376,8 +377,15 @@ onMounted(async () => {
     </n-card>
 
     <n-card :title="messages[currentLang].settings.about">
-      <p>Cursor Pool v0.1.0</p>
-      <p> 2024 All Rights Reserved</p>
+      <n-space vertical :size="12">
+        <p>{{ i18n.about.appName }} v{{ version }}</p>
+        <p>
+          {{ i18n.about.copyright }} © {{ new Date().getFullYear() }} 
+          <n-button text tag="a" href="https://github.com/Sanyela" target="_blank">Sanyela</n-button> & 
+          <n-button text tag="a" href="https://github.com/Cloxl" target="_blank">Cloxl</n-button>
+        </p>
+        <p>{{ i18n.about.license }}</p>
+      </n-space>
     </n-card>
 
     <!-- 合并后的 Cursor 运行提醒模态框 -->

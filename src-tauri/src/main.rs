@@ -47,7 +47,6 @@ fn main() {
             api::reset_password,
             reset_machine_id,
             switch_account,
-            get_current_account,
             get_machine_ids,
             cursor_reset::commands::check_cursor_running,
             cursor_reset::commands::kill_cursor_process,

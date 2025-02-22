@@ -31,6 +31,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      - name: Get Version
+        id: get_version
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
@@ -53,8 +59,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: ${{ github.ref_name }}
+          tagName: ${{ steps.get_version.outputs.version }}
+          releaseName: ${{ steps.get_version.outputs.version }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
