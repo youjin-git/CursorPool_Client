@@ -194,3 +194,8 @@ export interface ResetPasswordRequest {
   smsCode: string
   newPassword: string
 }
+
+// 添加新的类型定义
+export interface SystemInfo {
+    isWindows: boolean;
+}

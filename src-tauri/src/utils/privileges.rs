@@ -111,4 +111,9 @@ pub fn check_admin_privileges() -> Result<bool, String> {
 #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
 pub fn request_admin_privileges(_exe_path: &str) -> Result<bool, String> {
     Err(format!("不支持的操作系统: {}", std::env::consts::OS))
-} 
+}
+
+// 添加新的函数来检测系统是否为 Windows
+pub fn is_windows() -> bool {
+    cfg!(target_os = "windows")
+}

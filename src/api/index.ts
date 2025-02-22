@@ -311,3 +311,12 @@ export async function resetPassword(email: string, smsCode: string, newPassword:
         throw new ApiError(error instanceof Error ? error.message : 'Failed to reset password')
     }
 }
+
+// 添加新的 API 函数来检测系统是否为 Windows
+export async function checkIsWindows(): Promise<boolean> {
+    try {
+        return await invoke<boolean>('check_is_windows');
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to check if system is Windows');
+    }
+}

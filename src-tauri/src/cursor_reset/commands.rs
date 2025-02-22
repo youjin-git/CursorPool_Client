@@ -347,3 +347,8 @@ pub async fn restore_hook(force_kill: bool) -> Result<(), String> {
     // 执行恢复操作
     Hook::restore_from_backup()
 }
+
+#[tauri::command]
+pub fn check_is_windows() -> bool {
+    crate::utils::privileges::is_windows()
+}

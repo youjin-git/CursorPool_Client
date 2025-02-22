@@ -16,7 +16,8 @@ import {
     waitForCursorClose,
     checkAdminPrivileges,
     checkUpdateDisabled,
-    checkHookStatus
+    checkHookStatus,
+    checkIsWindows
 } from '@/api'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
 import { addHistoryRecord } from '../utils/history'
@@ -473,13 +474,17 @@ const showAdminPrivilegeModal = ref(false)
 // 检查管理员权限
 const checkPrivileges = async () => {
   try {
-    const isAdmin = await checkAdminPrivileges()
+    const isAdmin = await checkAdminPrivileges();
     if (!isAdmin) {
-      showAdminPrivilegeModal.value = true
+      // 如果不是管理员，再检查是否是 Windows 平台
+      const isWindows = await checkIsWindows();
+      if (isWindows) {
+        showAdminPrivilegeModal.value = true;
+      }
     }
   } catch (error) {
-    console.error('检查管理员权限失败:', error)
-    message.error('检查管理员权限失败')
+    console.error('检查管理员权限失败:', error);
+    message.error('检查管理员权限失败');
   }
 }
 

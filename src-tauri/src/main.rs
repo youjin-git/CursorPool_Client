@@ -58,6 +58,7 @@ fn main() {
             cursor_reset::commands::is_hook,
             cursor_reset::commands::hook_main_js,
             cursor_reset::commands::restore_hook,
+            cursor_reset::commands::check_is_windows,
         ])
         .manage(api::ApiClient::default())
         .run(generate_context!())
