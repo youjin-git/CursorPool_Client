@@ -175,26 +175,29 @@ const handleControlAction = async (action: 'disableUpdate' | 'restoreUpdate' | '
         await disableCursorUpdate(force_kill)
         successMessage = messages[currentLang.value].systemControl.messages.disableUpdateSuccess
         historyAction = messages[currentLang.value].systemControl.history.disableUpdate
+        controlStatus.value.updateDisabled = true
         break
       case 'restoreUpdate':
         await restoreCursorUpdate(force_kill)
         successMessage = messages[currentLang.value].systemControl.messages.restoreUpdateSuccess
         historyAction = messages[currentLang.value].systemControl.history.restoreUpdate
+        controlStatus.value.updateDisabled = false
         break
       case 'applyHook':
         await applyHook(force_kill)
         successMessage = messages[currentLang.value].systemControl.messages.applyHookSuccess
         historyAction = messages[currentLang.value].systemControl.history.applyHook
+        controlStatus.value.isHooked = true
         break
       case 'restoreHook':
         await restoreHook(force_kill)
         successMessage = messages[currentLang.value].systemControl.messages.restoreHookSuccess
         historyAction = messages[currentLang.value].systemControl.history.restoreHook
+        controlStatus.value.isHooked = false
         break
     }
 
     message.success(successMessage)
-    await checkControlStatus()
     showControlRunningModal.value = false
     addHistoryRecord('系统控制', historyAction)
   } catch (error) {
