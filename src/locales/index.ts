@@ -1,4 +1,4 @@
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { NLocale, NDateLocale } from 'naive-ui'
 import { 
   zhCN, 
@@ -18,6 +18,7 @@ import {
   esAR,
   dateEsAR
 } from 'naive-ui'
+import { messages } from './messages'
 
 export type Language = 'zh-CN' | 'en-US' | 'ja-JP' | 'fr-FR' | 'de-DE' | 'ko-KR' | 'ru-RU' | 'es-AR'
 
@@ -82,6 +83,7 @@ export function useI18n() {
 
   return {
     currentLang,
-    setLanguage
+    setLanguage,
+    i18n: computed(() => messages[currentLang.value])
   }
 } 

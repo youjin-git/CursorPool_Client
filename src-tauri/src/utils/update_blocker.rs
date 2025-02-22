@@ -13,7 +13,7 @@ impl UpdateBlocker {
 
     /// 禁用 Cursor 自动更新
     pub fn disable_auto_update(&self, updater_path: &PathBuf) -> Result<(), String> {
-        // 如果是目录，先备份
+        // 如果是目录, 先备份
         if updater_path.is_dir() {
             self.backup_updater_dir(updater_path)?;
         }
@@ -187,7 +187,7 @@ impl UpdateBlocker {
             Ok(_) => {
                 fs::File::create(updater_path)
                     .map_err(|e| format!("重新创建文件失败: {}", e))?;
-                Err("权限设置失败：文件仍可被删除".to_string())
+                Err("权限设置失败: 文件仍可被删除".to_string())
             },
             Err(_) => {
                 Ok(())
@@ -197,7 +197,7 @@ impl UpdateBlocker {
 
     /// macOS 平台禁用更新
     fn disable_macos_update(&self, updater_path: &PathBuf) -> Result<(), String> {
-        // 使用 sudo 执行命令
+        // 原有的更新器处理
         Command::new("sudo")
             .args(&[
                 "sh",
@@ -212,7 +212,28 @@ impl UpdateBlocker {
                 ),
             ])
             .output()
-            .map_err(|e| format!("执行命令失败: {}", e))?;
+            .map_err(|e| format!("执行更新器命令失败: {}", e))?;
+
+        // 处理 app-update.yml
+        let app_path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app-update.yml");
+        if app_path.exists() {
+            Command::new("sudo")
+                .args(&[
+                    "sh",
+                    "-c",
+                    &format!(
+                        "mv '{}' '{}.backup' 2>/dev/null || true && \
+                         touch '{}' && \
+                         chmod a-w '{}'",
+                        app_path.to_string_lossy(),
+                        app_path.to_string_lossy(),
+                        app_path.to_string_lossy(),
+                        app_path.to_string_lossy()
+                    ),
+                ])
+                .output()
+                .map_err(|e| format!("处理配置文件失败: {}", e))?;
+        }
 
         Ok(())
     }
@@ -316,6 +337,7 @@ impl UpdateBlocker {
 
     /// macOS 平台恢复更新
     fn restore_macos_update(&self, updater_path: &PathBuf) -> Result<(), String> {
+        // 恢复更新器
         Command::new("sudo")
             .args(&[
                 "sh",
@@ -334,7 +356,29 @@ impl UpdateBlocker {
                 ),
             ])
             .output()
-            .map_err(|e| format!("执行命令失败: {}", e))?;
+            .map_err(|e| format!("恢复更新器失败: {}", e))?;
+
+        // 恢复 app-update.yml
+        let app_path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app-update.yml");
+        if app_path.exists() {
+            Command::new("sudo")
+                .args(&[
+                    "sh",
+                    "-c",
+                    &format!(
+                        "rm -f '{}' && \
+                         if [ -f '{}.backup' ]; then \
+                             mv '{}.backup' '{}'; \
+                         fi",
+                        app_path.to_string_lossy(),
+                        app_path.to_string_lossy(),
+                        app_path.to_string_lossy(),
+                        app_path.to_string_lossy()
+                    ),
+                ])
+                .output()
+                .map_err(|e| format!("恢复配置文件失败: {}", e))?;
+        }
 
         Ok(())
     }

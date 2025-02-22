@@ -31,7 +31,7 @@ pub fn update_auth(paths: &AppPaths, auth: &AuthInfo) -> Result<(), String> {
     auth_updates.insert("cursorAuth/accessToken".to_string(), auth.token.clone());
     auth_updates.insert("cursorAuth/cachedEmail".to_string(), auth.email.clone());
     
-    // 可选：根据Cursor版本添加额外的字段
+    // 可选: 根据Cursor版本添加额外的字段
     auth_updates.insert("cursor.email".to_string(), auth.email.clone());
     auth_updates.insert("cursor.accessToken".to_string(), auth.token.clone());
 

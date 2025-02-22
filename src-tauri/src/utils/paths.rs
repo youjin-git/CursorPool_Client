@@ -7,6 +7,7 @@ pub struct AppPaths {
     pub db: PathBuf,
     pub cursor_exe: PathBuf,
     pub cursor_updater: PathBuf,
+    pub main_js: PathBuf,
 }
 
 impl AppPaths {
@@ -77,12 +78,42 @@ impl AppPaths {
                 .join("cursor-updater")
         };
 
+        // 获取 main.js 路径
+        let main_js = if cfg!(target_os = "windows") {
+            let local_app_data = std::env::var("LOCALAPPDATA")
+                .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
+            PathBuf::from(local_app_data)
+                .join("Programs")
+                .join("cursor")
+                .join("resources")
+                .join("app")
+                .join("out")
+                .join("main.js")
+        } else if cfg!(target_os = "macos") {
+            PathBuf::from("/Applications")
+                .join("Cursor.app")
+                .join("Contents")
+                .join("Resources")
+                .join("app")
+                .join("out")
+                .join("main.js")
+        } else {
+            // Linux 路径
+            PathBuf::from("/usr/lib")
+                .join("cursor")
+                .join("resources")
+                .join("app")
+                .join("out")
+                .join("main.js")
+        };
+
         let paths = Self {
             storage: global_storage.join("storage.json"),
             auth: global_storage.join("cursor.auth.json"),
             db: global_storage.join("state.vscdb"),
             cursor_exe,
             cursor_updater,
+            main_js,
         };
 
         // 确保目录存在
@@ -116,7 +147,7 @@ impl AppPaths {
         Ok(())
     }
 
-    // 新增：检查 cursor-updater 路径
+    // 新增: 检查 cursor-updater 路径
     pub fn check_cursor_updater(&self) -> Result<(), String> {
         if !self.cursor_updater.exists() {
             return Err("cursor-updater 路径不存在".to_string());
@@ -125,7 +156,7 @@ impl AppPaths {
         if self.cursor_updater.is_file() {
             Ok(())
         } else if self.cursor_updater.is_dir() {
-            // 可选：列出目录内容用于调试
+            // 可选: 列出目录内容用于调试
             if let Ok(entries) = std::fs::read_dir(&self.cursor_updater) {
                 for entry in entries {
                     if let Ok(entry) = entry {

@@ -87,6 +87,9 @@ pub struct CheckUserResponse {
 #[derive(Debug, Serialize)]
 pub struct SendCodeRequest {
     pub username: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "isResetPassword")]
+    pub is_reset_password: Option<bool>,
 }
 
 // 发送验证码响应
@@ -113,7 +116,9 @@ pub struct ActivateResponse {
 // 修改密码请求
 #[derive(Debug, Serialize)]
 pub struct ChangePasswordRequest {
+    #[serde(rename = "oldPassword")]
     pub old_password: String,
+    #[serde(rename = "newPassword")]
     pub new_password: String,
 }
 
@@ -217,4 +222,13 @@ pub struct CursorUsageInfo {
     pub gpt4_32k: CursorModelUsage,
     #[serde(rename = "startOfMonth")]
     pub start_of_month: String,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ResetPasswordRequest {
+    pub email: String,
+    #[serde(rename = "smsCode")]
+    pub sms_code: String,
+    #[serde(rename = "newPassword")]
+    pub new_password: String,
 }

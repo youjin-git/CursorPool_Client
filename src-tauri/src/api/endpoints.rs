@@ -22,16 +22,26 @@ pub async fn check_user(
 pub async fn send_code(
     client: State<'_, super::client::ApiClient>,
     username: String,
+    is_reset_password: Option<bool>,
 ) -> Result<ApiResponse<SendCodeResponse>, String> {
     let response = client
         .0
         .post(format!("{}/user/send_code", get_base_url()))
-        .json(&SendCodeRequest { username })
+        .json(&SendCodeRequest {
+            username,
+            is_reset_password,
+        })
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    // 先获取响应文本
+    let response_text = response.text().await.map_err(|e| e.to_string())?;
+    // 打印响应文本用于调试
+    println!("Send code response: {}", response_text);
+    // 解析JSON响应
+    serde_json::from_str(&response_text).map_err(|e| e.to_string())
+    // response.json().await.map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -58,7 +68,7 @@ pub async fn login(
     let api_response: ApiResponse<LoginResponse> = response.json().await
         .map_err(|e| e.to_string())?;
     
-    // 如果状态不是成功，返回错误
+    // 如果状态不是成功, 返回错误
     if api_response.status != "success" {
         return Err(api_response.message);
     }
@@ -120,7 +130,15 @@ pub async fn change_password(
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    // 先打印原始响应内容
+    let raw_response = response.text().await.map_err(|e| e.to_string())?;
+    println!("Raw change password response: {}", raw_response);
+
+    // 尝试解析为JSON
+    let result: ApiResponse<LoginResponse> = serde_json::from_str(&raw_response)
+        .map_err(|e| format!("Failed to parse response: {}", e))?;
+    
+    Ok(result)
 }
 
 #[tauri::command]
@@ -225,4 +243,32 @@ pub async fn get_public_info(
         .map_err(|e| e.to_string())?;
 
     response.json().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn reset_password(
+    client: State<'_, super::client::ApiClient>,
+    email: String,
+    sms_code: String,
+    new_password: String,
+) -> Result<ApiResponse<()>, String> {
+    let response = client
+        .0
+        .post(format!("{}/user/reset_password", get_base_url()))
+        .json(&ResetPasswordRequest {
+            email,
+            sms_code,
+            new_password,
+        })
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    // 先获取响应文本
+    let response_text = response.text().await.map_err(|e| e.to_string())?;
+    // 打印响应文本用于调试
+    println!("Reset password response: {}", response_text);
+    // 解析JSON响应
+    serde_json::from_str(&response_text).map_err(|e| e.to_string())
+    // response.json().await.map_err(|e| e.to_string())
 }

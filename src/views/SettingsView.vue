@@ -21,13 +21,16 @@ import {
   checkCursorRunning,
   disableCursorUpdate,
   restoreCursorUpdate,
-  checkUpdateDisabled
+  checkUpdateDisabled,
+  checkHookStatus,
+  applyHook,
+  restoreHook
 } from '@/api'
 import { addHistoryRecord } from '../utils/history'
 
 const router = useRouter()
 const message = useMessage()
-const { currentLang } = useI18n()
+const { currentLang, i18n } = useI18n()
 
 interface SettingsForm {
   activationCode: string
@@ -43,13 +46,24 @@ const formValue = ref<SettingsForm>({
   confirmPassword: ''
 })
 
-const loading = ref(false)
+// 修改控制状态
+const controlStatus = ref({
+  updateDisabled: false,
+  isHooked: false
+})
 
-// 添加更新控制相关的状态
-const updateDisabled = ref(false)
-const showCursorRunningModal = ref(false)
-const pendingAction = ref<'disable' | 'restore' | null>(null)
-const updateLoading = ref(false)
+// 为每个操作添加单独的加载状态
+const disableUpdateLoading = ref(false)
+const restoreUpdateLoading = ref(false)
+const applyHookLoading = ref(false)
+const restoreHookLoading = ref(false)
+
+const showControlRunningModal = ref(false)
+const pendingControlAction = ref<'disableUpdate' | 'restoreUpdate' | 'applyHook' | 'restoreHook' | null>(null)
+
+// 为激活和修改密码添加独立的加载状态
+const activateLoading = ref(false)
+const passwordChangeLoading = ref(false)
 
 const handleActivate = async () => {
   if (!formValue.value.activationCode) {
@@ -57,7 +71,7 @@ const handleActivate = async () => {
     return
   }
 
-  loading.value = true
+  activateLoading.value = true
   try {
     const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
@@ -75,7 +89,7 @@ const handleActivate = async () => {
     console.error('激活失败:', error)
     message.error(messages[currentLang.value].message.activationFailed)
   } finally {
-    loading.value = false
+    activateLoading.value = false
   }
 }
 
@@ -89,7 +103,7 @@ const handlePasswordChange = async () => {
     return
   }
 
-  loading.value = true
+  passwordChangeLoading.value = true
   try {
     const apiKey = localStorage.getItem('apiKey')
     if (!apiKey) {
@@ -110,7 +124,7 @@ const handlePasswordChange = async () => {
   } catch (error) {
     message.error(messages[currentLang.value].message.passwordChangeFailed)
   } finally {
-    loading.value = false
+    passwordChangeLoading.value = false
   }
 }
 
@@ -121,85 +135,140 @@ const handleLogout = async () => {
   window.location.reload()
 }
 
-// 检查更新状态
-const checkUpdateStatus = async () => {
+// 检查控制状态
+const checkControlStatus = async () => {
   try {
-    updateDisabled.value = await checkUpdateDisabled()
+    controlStatus.value.updateDisabled = await checkUpdateDisabled()
+    controlStatus.value.isHooked = await checkHookStatus()
   } catch (error) {
-    console.error('检查更新状态失败:', error)
+    console.error('检查控制状态失败:', error)
   }
 }
 
-// 处理禁用更新
-const handleDisableUpdate = async (force_kill: boolean = false) => {
-  try {
-    updateLoading.value = true
-    if (!force_kill) {
-      const isRunning = await checkCursorRunning()
-      if (isRunning) {
-        showCursorRunningModal.value = true
-        pendingAction.value = 'disable'
-        return
-      }
-    }
-    
-    await disableCursorUpdate(force_kill)
-    message.success('成功禁用自动更新')
-    await checkUpdateStatus()
-    showCursorRunningModal.value = false
-    addHistoryRecord('更新控制', '禁用自动更新')
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '禁用自动更新失败')
-  } finally {
-    updateLoading.value = false
-  }
-}
+// 修改 handleControlAction 函数
+const handleControlAction = async (action: 'disableUpdate' | 'restoreUpdate' | 'applyHook' | 'restoreHook', force_kill: boolean = false) => {
+  // 根据操作设置对应的加载状态
+  const loadingRef = {
+    'disableUpdate': disableUpdateLoading,
+    'restoreUpdate': restoreUpdateLoading,
+    'applyHook': applyHookLoading,
+    'restoreHook': restoreHookLoading
+  }[action]
 
-// 处理恢复更新
-const handleRestoreUpdate = async (force_kill: boolean = false) => {
   try {
-    updateLoading.value = true
+    loadingRef.value = true
     if (!force_kill) {
       const isRunning = await checkCursorRunning()
       if (isRunning) {
-        showCursorRunningModal.value = true
-        pendingAction.value = 'restore'
+        showControlRunningModal.value = true
+        pendingControlAction.value = action
         return
       }
     }
+
+    let successMessage = ''
+    let historyAction = ''
     
-    await restoreCursorUpdate(force_kill)
-    message.success('成功恢复自动更新')
-    await checkUpdateStatus()
-    showCursorRunningModal.value = false
-    addHistoryRecord('更新控制', '恢复自动更新')
+    switch (action) {
+      case 'disableUpdate':
+        await disableCursorUpdate(force_kill)
+        successMessage = '成功禁用自动更新'
+        historyAction = '禁用自动更新'
+        break
+      case 'restoreUpdate':
+        await restoreCursorUpdate(force_kill)
+        successMessage = '成功恢复自动更新'
+        historyAction = '恢复自动更新'
+        break
+      case 'applyHook':
+        await applyHook(force_kill)
+        successMessage = '成功应用 Hook'
+        historyAction = '应用 Hook'
+        break
+      case 'restoreHook':
+        await restoreHook(force_kill)
+        successMessage = '成功恢复 Hook'
+        historyAction = '恢复 Hook'
+        break
+    }
+
+    message.success(successMessage)
+    await checkControlStatus()
+    showControlRunningModal.value = false
+    addHistoryRecord('系统控制', historyAction)
   } catch (error) {
-    message.error(error instanceof Error ? error.message : '恢复自动更新失败')
+    message.error(error instanceof Error ? error.message : '操作失败')
   } finally {
-    updateLoading.value = false
+    loadingRef.value = false
   }
 }
 
 // 处理强制关闭
-const handleForceKill = async () => {
-  if (pendingAction.value === 'disable') {
-    await handleDisableUpdate(true)
-  } else if (pendingAction.value === 'restore') {
-    await handleRestoreUpdate(true)
+const handleControlForceKill = async () => {
+  if (pendingControlAction.value) {
+    await handleControlAction(pendingControlAction.value, true)
   }
 }
 
-// 在组件挂载时检查更新状态
+// 在组件挂载时检查控制状态
 onMounted(async () => {
-  await checkUpdateStatus()
+  await checkControlStatus()
 })
 </script>
 
 <template>
   <n-space vertical :size="24">
-    <n-card title="Language / 语言">
+    <n-card :title="i18n.systemControl.title">
       <n-space vertical>
-        <language-switch />
+        <!-- Hook 控制部分 -->
+        <n-space justify="space-between" align="center">
+          <span>{{ i18n.systemControl.hookStatus }}: {{ controlStatus.isHooked ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}</span>
+          <n-space>
+            <n-button 
+              type="warning" 
+              :loading="applyHookLoading"
+              :disabled="controlStatus.isHooked"
+              @click="handleControlAction('applyHook')"
+              style="width: 120px"
+            >
+              {{ i18n.systemControl.applyHook }}
+            </n-button>
+            <n-button 
+              type="primary"
+              :loading="restoreHookLoading"
+              :disabled="!controlStatus.isHooked"
+              @click="handleControlAction('restoreHook')"
+              style="width: 120px"
+            >
+              {{ i18n.systemControl.restoreHook }}
+            </n-button>
+          </n-space>
+        </n-space>
+
+        <!-- 更新控制部分 -->
+        <n-space justify="space-between" align="center">
+          <span>{{ i18n.systemControl.updateStatus }}: {{ controlStatus.updateDisabled ? i18n.systemControl.updateDisabled : i18n.systemControl.updateEnabled }}</span>
+          <n-space>
+            <n-button 
+              type="warning" 
+              :loading="disableUpdateLoading"
+              :disabled="controlStatus.updateDisabled"
+              @click="handleControlAction('disableUpdate')"
+              style="width: 120px"
+            >
+              {{ i18n.systemControl.disableUpdate }}
+            </n-button>
+            <n-button 
+              type="primary"
+              :loading="restoreUpdateLoading"
+              :disabled="!controlStatus.updateDisabled"
+              @click="handleControlAction('restoreUpdate')"
+              style="width: 120px"
+            >
+              {{ i18n.systemControl.restoreUpdate }}
+            </n-button>
+          </n-space>
+        </n-space>
       </n-space>
     </n-card>
 
@@ -223,7 +292,7 @@ onMounted(async () => {
             <n-button
               type="primary"
               @click="handleActivate"
-              :loading="loading"
+              :loading="activateLoading"
               size="large"
             >
               {{ messages[currentLang].settings.activate }}
@@ -238,7 +307,7 @@ onMounted(async () => {
               @click="handleLogout"
               size="large"
             >
-              登出账户
+              {{ i18n.common.logout }}
             </n-button>
           </div>
         </n-form-item>
@@ -258,6 +327,9 @@ onMounted(async () => {
             type="password"
             show-password-on="click"
             :placeholder="messages[currentLang].settings.currentPassword"
+            maxlength="20"
+            minlength="6"
+            :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
           />
         </n-form-item>
 
@@ -267,6 +339,9 @@ onMounted(async () => {
             type="password"
             show-password-on="click"
             :placeholder="messages[currentLang].settings.newPassword"
+            maxlength="20"
+            minlength="6"
+            :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
           />
         </n-form-item>
 
@@ -276,40 +351,27 @@ onMounted(async () => {
             type="password"
             show-password-on="click"
             :placeholder="messages[currentLang].settings.confirmPassword"
+            maxlength="20"
+            minlength="6"
+            :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
           />
         </n-form-item>
 
         <div style="margin-top: 24px">
-          <n-button type="primary" @click="handlePasswordChange">
+          <n-button 
+            type="primary" 
+            @click="handlePasswordChange"
+            :loading="passwordChangeLoading"
+          >
             {{ messages[currentLang].settings.changePassword }}
           </n-button>
         </div>
       </n-form>
     </n-card>
 
-    <n-card title="更新控制">
+    <n-card title="Language / 语言">
       <n-space vertical>
-        <n-space justify="space-between">
-          <span>自动更新状态：{{ updateDisabled ? '已禁用' : '已启用' }}</span>
-          <n-space>
-            <n-button 
-              type="warning" 
-              :loading="updateLoading"
-              :disabled="updateDisabled"
-              @click="handleDisableUpdate()"
-            >
-              禁用自动更新
-            </n-button>
-            <n-button 
-              type="primary"
-              :loading="updateLoading"
-              :disabled="!updateDisabled"
-              @click="handleRestoreUpdate()"
-            >
-              恢复自动更新
-            </n-button>
-          </n-space>
-        </n-space>
+        <language-switch />
       </n-space>
     </n-card>
 
@@ -318,21 +380,21 @@ onMounted(async () => {
       <p> 2024 All Rights Reserved</p>
     </n-card>
 
-    <!-- 添加 Cursor 运行提醒模态框 -->
+    <!-- 合并后的 Cursor 运行提醒模态框 -->
     <n-modal
-      v-model:show="showCursorRunningModal"
+      v-model:show="showControlRunningModal"
       preset="dialog"
       title="Cursor 正在运行"
       :closable="true"
       :mask-closable="false"
     >
       <template #default>
-        检测到 Cursor 正在运行，请保存尚未更改的项目再继续操作!
+        检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!
       </template>
       <template #action>
         <n-space justify="end">
-          <n-button type="warning" @click="handleForceKill">
-            我已保存，强制关闭
+          <n-button type="warning" @click="handleControlForceKill">
+            我已保存, 强制关闭
           </n-button>
         </n-space>
       </template>

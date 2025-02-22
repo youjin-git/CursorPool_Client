@@ -6,7 +6,7 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import type { OperationRecord } from '../types/history'
 
-const { currentLang } = useI18n()
+const { currentLang, i18n } = useI18n()
 
 const records = ref<OperationRecord[]>([])
 const dateRange = ref<[number, number] | null>(null)
@@ -60,7 +60,7 @@ const columns: DataTableColumns<OperationRecord> = [
           v-model:value="dateRange"
           type="daterange"
           clearable
-          :placeholder="messages[currentLang].history.dateRange"
+          :placeholder="i18n.history.datePlaceholder"
         />
       </n-space>
     </n-card>

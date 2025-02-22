@@ -6,6 +6,8 @@ use crate::utils::id_generator::generate_new_ids;
 use crate::utils::ProcessManager;
 use std::thread;
 use crate::utils::UpdateBlocker;
+use crate::utils::hook::Hook;
+use crate::utils::file_utils::safe_write;
 
 #[tauri::command]
 pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
@@ -13,10 +15,10 @@ pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
     
     // 检查Cursor进程
     if !force_kill && process_manager.is_cursor_running() {
-        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+        return Err("Cursor进程正在运行, 请先关闭Cursor".to_string());
     }
 
-    // 如果force_kill为true，则强制终止Cursor进程
+    // 如果force_kill为true, 则强制终止Cursor进程
     if force_kill {
         process_manager.kill_cursor_processes()?;
     }
@@ -41,8 +43,11 @@ pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
         map.insert("telemetry.sqmId".to_string(), Value::String(new_ids.get("telemetry.sqmId").unwrap().clone()));
     }
 
-    fs::write(&paths.storage, serde_json::to_string_pretty(&storage_content)
-        .map_err(|e| format!("序列化 storage.json 失败: {}", e))?)
+    // 使用 safe_write 代替 fs::write
+    let storage_content_str = serde_json::to_string_pretty(&storage_content)
+        .map_err(|e| format!("序列化 storage.json 失败: {}", e))?;
+    
+    safe_write(&paths.storage, &storage_content_str)
         .map_err(|e| format!("写入 storage.json 失败: {}", e))?;
 
     // 更新数据库
@@ -69,43 +74,16 @@ pub async fn switch_account(
     
     // 检查Cursor进程
     if !force_kill && process_manager.is_cursor_running() {
-        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+        return Err("Cursor进程正在运行, 请先关闭Cursor".to_string());
     }
 
-    // 如果force_kill为true，则强制终止Cursor进程
+    // 如果force_kill为true, 则强制终止Cursor进程
     if force_kill {
         process_manager.kill_cursor_processes()?;
     }
 
     let paths = AppPaths::new()?;
 
-    // 更新 storage.json
-    let mut storage_content = if paths.storage.exists() {
-        let content = fs::read_to_string(&paths.storage)
-            .map_err(|e| format!("读取 storage.json 失败: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("解析 storage.json 失败: {}", e))?
-    } else {
-        json!({})
-    };
-
-    if let Value::Object(ref mut map) = storage_content {
-        map.insert("cursor.email".to_string(), json!(email));
-        map.insert("cursor.accessToken".to_string(), json!(token));
-        map.insert("cursorAuth/refreshToken".to_string(), json!(token));
-        map.insert("cursorAuth/accessToken".to_string(), json!(token));
-        map.insert("cursorAuth/cachedEmail".to_string(), json!(email));
-    }
-
-    // 写入文件
-    fs::write(
-        &paths.storage,
-        serde_json::to_string_pretty(&storage_content)
-            .map_err(|e| format!("序列化 JSON 失败: {}", e))?,
-    )
-    .map_err(|e| format!("写入 storage.json 失败: {}", e))?;
-
-    // 更新数据库中的账号信息
     let account_updates = vec![
         ("cursor.email", email.clone()),
         ("cursor.accessToken", token.clone()),
@@ -219,10 +197,10 @@ pub async fn disable_cursor_update(force_kill: bool) -> Result<(), String> {
     
     // 检查 Cursor 进程
     if !force_kill && process_manager.is_cursor_running() {
-        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+        return Err("Cursor进程正在运行, 请先关闭Cursor".to_string());
     }
 
-    // 如果 force_kill 为 true，则强制终止 Cursor 进程
+    // 如果 force_kill 为 true, 则强制终止 Cursor 进程
     if force_kill {
         process_manager.kill_cursor_processes()?;
     }
@@ -243,10 +221,10 @@ pub async fn restore_cursor_update(force_kill: bool) -> Result<(), String> {
     
     // 检查 Cursor 进程
     if !force_kill && process_manager.is_cursor_running() {
-        return Err("Cursor进程正在运行，请先关闭Cursor".to_string());
+        return Err("Cursor进程正在运行, 请先关闭Cursor".to_string());
     }
 
-    // 如果 force_kill 为 true，则强制终止 Cursor 进程
+    // 如果 force_kill 为 true, 则强制终止 Cursor 进程
     if force_kill {
         process_manager.kill_cursor_processes()?;
     }
@@ -270,7 +248,7 @@ pub fn check_update_disabled() -> Result<bool, String> {
         return Ok(false);
     }
 
-    // 如果是文件而不是目录，说明已被禁用
+    // 如果是文件而不是目录, 说明已被禁用
     Ok(!paths.cursor_updater.is_dir())
 }
 
@@ -293,7 +271,7 @@ fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl 
             [value.as_ref(), key]
         );
 
-        // 如果记录不存在（没有更新任何行），则插入新记录
+        // 如果记录不存在（没有更新任何行）, 则插入新记录
         if let Ok(0) = result {
             conn.execute(
                 "INSERT INTO ItemTable (key, value) VALUES (?1, ?2)",
@@ -305,4 +283,67 @@ fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl 
     }
 
     Ok(())
+}
+
+/// 检查 main.js 是否已被 hook
+#[tauri::command]
+pub fn is_hook() -> Result<bool, String> {
+    let paths = AppPaths::new()?;
+    let content = fs::read_to_string(&paths.main_js)
+        .map_err(|e| format!("读取 main.js 失败: {}", e))?;
+
+    // 检查正则匹配
+    let machine_id_matches = Hook::machine_id_regex().find_iter(&content).count();
+    let mac_machine_id_matches = Hook::mac_machine_id_regex().find_iter(&content).count();
+
+    // 如果找不到匹配, 说明已经被 hook 了
+    if machine_id_matches == 0 || mac_machine_id_matches == 0 {
+        return Ok(true);
+    }
+
+    // 检查版本兼容性
+    let hash = Hook::get_main_js_hash()?;
+    if !Hook::main_js_md5().contains_key(hash.as_str()) {
+        return Ok(false);
+    }
+
+    Ok(false)
+}
+
+/// Hook main.js 文件
+#[tauri::command]
+pub async fn hook_main_js(force_kill: bool) -> Result<(), String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查 Cursor 进程
+    if !force_kill && process_manager.is_cursor_running() {
+        return Err("Cursor进程正在运行, 请先关闭Cursor".to_string());
+    }
+
+    // 如果 force_kill 为 true, 则强制终止 Cursor 进程
+    if force_kill {
+        process_manager.kill_cursor_processes()?;
+    }
+
+    // 执行 hook 操作
+    Hook::update_main_js_content()
+}
+
+/// 从备份恢复 main.js 文件
+#[tauri::command]
+pub async fn restore_hook(force_kill: bool) -> Result<(), String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查 Cursor 进程
+    if !force_kill && process_manager.is_cursor_running() {
+        return Err("Cursor进程正在运行, 请先关闭Cursor".to_string());
+    }
+
+    // 如果 force_kill 为 true, 则强制终止 Cursor 进程
+    if force_kill {
+        process_manager.kill_cursor_processes()?;
+    }
+
+    // 执行恢复操作
+    Hook::restore_from_backup()
 }

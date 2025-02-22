@@ -18,7 +18,7 @@ import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 
 const router = useRouter() as unknown as Router
-const { currentLang } = useI18n()
+const { currentLang, i18n } = useI18n()
 
 // 获取当前窗口实例
 const appWindow = new Window('main')
@@ -111,7 +111,7 @@ async function closeWindow() {
       style="height: 100vh; -webkit-app-region: drag"
     >
       <div class="logo">
-        <h2 v-if="!collapsed" style="user-select: none;">Cursor Pool</h2>
+        <h2 v-if="!collapsed" style="user-select: none;">{{ i18n.appName }}</h2>
         <h2 v-else style="user-select: none;">CP</h2>
       </div>
       <n-menu

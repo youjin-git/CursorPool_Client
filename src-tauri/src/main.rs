@@ -44,6 +44,7 @@ fn main() {
             api::send_code,
             api::get_version,
             api::get_public_info,
+            api::reset_password,
             reset_machine_id,
             switch_account,
             get_current_account,
@@ -54,6 +55,9 @@ fn main() {
             cursor_reset::commands::disable_cursor_update,
             cursor_reset::commands::restore_cursor_update,
             cursor_reset::commands::check_update_disabled,
+            cursor_reset::commands::is_hook,
+            cursor_reset::commands::hook_main_js,
+            cursor_reset::commands::restore_hook,
         ])
         .manage(api::ApiClient::default())
         .run(generate_context!())

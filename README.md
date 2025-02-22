@@ -1,6 +1,6 @@
 # Cursor Pool
 
-Cursor Pool 是一个基于 Tauri + Vue3 + TypeScript 开发的桌面应用程序，用于管理和优化 Cursor 账户使用。
+Cursor Pool 是一个基于 Tauri + Vue3 + TypeScript 开发的桌面应用程序, 用于管理和优化 Cursor 账户使用。
 
 ## 功能特性
 

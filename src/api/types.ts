@@ -57,6 +57,7 @@ export interface CheckUserResponse {
 // 发送验证码请求
 export interface SendCodeRequest {
   username: string
+  isResetPassword?: boolean
 }
 
 // 发送验证码响应
@@ -176,4 +177,20 @@ export interface AdminPrivilegesInfo {
 // Cursor 更新状态
 export interface UpdateStatus {
   isDisabled: boolean
+}
+
+// Hook 状态信息
+export interface HookStatus {
+  isHooked: boolean
+}
+
+// Hook 操作响应
+export interface HookResponse {
+  success: boolean
+}
+
+export interface ResetPasswordRequest {
+  email: string
+  smsCode: string
+  newPassword: string
 }

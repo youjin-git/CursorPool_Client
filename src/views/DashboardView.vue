@@ -2,7 +2,6 @@
 import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon } from 'naive-ui'
 import { ref, onMounted, computed } from 'vue'
 import { useI18n } from '../locales'
-import { messages } from '../locales/messages'
 import { useMessage } from 'naive-ui'
 import { 
     getUserInfo, 
@@ -16,9 +15,9 @@ import {
     killCursorProcess,
     waitForCursorClose,
     checkAdminPrivileges,
-    checkUpdateDisabled
+    checkUpdateDisabled,
+    checkHookStatus
 } from '@/api'
-import type { Language } from '../locales'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
 import { addHistoryRecord } from '../utils/history'
 import { version } from '../../package.json'
@@ -38,6 +37,7 @@ interface DeviceInfoState {
     userInfo: CursorUserInfo | null
     usage: CursorUsageInfo | null
   }
+  hookStatus: boolean | null
 }
 
 // 格式化日期
@@ -55,13 +55,13 @@ const deviceInfo = ref<DeviceInfoState>({
     userInfo: null,
     usage: null
   },
+  hookStatus: null
 })
 
 const loading = ref(true)
 
 const message = useMessage()
-const { currentLang } = useI18n()
-const i18n = computed(() => messages[currentLang.value as Language])
+const { i18n } = useI18n()
 
 // 计算使用量百分比
 const getUsagePercentage = (used: number, total: number) => {
@@ -124,6 +124,9 @@ const fetchMachineIds = async () => {
     deviceInfo.value.machineCode = result.machineId
     deviceInfo.value.currentAccount = result.currentAccount
     deviceInfo.value.cursorToken = result.cursorToken
+    
+    // 获取 Hook 状态
+    deviceInfo.value.hookStatus = await checkHookStatus()
   } catch (error) {
     console.error('获取机器码失败:', error)
   }
@@ -169,7 +172,7 @@ const pendingForceKillAction = ref<{
 const handleMachineCodeChange = async (force_kill: boolean = false) => {
   try {
     await resetMachineId(force_kill)
-    message.success(i18n.value.dashboard.machineChangeSuccess)
+    message.success(i18n.value.common.copySuccess)
     addHistoryRecord(
       '机器码修改',
       `修改机器码: ${deviceInfo.value.machineCode}`
@@ -177,12 +180,12 @@ const handleMachineCodeChange = async (force_kill: boolean = false) => {
     await fetchMachineIds()
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
-    if (errorMsg === 'Cursor进程正在运行，请先关闭Cursor') {
+    if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
       showCursorRunningModal.value = true
       pendingForceKillAction.value = { type: 'machine' }
       return
     }
-    message.error(i18n.value.dashboard.machineChangeFailed)
+    message.error(i18n.value.common.copyFailed)
   }
 }
 
@@ -302,15 +305,12 @@ const executeAccountSwitch = async (force_kill: boolean = false) => {
       message.error(i18n.value.dashboard.accountChangeFailed)
       return
     }
-
-    localStorage.setItem('cache.cursor.userId', accountInfo.userId)
-    localStorage.setItem('cache.cursor.token', accountInfo.token)
     
     await switchAccount(accountInfo.email, accountInfo.token, force_kill)
     message.success(i18n.value.dashboard.accountChangeSuccess)
     addHistoryRecord(
       '账户切换',
-      `切换到账户: ${accountInfo.email}`
+      `切换到账户: ${accountInfo.email} 扣除150积分`
     )
     await Promise.all([
       fetchUserInfo(),
@@ -319,13 +319,13 @@ const executeAccountSwitch = async (force_kill: boolean = false) => {
     ])
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
-    if (errorMsg === 'Cursor进程正在运行，请先关闭Cursor') {
+    if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
       showCursorRunningModal.value = true
       pendingForceKillAction.value = { type: 'account' }
       return
     }
     console.error('切换账户失败:', error)
-    message.error(i18n.value.dashboard.accountChangeFailed)
+    message.error(i18n.value.common.copyFailed)
   }
 }
 
@@ -340,12 +340,12 @@ const executeQuickChange = async (force_kill: boolean = false) => {
     )
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
-    if (errorMsg === 'Cursor进程正在运行，请先关闭Cursor') {
+    if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
       showCursorRunningModal.value = true
       pendingForceKillAction.value = { type: 'quick' }
       return
     }
-    message.error(i18n.value.dashboard.changeFailed)
+    message.error(i18n.value.common.copyFailed)
   }
 }
 
@@ -372,24 +372,24 @@ const handleForceKill = async () => {
         await handleKillCursorProcess()
         message.destroyAll() // 清除 loading 消息
         
-        // 根据类型执行相应操作，但不再传入 force_kill 参数
+        // 根据类型执行相应操作, 但不再传入 force_kill 参数
         switch (pendingForceKillAction.value.type) {
             case 'machine':
                 await handleMachineCodeChange()
-                message.success(i18n.value.dashboard.machineChangeSuccess + '，正在清理进程，15秒后将自动重启Cursor')
+                message.success(i18n.value.common.copySuccess + ', 正在清理进程, 15秒后将自动重启Cursor')
                 break
             case 'account':
                 await executeAccountSwitch()
-                message.success(i18n.value.dashboard.accountChangeSuccess + '，正在清理进程，15秒后将自动重启Cursor')
+                message.success(i18n.value.dashboard.accountChangeSuccess + ', 正在清理进程, 15秒后将自动重启Cursor')
                 break
             case 'quick':
                 await executeQuickChange()
-                message.success(i18n.value.dashboard.changeSuccess + '，正在清理进程，15秒后将自动重启Cursor')
+                message.success(i18n.value.common.copySuccess + ', 正在清理进程, 15秒后将自动重启Cursor')
                 break
         }
     } catch (error) {
         message.destroyAll() // 清除 loading 消息
-        message.error('操作失败：' + (error instanceof Error ? error.message : String(error)))
+        message.error('操作失败: ' + (error instanceof Error ? error.message : String(error)))
     } finally {
         loading.value = false
         pendingForceKillAction.value = null
@@ -399,9 +399,9 @@ const handleForceKill = async () => {
 const copyText = (text: string) => {
   if (!text) return
   navigator.clipboard.writeText(text).then(() => {
-    message.success('复制成功')
+    message.success(i18n.value.common.copySuccess)
   }).catch(() => {
-    message.error('复制失败')
+    message.error(i18n.value.common.copyFailed)
   })
 }
 
@@ -434,7 +434,7 @@ const checkUpdate = async () => {
     if (lastCheckTime) {
       const timeDiff = now - parseInt(lastCheckTime)
       if (timeDiff < VERSION_CHECK_INTERVAL) {
-        return // 如果间隔小于3小时，不进行检查
+        return // 如果间隔小于3小时, 不进行检查
       }
     }
     
@@ -550,7 +550,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
           <n-space vertical>
             <n-space vertical :size="12" style="user-select: none;">
               <n-space :size="8" style="line-height: 1.2;">
-                <span style="width: 70px">用户名</span>
+                <span style="width: 70px">{{ i18n.dashboard.username }}</span>
                 <n-space :size="4" align="center">
                   <span 
                     style="font-size: 14px; cursor: pointer;" 
@@ -565,29 +565,32 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
               <n-divider style="margin: 0" />
 
               <n-space :size="8" style="line-height: 1.2;">
-                <span style="width: 70px">CC邮箱</span>
+                <span style="width: 70px">{{ i18n.dashboard.email }}</span>
                 <n-space :size="4" align="center">
                   <span 
                     style="font-size: 14px; cursor: pointer;" 
                     @click="deviceInfo.cursorInfo.userInfo?.email && copyText(deviceInfo.cursorInfo.userInfo?.email)"
                   >{{ deviceInfo.cursorInfo.userInfo?.email || '未绑定' }}</span>
-                  <n-tag v-if="deviceInfo.cursorInfo.userInfo?.email" :type="deviceInfo.cursorInfo.userInfo?.email_verified ? 'success' : 'warning'" size="tiny" style="transform: scale(0.9)">
-                    {{ deviceInfo.cursorInfo.userInfo?.email_verified ? '已验证' : '未验证' }}
+                  <n-tag :type="deviceInfo.cursorInfo.userInfo?.email_verified ? 'success' : 'warning'" size="tiny" style="transform: scale(0.9)">
+                    {{ deviceInfo.cursorInfo.userInfo?.email_verified ? i18n.systemControl.clientVerified : i18n.systemControl.clientUnverified }}
                   </n-tag>
                 </n-space>
               </n-space>
               <n-space :size="8" style="line-height: 1.2;">
-                <span style="width: 70px">注册时间</span>
+                <span style="width: 70px">{{ i18n.dashboard.ccStatus }}</span>
+                <n-tag :type="updateDisabled ? 'success' : 'error'" size="small">
+                  {{ updateDisabled ? i18n.systemControl.updateDisabled : i18n.systemControl.updateEnabled }}
+                </n-tag>
+                <n-tag :type="deviceInfo.hookStatus === true ? 'success' : 'error'" size="small">
+                  {{ deviceInfo.hookStatus === true ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
+                </n-tag>
+              </n-space>
+              <n-space :size="8" style="line-height: 1.2;">
+                <span style="width: 70px">{{ i18n.dashboard.registerTime }}</span>
                 <span 
                   style="font-size: 14px; cursor: pointer;" 
                   @click="copyText(deviceInfo.cursorInfo.usage?.startOfMonth ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth) : '')"
                 >{{ deviceInfo.cursorInfo.usage?.startOfMonth ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth) : '未知' }}</span>
-              </n-space>
-              <n-space :size="8" style="line-height: 1.2;">
-                <span style="width: 70px">CC状态</span>
-                <n-tag :type="updateDisabled ? 'success' : 'error'" size="small">
-                  {{ updateDisabled ? '已禁用自动更新' : '未禁用自动更新' }}
-                </n-tag>
               </n-space>
               <span 
                 style="font-size: 12px; color: #999; word-break: break-all; text-align: center; cursor: pointer;" 
@@ -605,14 +608,14 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
             <!-- 账户使用统计 -->
             <n-space vertical :size="8">
               <n-space justify="space-between">
-                <span>CP积分使用量</span>
+                <span>{{ i18n.dashboard.cpUsage }}</span>
                 <n-space :size="0">
                   <n-number-animation 
                     :from="0" 
-                    :to="(deviceInfo.userInfo?.usedCount || 0) * 50"
+                    :to="(deviceInfo.userInfo?.usedCount || 0) * 150"
                     :duration="1000"
                   />
-                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 50 }}</span>
+                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 150 }}</span>
                 </n-space>
               </n-space>
               <n-progress
@@ -629,7 +632,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
             <!-- Cursor GPT-4 使用统计 -->
             <n-space vertical :size="8">
               <n-space justify="space-between">
-                <span>高级模型使用量</span>
+                <span>{{ i18n.dashboard.advancedModelUsage }}</span>
                 <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">
                   <n-number-animation 
                     :from="0"
@@ -638,7 +641,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                   />
                   <span>/{{ deviceInfo.cursorInfo.usage['gpt-4']?.maxRequestUsage || 0 }}</span>
                 </n-space>
-                <span v-else>无法获取</span>
+                <span v-else>{{ i18n.dashboard.cannotGetUsage }}</span>
               </n-space>
               <n-progress
                 type="line"
@@ -654,7 +657,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
             <!-- Cursor GPT-3.5 使用统计 -->
             <n-space vertical :size="8">
               <n-space justify="space-between">
-                <span>普通模型使用量</span>
+                <span>{{ i18n.dashboard.basicModelUsage }}</span>
                 <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">
                   <n-number-animation 
                     :from="0" 
@@ -666,7 +669,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
                   </span>
                   <span v-else>/{{ i18n.dashboard.unlimited }}</span>
                 </n-space>
-                <span v-else>无法获取</span>
+                <span v-else>{{ i18n.dashboard.cannotGetUsage }}</span>
               </n-space>
               <n-progress
                 type="line"
@@ -740,7 +743,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
       :mask-closable="false"
     >
       <template #default>
-        您还有 {{ unusedCredits }} 次高级模型使用次数未使用，确定要切换账号吗？
+        您还有 {{ unusedCredits }} 次高级模型使用次数未使用, 确定要切换账号吗？
       </template>
       <template #action>
         <n-space justify="end">
@@ -763,12 +766,12 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
       :mask-closable="false"
     >
       <template #default>
-        检测到 Cursor 正在运行，请保存尚未更改的项目再继续操作!
+        检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!
       </template>
       <template #action>
         <n-space justify="end">
           <n-button type="warning" @click="handleForceKill">
-            我已保存，强制关闭
+            我已保存, 强制关闭
           </n-button>
         </n-space>
       </template>
@@ -803,6 +806,18 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
         </n-button>
       </template>
     </n-modal>
+
+    <n-space justify="center" style="margin-top: 24px;">
+      <n-button
+        text
+        tag="a"
+        href="https://downloader-cursor.deno.dev/"
+        target="_blank"
+        style="font-size: 12px;"
+      >
+        {{ i18n.dashboard.cursorHistoryDownload }}
+      </n-button>
+    </n-space>
   </n-space>
 </template>
 

@@ -9,9 +9,10 @@ import {
   useMessage,
   NSpace,
   NAutoComplete,
-  NTag
+  NTag,
+  NModal
 } from 'naive-ui'
-import { checkUser, sendCode, login } from '../api'
+import { checkUser, sendCode, login, resetPassword } from '../api'
 import type { LoginRequest } from '../api/types'
 import type { SelectOption } from 'naive-ui'
 import { h } from 'vue'
@@ -196,15 +197,15 @@ watch(() => formData.value.username, async (newValue) => {
 })
 
 // 发送验证码
-async function handleSendCode() {
-  if (!formData.value.username || !isValidEmail(formData.value.username)) {
+async function handleSendCode(email: string, isResetPassword?: boolean) {
+  if (!email || !isValidEmail(email)) {
     message.error('请输入有效的邮箱地址')
     return
   }
   
   try {
     loading.value = true
-    const result = await sendCode(formData.value.username)
+    const result = await sendCode(email, isResetPassword)
     message.success('验证码已发送')
     
     // 开始倒计时
@@ -243,7 +244,7 @@ const passwordInputFeedback = computed(() => {
   return ''
 })
 
-// 修改处理提交的逻辑，添加密码验证
+// 修改处理提交的逻辑, 添加密码验证
 async function handleSubmit() {
   if (!formData.value.username || !isValidEmail(formData.value.username)) {
     message.error(messages[currentLang.value].login.emailError)
@@ -271,6 +272,8 @@ async function handleSubmit() {
       localStorage.setItem('apiKey', result.apiKey)
       message.success(messages[currentLang.value].login.loginSuccess)
       emit('login-success')
+      // 手动触发刷新数据
+      window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
     } else {
       message.error(messages[currentLang.value].login.loginFailed)
     }
@@ -283,7 +286,7 @@ async function handleSubmit() {
 
 const emit = defineEmits(['login-success'])
 
-const { currentLang } = useI18n()
+const { currentLang, i18n } = useI18n()
 
 // 定义自定义输入属性类型
 interface CustomInputProps extends HTMLAttributes {
@@ -298,6 +301,56 @@ const inputProps = {
   'data-form-type': 'other',
   'data-lpignore': 'true'
 } as CustomInputProps
+
+// 添加忘记密码相关状态
+const showForgotPassword = ref(false)
+const forgotPasswordLoading = ref(false)
+const forgotPasswordForm = ref({
+  email: '',
+  smsCode: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
+// 处理忘记密码提交
+const handleForgotPassword = async () => {
+  if (!forgotPasswordForm.value.email || !isValidEmail(forgotPasswordForm.value.email)) {
+    message.error('请输入有效的邮箱地址')
+    return
+  }
+
+  if (!forgotPasswordForm.value.smsCode) {
+    message.error('请输入验证码')
+    return
+  }
+
+  if (!forgotPasswordForm.value.newPassword || !passwordRegex.test(forgotPasswordForm.value.newPassword)) {
+    message.error('新密码不符合要求')
+    return
+  }
+
+  if (forgotPasswordForm.value.newPassword !== forgotPasswordForm.value.confirmPassword) {
+    message.error('两次输入的密码不一致')
+    return
+  }
+
+  try {
+    forgotPasswordLoading.value = true
+    const result = await resetPassword(
+      forgotPasswordForm.value.email,
+      forgotPasswordForm.value.smsCode,
+      forgotPasswordForm.value.newPassword
+    )
+    
+    // 处理成功响应
+    message.success(result || '密码重置成功')
+    showForgotPassword.value = false
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '密码重置失败')
+  } finally {
+    forgotPasswordLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -311,12 +364,12 @@ const inputProps = {
   <div class="login-overlay">
     <n-card :title="formTitle" class="login-card">
       <n-form>
-        <n-form-item :label="messages[currentLang].login.emailPlaceholder">
+        <n-form-item :label="i18n.login.emailPlaceholder">
           <n-auto-complete
             v-model:value="formData.username"
             :options="emailOptions"
             :status="emailInputStatus"
-            :placeholder="messages[currentLang].login.emailPlaceholder"
+            :placeholder="i18n.login.emailPlaceholder"
             :render-label="renderLabel"
             :disabled="loading"
             @select="handleEmailSelect"
@@ -330,13 +383,13 @@ const inputProps = {
         </n-form-item>
         
         <n-form-item 
-          :label="messages[currentLang].login.passwordPlaceholder"
+          :label="i18n.login.passwordPlaceholder"
           :status="passwordInputStatus"
         >
           <n-input 
             v-model:value="formData.password"
             type="password"
-            :placeholder="messages[currentLang].login.passwordPlaceholder"
+            :placeholder="i18n.login.passwordPlaceholder"
             :disabled="loading"
           />
           <template #feedback>
@@ -344,19 +397,19 @@ const inputProps = {
           </template>
         </n-form-item>
 
-        <n-form-item v-if="showVerifyCode" :label="messages[currentLang].login.smsCodePlaceholder">
+        <n-form-item v-if="showVerifyCode" :label="i18n.login.smsCodePlaceholder">
           <n-space>
             <n-input 
               v-model:value="formData.sms_code"
-              :placeholder="messages[currentLang].login.smsCodePlaceholder"
+              :placeholder="i18n.login.smsCodePlaceholder"
               :disabled="loading"
             />
             <n-button 
               :disabled="loading || countDown > 0 || !isValidEmail(formData.username)"
-              @click="handleSendCode"
+              @click="handleSendCode(formData.username)"
               secondary
             >
-              {{ countDown > 0 ? messages[currentLang].login.resendCode.replace('{seconds}', countDown.toString()) : messages[currentLang].login.sendCode }}
+              {{ countDown > 0 ? i18n.login.resendCode.replace('{seconds}', countDown.toString()) : i18n.login.sendCode }}
             </n-button>
           </n-space>
         </n-form-item>
@@ -372,21 +425,93 @@ const inputProps = {
             {{ buttonText }}
           </n-button>
 
-          <n-button 
-            quaternary 
-            block
-            @click="toggleMode"
-            :disabled="loading"
-          >
-            {{ isRegisterMode 
-              ? messages[currentLang].login.hasAccount 
-              : `${messages[currentLang].login.noAccount} ${messages[currentLang].login.register}`
-            }}
-          </n-button>
+          <n-space justify="space-between">
+            <n-button
+              text
+              tag="a"
+              @click="toggleMode"
+              :disabled="loading"
+            >
+              {{ isRegisterMode 
+                ? i18n.login.hasAccount 
+                : `${i18n.login.noAccount} ${i18n.login.register}`
+              }}
+            </n-button>
+            <n-button
+              v-if="!isRegisterMode"
+              text
+              tag="a"
+              @click="showForgotPassword = true"
+              :disabled="loading"
+            >
+              {{ i18n.common.forgotPassword }}
+            </n-button>
+          </n-space>
         </n-space>
       </n-form>
     </n-card>
   </div>
+
+  <!-- 忘记密码模态框 -->
+  <n-modal v-model:show="showForgotPassword">
+    <n-card style="width: 400px" title="忘记密码">
+      <n-form>
+        <n-form-item label="邮箱">
+          <n-input
+            v-model:value="forgotPasswordForm.email"
+            placeholder="请输入注册邮箱"
+            :disabled="forgotPasswordLoading"
+          />
+        </n-form-item>
+
+        <n-form-item label="验证码">
+          <n-space>
+            <n-input
+              v-model:value="forgotPasswordForm.smsCode"
+              placeholder="请输入验证码"
+              :disabled="forgotPasswordLoading"
+            />
+            <n-button
+              :disabled="forgotPasswordLoading || !isValidEmail(forgotPasswordForm.email)"
+              @click="handleSendCode(forgotPasswordForm.email, true)"
+              secondary
+            >
+              获取验证码
+            </n-button>
+          </n-space>
+        </n-form-item>
+
+        <n-form-item label="新密码">
+          <n-input
+            v-model:value="forgotPasswordForm.newPassword"
+            type="password"
+            placeholder="请输入新密码"
+            :disabled="forgotPasswordLoading"
+          />
+        </n-form-item>
+
+        <n-form-item label="确认密码">
+          <n-input
+            v-model:value="forgotPasswordForm.confirmPassword"
+            type="password"
+            placeholder="请再次输入新密码"
+            :disabled="forgotPasswordLoading"
+          />
+        </n-form-item>
+
+        <n-space justify="end">
+          <n-button @click="showForgotPassword = false">取消</n-button>
+          <n-button
+            type="primary"
+            @click="handleForgotPassword"
+            :loading="forgotPasswordLoading"
+          >
+            重置密码
+          </n-button>
+        </n-space>
+      </n-form>
+    </n-card>
+  </n-modal>
 </template>
 
 <style scoped>

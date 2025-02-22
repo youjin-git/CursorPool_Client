@@ -1,5 +1,6 @@
 export const messages = {
   'zh-CN': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: '概览',
       history: '操作记录',
@@ -46,9 +47,17 @@ export const messages = {
       later: '稍后更新',
       downloadNow: '立即下载',
       unusedCreditsWarning: '使用提醒',
-      unusedCreditsMessage: '您还有 {count} 次高级模型使用次数未使用，确定要切换账号吗？',
+      unusedCreditsMessage: '您还有 {count} 次高级模型使用次数未使用, 确定要切换账号吗？',
       confirmSwitch: '确认切换',
-      cancelSwitch: '取消'
+      cancelSwitch: '取消',
+      ccStatus: 'CC状态',
+      registerTime: '注册时间',
+      email: '邮箱',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Cursor 历史版本下载'
     },
     login: {
       title: '登录',
@@ -67,11 +76,11 @@ export const messages = {
       noAccount: '还没有账户？',
       register: '立即注册',
       hasAccount: '已有账户？去登录',
-      userExists: '该邮箱已注册，已切换到登录模式',
-      userNotExists: '该邮箱未注册，请先注册账户',
+      userExists: '该邮箱已注册, 已切换到登录模式',
+      userNotExists: '该邮箱未注册, 请先注册账户',
       emailInvalid: '请输入有效的邮箱地址',
       emailUnsupported: '暂不支持该邮箱域名',
-      passwordInvalid: '密码必须包含至少8个字符，包括大小写字母和数字',
+      passwordInvalid: '密码必须包含至少8个字符, 包括大小写字母和数字',
     },
     settings: {
       activation: '激活码兑换',
@@ -90,7 +99,8 @@ export const messages = {
       type: '操作类型',
       detail: '详情',
       time: '时间',
-      operator: '操作者'
+      operator: '操作者',
+      datePlaceholder: '选择日期范围'
     },
     message: {
       pleaseInputActivationCode: '请输入激活码',
@@ -104,9 +114,52 @@ export const messages = {
       passwordNotMatch: '两次输入的新密码不一致',
       passwordChangeSuccess: '密码修改成功',
       passwordChangeFailed: '密码修改失败'
+    },
+    systemControl: {
+      title: '系统控制',
+      hookStatus: 'Hook 状态',
+      hookApplied: '已应用',
+      hookNotApplied: '未应用',
+      applyHook: '应用 Hook',
+      restoreHook: '恢复 Hook',
+      updateStatus: '自动更新状态',
+      updateDisabled: '已禁用',
+      updateEnabled: '已启用',
+      disableUpdate: '禁用更新',
+      restoreUpdate: '恢复更新',
+      clientStatus: '客户端状态',
+      clientVerified: '已验证',
+      clientUnverified: '未验证'
+    },
+    about: {
+      title: '关于',
+      version: '版本',
+      copyright: '版权信息'
+    },
+    language: {
+      title: '语言设置',
+      switch: '切换语言'
+    },
+    common: {
+      logout: '登出账户',
+      copySuccess: '复制成功',
+      copyFailed: '复制失败',
+      forceClose: '我已保存, 强制关闭',
+      cursorRunning: 'Cursor 正在运行',
+      cursorRunningMessage: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!',
+      closingCursor: '正在关闭 Cursor...',
+      forgotPassword: '忘记密码？',
+      unknown: '未知',
+      notBound: '未绑定',
+      verified: '已验证',
+      unverified: '未验证',
+      success: '成功',
+      failed: '失败',
+      loading: '加载中...'
     }
   },
   'en-US': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: 'Dashboard',
       history: 'History',
@@ -155,7 +208,15 @@ export const messages = {
       unusedCreditsWarning: 'Usage Reminder',
       unusedCreditsMessage: 'You still have {count} advanced model usage credits left. Are you sure you want to switch accounts?',
       confirmSwitch: 'Confirm',
-      cancelSwitch: 'Cancel'
+      cancelSwitch: 'Cancel',
+      ccStatus: 'CC Status',
+      registerTime: 'Register Time',
+      email: 'Email',
+      cpUsage: 'CP Credits Usage',
+      advancedModelUsage: 'Advanced Model Usage',
+      basicModelUsage: 'Basic Model Usage',
+      cannotGetUsage: 'Cannot Get',
+      cursorHistoryDownload: 'Cursor History Versions Download'
     },
     login: {
       title: 'Login',
@@ -197,7 +258,8 @@ export const messages = {
       type: 'Type',
       detail: 'Detail',
       time: 'Time',
-      operator: 'Operator'
+      operator: 'Operator',
+      datePlaceholder: 'Select Date Range'
     },
     message: {
       pleaseInputActivationCode: 'Please input activation code',
@@ -211,9 +273,52 @@ export const messages = {
       passwordNotMatch: 'New passwords do not match',
       passwordChangeSuccess: 'Password changed successfully',
       passwordChangeFailed: 'Failed to change password'
+    },
+    systemControl: {
+      title: 'System Control',
+      hookStatus: 'Hook Status',
+      hookApplied: 'Applied',
+      hookNotApplied: 'Not Applied',
+      applyHook: 'Apply Hook',
+      restoreHook: 'Restore Hook',
+      updateStatus: 'Auto Update Status',
+      updateDisabled: 'Disabled',
+      updateEnabled: 'Enabled',
+      disableUpdate: 'Disable Update',
+      restoreUpdate: 'Restore Update',
+      clientStatus: 'Client Status',
+      clientVerified: 'Verified',
+      clientUnverified: 'Unverified'
+    },
+    about: {
+      title: 'About',
+      version: 'Version',
+      copyright: 'Copyright'
+    },
+    language: {
+      title: 'Language Settings',
+      switch: 'Switch Language'
+    },
+    common: {
+      logout: 'Logout',
+      copySuccess: 'Copy successful',
+      copyFailed: 'Copy failed',
+      forceClose: 'I have saved, force close',
+      cursorRunning: 'Cursor is running',
+      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      closingCursor: 'Closing Cursor...',
+      forgotPassword: 'Forgot password?',
+      unknown: 'Unknown',
+      notBound: 'Not Bound',
+      verified: 'Verified',
+      unverified: 'Unverified',
+      success: 'Success',
+      failed: 'Failed',
+      loading: 'Loading...'
     }
   },
   'ja-JP': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: 'ダッシュボード',
       history: '履歴',
@@ -262,7 +367,15 @@ export const messages = {
       unusedCreditsWarning: '使用確認',
       unusedCreditsMessage: 'まだ {count} 回の高度なモデル使用回数が残っています。アカウントを切り替えてもよろしいですか？',
       confirmSwitch: '確認',
-      cancelSwitch: 'キャンセル'
+      cancelSwitch: 'キャンセル',
+      ccStatus: 'CC状態',
+      registerTime: '登録時間',
+      email: 'メールアドレス',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Cursor 履歴バージョン ダウンロード'
     },
     login: {
       title: 'ログイン',
@@ -304,7 +417,8 @@ export const messages = {
       type: '操作タイプ',
       detail: '詳細',
       time: '時間',
-      operator: '操作者'
+      operator: '操作者',
+      datePlaceholder: '選択日付範囲'
     },
     message: {
       pleaseInputActivationCode: 'アクティベーションコードを入力してください',
@@ -319,8 +433,51 @@ export const messages = {
       passwordChangeSuccess: 'パスワードの変更に成功しました',
       passwordChangeFailed: 'パスワードの変更に失敗しました'
     },
+    systemControl: {
+      title: 'システム制御',
+      hookStatus: 'フック状態',
+      hookApplied: '適用済み',
+      hookNotApplied: '未適用',
+      applyHook: 'フックを適用',
+      restoreHook: 'フックを復元',
+      updateStatus: '自動更新状態',
+      updateDisabled: '無効',
+      updateEnabled: '有効',
+      disableUpdate: '更新を無効にする',
+      restoreUpdate: '更新を復元する',
+      clientStatus: 'クライアント状態',
+      clientVerified: '検証済み',
+      clientUnverified: '未検証'
+    },
+    about: {
+      title: 'バージョン情報',
+      version: 'バージョン',
+      copyright: '著作権情報'
+    },
+    language: {
+      title: '言語設定',
+      switch: '言語を切り替え'
+    },
+    common: {
+      logout: 'ログアウト',
+      copySuccess: 'コピーに成功しました',
+      copyFailed: 'コピーに失敗しました',
+      forceClose: '保存しましたので、強制的に閉じます',
+      cursorRunning: 'Cursor が動作中',
+      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      closingCursor: 'Cursor を閉じています...',
+      forgotPassword: 'パスワードを忘れた場合',
+      unknown: '不明',
+      notBound: '未绑定',
+      verified: '検証済み',
+      unverified: '未検証',
+      success: '成功',
+      failed: '失敗',
+      loading: '読み込み中...'
+    }
   },
   'fr-FR': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: 'Tableau de bord',
       history: 'Historique',
@@ -369,7 +526,15 @@ export const messages = {
       unusedCreditsWarning: 'Rappel d\'utilisation',
       unusedCreditsMessage: 'Il vous reste {count} crédits d\'utilisation du modèle avancé. Êtes-vous sûr de vouloir changer de compte ?',
       confirmSwitch: 'Confirmer',
-      cancelSwitch: 'Annuler'
+      cancelSwitch: 'Annuler',
+      ccStatus: 'État CC',
+      registerTime: 'Heure d\'inscription',
+      email: 'Email',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Télécharger les versions historiques de Cursor'
     },
     login: {
       title: 'Connexion',
@@ -411,7 +576,8 @@ export const messages = {
       type: 'Type',
       detail: 'Détail',
       time: 'Heure',
-      operator: 'Opérateur'
+      operator: 'Opérateur',
+      datePlaceholder: 'Sélectionner la plage de dates'
     },
     message: {
       pleaseInputActivationCode: 'Veuillez saisir le code d\'activation',
@@ -426,8 +592,44 @@ export const messages = {
       passwordChangeSuccess: 'Mot de passe modifié avec succès',
       passwordChangeFailed: 'Échec de la modification du mot de passe'
     },
+    systemControl: {
+      title: 'Contrôle du système',
+      hookStatus: 'État du Hook',
+      hookApplied: 'Appliqué',
+      hookNotApplied: 'Non appliqué',
+      applyHook: 'Appliquer le Hook',
+      restoreHook: 'Restaurer le Hook',
+      updateStatus: 'État de la mise à jour automatique',
+      updateDisabled: 'Désactivé',
+      updateEnabled: 'Activé',
+      disableUpdate: 'Désactiver la mise à jour',
+      restoreUpdate: 'Restaurer la mise à jour',
+      clientStatus: 'État du client',
+      clientVerified: 'Vérifié',
+      clientUnverified: 'Non vérifié'
+    },
+    about: {
+      title: 'À propos',
+      version: 'Version',
+      copyright: 'Copyright'
+    },
+    language: {
+      title: 'Paramètres de langue',
+      switch: 'Basculer la langue'
+    },
+    common: {
+      logout: 'Se déconnecter',
+      copySuccess: 'Copie réussie',
+      copyFailed: 'Échec de la copie',
+      forceClose: 'J\'ai sauvegardé, fermer forcément',
+      cursorRunning: 'Cursor en cours d\'exécution',
+      cursorRunningMessage: 'Détecté que le Cursor est en cours d\'exécution, veuillez enregistrer le projet qui n\'a pas été modifié avant de continuer!',
+      closingCursor: 'Fermeture du Cursor...',
+      forgotPassword: 'Mot de passe oublié?'
+    }
   },
   'de-DE': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: 'Übersicht',
       history: 'Verlauf',
@@ -473,6 +675,14 @@ export const messages = {
       newVersion: 'Neue Version',
       later: 'Später aktualisieren',
       downloadNow: 'Jetzt herunterladen',
+      ccStatus: 'CC Status',
+      registerTime: 'Registrierungszeit',
+      email: 'Email',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Cursor Historische Versionen Herunterladen'
     },
     login: {
       title: 'Anmeldung',
@@ -514,7 +724,8 @@ export const messages = {
       type: 'Typ',
       detail: 'Detail',
       time: 'Zeit',
-      operator: 'Benutzer'
+      operator: 'Benutzer',
+      datePlaceholder: 'Datumsbereich auswählen'
     },
     message: {
       pleaseInputActivationCode: 'Bitte Aktivierungscode eingeben',
@@ -529,8 +740,44 @@ export const messages = {
       passwordChangeSuccess: 'Passwort erfolgreich geändert',
       passwordChangeFailed: 'Passwortänderung fehlgeschlagen'
     },
+    systemControl: {
+      title: 'Systemsteuerung',
+      hookStatus: 'Hook-Status',
+      hookApplied: 'Angewendet',
+      hookNotApplied: 'Nicht angewendet',
+      applyHook: 'Hook anwenden',
+      restoreHook: 'Hook wiederherstellen',
+      updateStatus: 'Automatischer Update-Status',
+      updateDisabled: 'Deaktiviert',
+      updateEnabled: 'Aktiviert',
+      disableUpdate: 'Update deaktivieren',
+      restoreUpdate: 'Update wiederherstellen',
+      clientStatus: 'Client-Status',
+      clientVerified: 'Verifiziert',
+      clientUnverified: 'Nicht verifiziert'
+    },
+    about: {
+      title: 'Über',
+      version: 'Version',
+      copyright: 'Copyright'
+    },
+    language: {
+      title: 'Spracheinstellungen',
+      switch: 'Sprache wechseln'
+    },
+    common: {
+      logout: 'Abmelden',
+      copySuccess: 'Kopie erfolgreich',
+      copyFailed: 'Kopie fehlgeschlagen',
+      forceClose: 'Ich habe gespeichert, erzwingend schließen',
+      cursorRunning: 'Cursor läuft',
+      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      closingCursor: 'Cursor schließen...',
+      forgotPassword: 'Passwort vergessen?'
+    }
   },
   'ko-KR': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: '대시보드',
       history: '기록',
@@ -576,6 +823,14 @@ export const messages = {
       newVersion: '새로운 버전',
       later: '나중에 업데이트',
       downloadNow: '지금 다운로드',
+      ccStatus: 'CC 상태',
+      registerTime: '등록 시간',
+      email: '이메일',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Cursor 이전 버전 다운로드'
     },
     login: {
       title: '로그인',
@@ -617,7 +872,8 @@ export const messages = {
       type: '유형',
       detail: '상세',
       time: '시간',
-      operator: '작업자'
+      operator: '작업자',
+      datePlaceholder: '날짜 범위 선택'
     },
     message: {
       pleaseInputActivationCode: '활성화 코드를 입력해주세요',
@@ -632,8 +888,44 @@ export const messages = {
       passwordChangeSuccess: '비밀번호 변경 성공',
       passwordChangeFailed: '비밀번호 변경 실패'
     },
+    systemControl: {
+      title: '시스템 제어',
+      hookStatus: 'Hook 상태',
+      hookApplied: '적용됨',
+      hookNotApplied: '미적용',
+      applyHook: '훅 적용',
+      restoreHook: '훅 복원',
+      updateStatus: '자동 업데이트 상태',
+      updateDisabled: '비활성화',
+      updateEnabled: '활성화',
+      disableUpdate: '업데이트 비활성화',
+      restoreUpdate: '업데이트 복원',
+      clientStatus: '클라이언트 상태',
+      clientVerified: '검증됨',
+      clientUnverified: '미검증'
+    },
+    about: {
+      title: '정보',
+      version: '버전',
+      copyright: '저작권 정보'
+    },
+    language: {
+      title: '언어 설정',
+      switch: '언어 변경'
+    },
+    common: {
+      logout: '로그아웃',
+      copySuccess: '복사 성공',
+      copyFailed: '복사 실패',
+      forceClose: '저장하고 강제로 닫기',
+      cursorRunning: 'Cursor 실행 중',
+      cursorRunningMessage: '변경되지 않은 프로젝트를 저장한 후 계속하세요!',
+      closingCursor: 'Cursor 닫는 중...',
+      forgotPassword: '비밀번호를 잊으셨나요?'
+    }
   },
   'ru-RU': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: 'Обзор',
       history: 'История',
@@ -679,6 +971,14 @@ export const messages = {
       newVersion: 'Новая версия',
       later: 'Обновить позже',
       downloadNow: 'Скачать сейчас',
+      ccStatus: 'Статус CC',
+      registerTime: 'Время регистрации',
+      email: 'Email',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Скачать исторические версии Cursor'
     },
     login: {
       title: 'Вход',
@@ -720,7 +1020,8 @@ export const messages = {
       type: 'Тип',
       detail: 'Подробности',
       time: 'Время',
-      operator: 'Оператор'
+      operator: 'Оператор',
+      datePlaceholder: 'Выберите период'
     },
     message: {
       pleaseInputActivationCode: 'Пожалуйста, введите код активации',
@@ -735,8 +1036,44 @@ export const messages = {
       passwordChangeSuccess: 'Пароль успешно изменен',
       passwordChangeFailed: 'Изменение пароля не удалось'
     },
+    systemControl: {
+      title: 'Управление системой',
+      hookStatus: 'Состояние Hook',
+      hookApplied: 'Применено',
+      hookNotApplied: 'Не применено',
+      applyHook: 'Применить Hook',
+      restoreHook: 'Восстановить Hook',
+      updateStatus: 'Статус автоматического обновления',
+      updateDisabled: 'Отключено',
+      updateEnabled: 'Включено',
+      disableUpdate: 'Отключить обновление',
+      restoreUpdate: 'Восстановить обновление',
+      clientStatus: 'Статус клиента',
+      clientVerified: 'Проверено',
+      clientUnverified: 'Не проверено'
+    },
+    about: {
+      title: 'О программе',
+      version: 'Версия',
+      copyright: 'Copyright'
+    },
+    language: {
+      title: 'Язык',
+      switch: 'Изменить язык'
+    },
+    common: {
+      logout: 'Выйти',
+      copySuccess: 'Копирование успешно',
+      copyFailed: 'Копирование не удалось',
+      forceClose: 'Я сохранил, закройте принудительно',
+      cursorRunning: 'Cursor работает',
+      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      closingCursor: 'Закрытие Cursor...',
+      forgotPassword: 'Забыли пароль?'
+    }
   },
   'es-AR': {
+    appName: 'Cursor Pool',
     menu: {
       dashboard: 'Panel',
       history: 'Historial',
@@ -782,6 +1119,14 @@ export const messages = {
       newVersion: 'Nueva versión',
       later: 'Actualizar más tarde',
       downloadNow: 'Descargar ahora',
+      ccStatus: 'Estado CC',
+      registerTime: 'Hora de registro',
+      email: 'Email',
+      cpUsage: 'CP积分使用量',
+      advancedModelUsage: '高级模型使用量',
+      basicModelUsage: '普通模型使用量',
+      cannotGetUsage: '无法获取',
+      cursorHistoryDownload: 'Descargar versiones históricas de Cursor'
     },
     login: {
       title: 'Iniciar sesión',
@@ -823,12 +1168,13 @@ export const messages = {
       type: 'Tipo',
       detail: 'Detalle',
       time: 'Hora',
-      operator: 'Operador'
+      operator: 'Operador',
+      datePlaceholder: 'Seleccionar rango de fechas'
     },
     message: {
       pleaseInputActivationCode: 'Por favor ingrese el código de activación',
-      activationSuccess: 'Activación exitosa',
-      activationFailed: 'Activación fallida',
+      activationSuccess: 'Activation exitosa',
+      activationFailed: 'Activation fallida',
       pleaseInputEmail: 'Por favor ingrese el correo electrónico',
       addSuccess: 'Agregado exitosamente',
       switchSuccess: 'Cambio de cuenta exitoso: {email}',
@@ -838,6 +1184,41 @@ export const messages = {
       passwordChangeSuccess: 'Contraseña cambiada exitosamente',
       passwordChangeFailed: 'Cambio de contraseña fallido'
     },
+    systemControl: {
+      title: 'Control del sistema',
+      hookStatus: 'Estado del Hook',
+      hookApplied: 'Aplicado',
+      hookNotApplied: 'No aplicado',
+      applyHook: 'Aplicar Hook',
+      restoreHook: 'Restaurar Hook',
+      updateStatus: 'Estado de actualización automática',
+      updateDisabled: 'Desactivado',
+      updateEnabled: 'Activado',
+      disableUpdate: 'Desactivar actualización',
+      restoreUpdate: 'Restaurar actualización',
+      clientStatus: 'Estado del cliente',
+      clientVerified: 'Verificado',
+      clientUnverified: 'No verificado'
+    },
+    about: {
+      title: 'Acerca de',
+      version: 'Versión',
+      copyright: 'Copyright'
+    },
+    language: {
+      title: 'Configuración de idioma',
+      switch: 'Cambiar idioma'
+    },
+    common: {
+      logout: 'Cerrar sesión',
+      copySuccess: 'Copia exitosa',
+      copyFailed: 'Copia fallida',
+      forceClose: 'Guardar y cerrar forzadamente',
+      cursorRunning: 'Cursor en ejecución',
+      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      closingCursor: 'Cerrando Cursor...',
+      forgotPassword: '¿Olvidó su contraseña?'
+    }
   }
 } as const
 
