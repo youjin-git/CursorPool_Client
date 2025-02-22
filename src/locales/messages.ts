@@ -132,7 +132,21 @@ export const messages = {
       restoreUpdate: '恢复更新',
       clientStatus: '客户端状态',
       clientVerified: '已验证',
-      clientUnverified: '未验证'
+      clientUnverified: '未验证',
+      messages: {
+        disableUpdateSuccess: '成功禁用自动更新',
+        restoreUpdateSuccess: '成功恢复自动更新',
+        applyHookSuccess: '注入客户端成功',
+        restoreHookSuccess: '恢复客户端成功',
+        cursorRunning: 'Cursor进程正在运行, 请先关闭Cursor',
+        forceKillConfirm: '我已保存, 强制关闭'
+      },
+      history: {
+        disableUpdate: '禁用自动更新',
+        restoreUpdate: '恢复自动更新',
+        applyHook: '注入客户端',
+        restoreHook: '恢复客户端'
+      }
     },
     about: {
       title: '关于',
@@ -297,7 +311,21 @@ export const messages = {
       restoreUpdate: 'Restore Update',
       clientStatus: 'Client Status',
       clientVerified: 'Verified',
-      clientUnverified: 'Unverified'
+      clientUnverified: 'Unverified',
+      messages: {
+        disableUpdateSuccess: 'Auto update disabled successfully',
+        restoreUpdateSuccess: 'Auto update restored successfully',
+        applyHookSuccess: 'Hook applied successfully',
+        restoreHookSuccess: 'Hook restored successfully',
+        cursorRunning: 'Cursor is running, please save your work before continuing!',
+        forceKillConfirm: 'I have saved, force close'
+      },
+      history: {
+        disableUpdate: 'Disable auto update',
+        restoreUpdate: 'Restore auto update',
+        applyHook: 'Apply hook',
+        restoreHook: 'Restore hook'
+      }
     },
     about: {
       title: 'About',
@@ -462,7 +490,21 @@ export const messages = {
       restoreUpdate: '更新を復元する',
       clientStatus: 'クライアント状態',
       clientVerified: '検証済み',
-      clientUnverified: '未検証'
+      clientUnverified: '未検証',
+      messages: {
+        disableUpdateSuccess: '自動更新を無効化しました',
+        restoreUpdateSuccess: '自動更新を復元しました',
+        applyHookSuccess: 'フックを適用しました',
+        restoreHookSuccess: 'フックを復元しました',
+        cursorRunning: 'Cursorが実行中です。続行する前に作業を保存してください！',
+        forceKillConfirm: '保存しました、強制終了します'
+      },
+      history: {
+        disableUpdate: '自動更新を無効化',
+        restoreUpdate: '自動更新を復元',
+        applyHook: 'フックを適用',
+        restoreHook: 'フックを復元'
+      }
     },
     about: {
       title: 'バージョン情報',
@@ -627,7 +669,21 @@ export const messages = {
       restoreUpdate: 'Restaurer la mise à jour',
       clientStatus: 'État du client',
       clientVerified: 'Vérifié',
-      clientUnverified: 'Non vérifié'
+      clientUnverified: 'Non vérifié',
+      messages: {
+        disableUpdateSuccess: 'Mise à jour automatique désactivée avec succès',
+        restoreUpdateSuccess: 'Mise à jour automatique restaurée avec succès',
+        applyHookSuccess: 'Hook appliqué avec succès',
+        restoreHookSuccess: 'Hook restauré avec succès',
+        cursorRunning: 'Cursor est en cours d\'exécution, veuillez sauvegarder votre travail avant de continuer !',
+        forceKillConfirm: 'J\'ai sauvegardé, forcer la fermeture'
+      },
+      history: {
+        disableUpdate: 'Désactiver la mise à jour automatique',
+        restoreUpdate: 'Restaurer la mise à jour automatique',
+        applyHook: 'Appliquer le hook',
+        restoreHook: 'Restaurar hook'
+      }
     },
     about: {
       title: 'À propos',
@@ -781,7 +837,21 @@ export const messages = {
       restoreUpdate: 'Update wiederherstellen',
       clientStatus: 'Client-Status',
       clientVerified: 'Verifiziert',
-      clientUnverified: 'Nicht verifiziert'
+      clientUnverified: 'Nicht verifiziert',
+      messages: {
+        disableUpdateSuccess: 'Automatische Updates erfolgreich deaktiviert',
+        restoreUpdateSuccess: 'Automatische Updates erfolgreich wiederhergestellt',
+        applyHookSuccess: 'Hook erfolgreich angewendet',
+        restoreHookSuccess: 'Hook erfolgreich wiederhergestellt',
+        cursorRunning: 'Cursor läuft, bitte speichern Sie Ihre Arbeit vor dem Fortfahren!',
+        forceKillConfirm: 'Ich habe gespeichert, Zwangsbeenden'
+      },
+      history: {
+        disableUpdate: 'Automatische Updates deaktivieren',
+        restoreUpdate: 'Automatische Updates wiederherstellen',
+        applyHook: 'Hook anwenden',
+        restoreHook: 'Hook wiederherstellen'
+      }
     },
     about: {
       title: 'Über',
@@ -882,7 +952,7 @@ export const messages = {
       userExists: '이메일이 이미 등록되어 있습니다. 로그인 모드로 전환합니다',
       userNotExists: '등록되지 않은 이메일입니다. 먼저 회원가입을 해주세요',
       emailInvalid: '유효한 이메일 주소를 입력하세요',
-      emailUnsupported: '이 이메일 도메인은 현재 지원되지 않습니다',
+      emailUnsupported: '이 이메인은 현재 지원되지 않습니다',
       passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
     },
     settings: {
@@ -935,7 +1005,21 @@ export const messages = {
       restoreUpdate: '업데이트 복원',
       clientStatus: '클라이언트 상태',
       clientVerified: '검증됨',
-      clientUnverified: '미검증'
+      clientUnverified: '미검증',
+      messages: {
+        disableUpdateSuccess: '자동 업데이트가 비활성화되었습니다',
+        restoreUpdateSuccess: '자동 업데이트가 복원되었습니다',
+        applyHookSuccess: '훅이 적용되었습니다',
+        restoreHookSuccess: '훅이 복원되었습니다',
+        cursorRunning: 'Cursor가 실행 중입니다. 계속하기 전에 작업을 저장하세요!',
+        forceKillConfirm: '저장했습니다, 강제 종료'
+      },
+      history: {
+        disableUpdate: '자동 업데이트 비활성화',
+        restoreUpdate: '자동 업데이트 복원',
+        applyHook: '훅 적용',
+        restoreHook: '훅 복원'
+      }
     },
     about: {
       title: '정보',
@@ -1089,7 +1173,21 @@ export const messages = {
       restoreUpdate: 'Восстановить обновление',
       clientStatus: 'Статус клиента',
       clientVerified: 'Проверено',
-      clientUnverified: 'Не проверено'
+      clientUnverified: 'Не проверено',
+      messages: {
+        disableUpdateSuccess: 'Автоматическое обновление успешно отключено',
+        restoreUpdateSuccess: 'Автоматическое обновление успешно восстановлено',
+        applyHookSuccess: 'Hook успешно применен',
+        restoreHookSuccess: 'Hook успешно восстановлен',
+        cursorRunning: 'Cursor запущен, пожалуйста, сохраните работу перед продолжением!',
+        forceKillConfirm: 'Я сохранил, принудительно закрыть'
+      },
+      history: {
+        disableUpdate: 'Отключить автообновление',
+        restoreUpdate: 'Восстановить автообновление',
+        applyHook: 'Применить hook',
+        restoreHook: 'Restaurar hook'
+      }
     },
     about: {
       title: 'О программе',
@@ -1108,7 +1206,7 @@ export const messages = {
       copySuccess: 'Копирование успешно',
       copyFailed: 'Копирование не удалось',
       forceClose: 'Я сохранил, закройте принудительно',
-      cursorRunning: 'Cursor работает',
+      cursorRunning: 'Cursor в работе',
       cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Закрытие Cursor...',
       forgotPassword: 'Забыли пароль?'
@@ -1241,9 +1339,23 @@ export const messages = {
       updateEnabled: 'Activado',
       disableUpdate: 'Desactivar actualización',
       restoreUpdate: 'Restaurar actualización',
-      clientStatus: 'Estado del cliente',
-      clientVerified: 'Verificado',
-      clientUnverified: 'No verificado'
+      clientStatus: 'État du client',
+      clientVerified: 'Vérifié',
+      clientUnverified: 'Non vérifié',
+      messages: {
+        disableUpdateSuccess: 'Actualización automática desactivada con éxito',
+        restoreUpdateSuccess: 'Actualización automática restaurada con éxito',
+        applyHookSuccess: 'Hook aplicado con éxito',
+        restoreHookSuccess: 'Hook restaurado con éxito',
+        cursorRunning: 'Cursor en ejecución, por favor guarde su trabajo antes de continuar!',
+        forceKillConfirm: 'He guardado, forzar cierre'
+      },
+      history: {
+        disableUpdate: 'Desactivar actualización automática',
+        restoreUpdate: 'Restaurar actualización automática',
+        applyHook: 'Aplicar hook',
+        restoreHook: 'Restaurar hook'
+      }
     },
     about: {
       title: 'Acerca de',
@@ -1270,4 +1382,4 @@ export const messages = {
   }
 } as const
 
-export type MessageSchema = typeof messages['zh-CN'] 
+export type MessageSchema = typeof messages['zh-CN']

@@ -173,23 +173,23 @@ const handleControlAction = async (action: 'disableUpdate' | 'restoreUpdate' | '
     switch (action) {
       case 'disableUpdate':
         await disableCursorUpdate(force_kill)
-        successMessage = '成功禁用自动更新'
-        historyAction = '禁用自动更新'
+        successMessage = messages[currentLang.value].systemControl.messages.disableUpdateSuccess
+        historyAction = messages[currentLang.value].systemControl.history.disableUpdate
         break
       case 'restoreUpdate':
         await restoreCursorUpdate(force_kill)
-        successMessage = '成功恢复自动更新'
-        historyAction = '恢复自动更新'
+        successMessage = messages[currentLang.value].systemControl.messages.restoreUpdateSuccess
+        historyAction = messages[currentLang.value].systemControl.history.restoreUpdate
         break
       case 'applyHook':
         await applyHook(force_kill)
-        successMessage = '成功应用 Hook'
-        historyAction = '应用 Hook'
+        successMessage = messages[currentLang.value].systemControl.messages.applyHookSuccess
+        historyAction = messages[currentLang.value].systemControl.history.applyHook
         break
       case 'restoreHook':
         await restoreHook(force_kill)
-        successMessage = '成功恢复 Hook'
-        historyAction = '恢复 Hook'
+        successMessage = messages[currentLang.value].systemControl.messages.restoreHookSuccess
+        historyAction = messages[currentLang.value].systemControl.history.restoreHook
         break
     }
 
@@ -392,17 +392,17 @@ onMounted(async () => {
     <n-modal
       v-model:show="showControlRunningModal"
       preset="dialog"
-      title="Cursor 正在运行"
-      :closable="true"
+      title="提示"
+      :closable="false"
       :mask-closable="false"
     >
       <template #default>
-        检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!
+        {{ i18n.systemControl.messages.cursorRunning }}
       </template>
       <template #action>
         <n-space justify="end">
           <n-button type="warning" @click="handleControlForceKill">
-            我已保存, 强制关闭
+            {{ i18n.systemControl.messages.forceKillConfirm }}
           </n-button>
         </n-space>
       </template>
