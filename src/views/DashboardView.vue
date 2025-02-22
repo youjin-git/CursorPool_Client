@@ -173,7 +173,7 @@ const pendingForceKillAction = ref<{
 const handleMachineCodeChange = async (force_kill: boolean = false) => {
   try {
     await resetMachineId(force_kill)
-    message.success(i18n.value.common.copySuccess)
+    message.success(i18n.value.dashboard.machineChangeSuccess)
     addHistoryRecord(
       '机器码修改',
       `修改机器码: ${deviceInfo.value.machineCode}`
@@ -186,7 +186,7 @@ const handleMachineCodeChange = async (force_kill: boolean = false) => {
       pendingForceKillAction.value = { type: 'machine' }
       return
     }
-    message.error(i18n.value.common.copyFailed)
+    message.error(i18n.value.dashboard.machineChangeFailed)
   }
 }
 
