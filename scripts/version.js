@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { execSync } from 'child_process';
 
 // 获取 __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -35,4 +36,25 @@ const newVersion = `${major}.${minor}.${newPatch}`;
 pkg.version = newVersion;
 fs.writeFileSync(packagePath, JSON.stringify(pkg, null, 2) + '\n');
 
-console.log(`版本已更新到 ${newVersion}`); 
+console.log(`版本已更新到 ${newVersion}`);
+
+// 执行 git 命令
+try {
+  // 添加 package.json 到暂存区
+  execSync('git add package.json');
+  
+  // 提交版本更新
+  execSync(`git commit -m "Bump version to ${newVersion}"`);
+  
+  // 创建 tag
+  execSync(`git tag v${newVersion}`);
+  
+  // 推送 commit 和 tag
+  execSync('git push origin HEAD');
+  execSync('git push origin --tags');
+  
+  console.log(`已成功创建并推送 tag v${newVersion}`);
+} catch (error) {
+  console.error('Git 操作失败:', error.message);
+  process.exit(1);
+} 
