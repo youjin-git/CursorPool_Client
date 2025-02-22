@@ -8,6 +8,7 @@ use std::thread;
 use crate::utils::UpdateBlocker;
 use crate::utils::hook::Hook;
 use crate::utils::file_utils::safe_write;
+use std::path::PathBuf;
 
 #[tauri::command]
 pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
@@ -227,13 +228,33 @@ pub async fn restore_cursor_update(force_kill: bool) -> Result<(), String> {
 pub fn check_update_disabled() -> Result<bool, String> {
     let paths = AppPaths::new()?;
     
-    // 检查更新器路径是否存在
-    if !paths.cursor_updater.exists() {
-        return Ok(false);
-    }
+    match std::env::consts::OS {
+        "macos" => {
+            // macOS 下检查 app-update.yml 文件状态和 main.js.backup 是否存在
+            let app_update_path = PathBuf::from("/Applications/Cursor.app/Contents/Resources/app-update.yml");
+            let main_js_backup = paths.main_js.with_extension("js.backup");
+            
+            if !app_update_path.exists() {
+                return Ok(false);
+            }
 
-    // 如果是文件而不是目录, 说明已被禁用
-    Ok(!paths.cursor_updater.is_dir())
+            // 检查 app-update.yml 是否为只读
+            let is_readonly = crate::utils::file_utils::is_read_only(&app_update_path)
+                .map_err(|e| format!("检查文件权限失败: {}", e))?;
+
+            // 同时检查备份文件是否存在和文件是否只读
+            Ok(is_readonly && main_js_backup.exists())
+        },
+        "windows" | "linux" => {
+            // Windows 和 Linux 下检查更新器路径
+            if !paths.cursor_updater.exists() {
+                return Ok(false);
+            }
+            // 如果是文件而不是目录, 说明已被禁用
+            Ok(!paths.cursor_updater.is_dir())
+        },
+        _ => Err("不支持的操作系统".to_string()),
+    }
 }
 
 fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl AsRef<str>)]) -> Result<(), String> {

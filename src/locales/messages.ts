@@ -120,9 +120,9 @@ export const messages = {
     },
     systemControl: {
       title: '系统控制',
-      hookStatus: 'Hook 状态',
+      hookStatus: '客户端注入状态',
       hookApplied: '已注入客户端',
-      hookNotApplied: '不支持的客户端',
+      hookNotApplied: '未注入或客户端不支持',
       applyHook: '注入客户端',
       restoreHook: '还原客户端',
       updateStatus: '自动更新状态',

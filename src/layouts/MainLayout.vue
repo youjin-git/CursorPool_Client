@@ -87,12 +87,16 @@ async function closeWindow() {
     <div class="window-controls">
       <n-button text @click="minimizeWindow" class="control-button">
         <template #icon>
-          <n-icon :component="RemoveOutline" />
+          <n-icon>
+            <RemoveOutline />
+          </n-icon>
         </template>
       </n-button>
       <n-button text @click="closeWindow" class="control-button">
         <template #icon>
-          <n-icon :component="Close" />
+          <n-icon>
+            <Close />
+          </n-icon>
         </template>
       </n-button>
     </div>
