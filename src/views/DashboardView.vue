@@ -593,9 +593,6 @@ const handleHistoryDownload = async () => {
               </n-space>
               <n-space :size="8" style="line-height: 1.2;">
                 <span style="width: 70px">{{ i18n.dashboard.ccStatus }}</span>
-                <n-tag :type="updateDisabled ? 'success' : 'error'" size="small">
-                  {{ updateDisabled ? i18n.systemControl.updateDisabled : i18n.systemControl.updateEnabled }}
-                </n-tag>
                 <n-tag :type="deviceInfo.hookStatus === true ? 'success' : 'error'" size="small">
                   {{ deviceInfo.hookStatus === true ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
                 </n-tag>
