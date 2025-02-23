@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main-capability",
   "description": "Capability for the main window",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:window:default",
     "core:window:allow-minimize",
@@ -21,6 +23,28 @@
     "core:image:default",
     "core:image:allow-from-path",
     "core:event:default",
-    "core:event:allow-listen"
+    "core:event:allow-listen",
+    "os:default",
+    "shell:default",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        {
+          "name": "open-url-mac",
+          "cmd": "open",
+          "args": true
+        },
+        {
+          "name": "open-url-linux",
+          "cmd": "xdg-open",
+          "args": true
+        },
+        {
+          "name": "open-url-windows",
+          "cmd": "start",
+          "args": true
+        }
+      ]
+    }
   ]
 }

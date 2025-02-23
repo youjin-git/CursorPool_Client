@@ -1,7 +1,7 @@
 {
   "name": "cursor-pool",
   "private": true,
-  "version": "1.2.268",
+  "version": "1.3.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,11 +9,14 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "generate-icons": "tauricon",
-    "version:update": "node scripts/version.js"
+    "version:update": "node scripts/version.js update",
+    "version:tag": "node scripts/version.js tag"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-opener": "^2",
+    "@tauri-apps/plugin-os": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0",
     "@types/crypto-js": "^4.2.2",
     "@types/uuid": "^10.0.0",
     "crypto-js": "^4.2.0",

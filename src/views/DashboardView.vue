@@ -24,6 +24,8 @@ import { addHistoryRecord } from '../utils/history'
 import { version } from '../../package.json'
 import { WarningOutlined } from '@vicons/antd'
 import { Window } from '@tauri-apps/api/window'
+import { open } from '@tauri-apps/plugin-shell'
+
 const LOCAL_VERSION = version
 
 // 版本检查的时间间隔（毫秒）
@@ -113,6 +115,7 @@ const fetchUserInfo = async () => {
     const info = await getUserInfo(apiKey)
     deviceInfo.value.userInfo = info
   } catch (error) {
+    localStorage.removeItem('apiKey')
     console.error('获取用户信息失败:', error)
   }
 }
@@ -540,6 +543,17 @@ onMounted(async () => {
 
 // 修改按钮点击处理函数
 const handleMachineCodeClick = () => handleMachineCodeChange(false)
+
+// 添加系统检测和链接处理
+const handleHistoryDownload = async () => {
+  try {
+    const url = 'https://downloader-cursor.deno.dev/'
+    await open(url)
+  } catch (error) {
+    console.error('打开链接失败:', error)
+    message.error('打开链接失败')
+  }
+}
 </script>
 
 <template>
@@ -814,9 +828,7 @@ const handleMachineCodeClick = () => handleMachineCodeChange(false)
     <n-space justify="center" style="margin-top: 24px;">
       <n-button
         text
-        tag="a"
-        href="https://downloader-cursor.deno.dev/"
-        target="_blank"
+        @click="handleHistoryDownload"
         style="font-size: 12px;"
       >
         {{ i18n.dashboard.cursorHistoryDownload }}

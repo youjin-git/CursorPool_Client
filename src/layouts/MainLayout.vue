@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutSider, NMenu, NIcon, NButton } from 'naive-ui'
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { 
@@ -16,12 +16,15 @@ import { Component, h } from 'vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
+import { platform } from '@tauri-apps/plugin-os'
 
 const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
 
 // 获取当前窗口实例
 const appWindow = new Window('main')
+const currentPlatform = ref('')
+const isMacOS = computed(() => currentPlatform.value === 'macos')
 
 // 登录状态管理
 const isLoggedIn = ref(!!localStorage.getItem('apiKey'))
@@ -70,12 +73,25 @@ async function closeWindow() {
   await appWindow.hide()
 }
 
+// 初始化平台检测
+onMounted(async () => {
+  try {
+    currentPlatform.value = await platform()
+    console.log('Current platform:', currentPlatform.value)
+  } catch (error) {
+    console.error('Failed to detect platform:', error)
+  }
+})
+
 </script>
 
 <template>
-  <n-layout has-sider style="height: 100vh">
-    <!-- 可拖动区域 -->
-    <div class="drag-region"></div>
+  <n-layout has-sider :style="isMacOS ? {} : { borderRadius: '6px' }">
+    <!-- macOS 拖拽区域 -->
+    <div v-if="isMacOS" class="drag-region-mac"></div>
+
+    <!-- Windows 拖拽区域 -->
+    <div v-else class="drag-region-windows"></div>
 
     <!-- 登录遮罩 -->
     <login-overlay
@@ -112,7 +128,8 @@ async function closeWindow() {
       @expand="collapsed = false"
       :native-scrollbar="false"
       position="absolute"
-      style="height: 100vh; -webkit-app-region: drag"
+      style="height: 100vh;"
+      :style="isMacOS ? {} : { 'app-region': 'drag' }"
     >
       <div class="logo">
         <h2 v-if="!collapsed" style="user-select: none;">{{ i18n.appName }}</h2>
@@ -164,24 +181,37 @@ async function closeWindow() {
   z-index: 1;
 }
 
-.drag-region {
+/* macOS 拖拽区域样式 */
+.drag-region-mac {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 32px; /* 拖动区域高度 */
-  -webkit-app-region: drag; /* 启用拖动 */
-  z-index: 999;
+  height: 28px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+  z-index: 9999;
 }
 
-.window-controls {
+/* Windows 拖拽区域样式 */
+.drag-region-windows {
   position: fixed;
-  top: 0;
-  right: 0;
-  z-index: 1000;
-  display: flex;
-  gap: 8px;
-  padding: 8px;
+  top: 6px;
+  left: 6px;
+  right: 6px;
+  height: 28px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-app-region: drag;
+  z-index: 9999;
+}
+
+/* 确保其他元素不受拖拽影响 */
+.window-controls,
+.n-menu,
+.n-button {
+  -webkit-app-region: no-drag !important;
 }
 
 /* 控制按钮样式 */
