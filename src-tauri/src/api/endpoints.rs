@@ -264,11 +264,5 @@ pub async fn reset_password(
         .await
         .map_err(|e| e.to_string())?;
     
-    // 先获取响应文本
-    let response_text = response.text().await.map_err(|e| e.to_string())?;
-    // 打印响应文本用于调试
-    println!("Reset password response: {}", response_text);
-    // 解析JSON响应
-    serde_json::from_str(&response_text).map_err(|e| e.to_string())
-    // response.json().await.map_err(|e| e.to_string())
+    response.json().await.map_err(|e| e.to_string())
 }

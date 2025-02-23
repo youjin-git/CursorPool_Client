@@ -4,7 +4,7 @@ use tauri::{
     AppHandle,
     Emitter,
     menu::{Menu, MenuItem},
-    tray::TrayIconBuilder
+    tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent}
 };
 
 use crate::cursor_reset::reset_machine_id;
@@ -19,7 +19,7 @@ fn show_and_focus_window(app: &AppHandle) {
 
 pub fn setup_system_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-    let show = MenuItem::with_id(app, "show", "显示", true, None::<&str>)?;
+    let show = MenuItem::with_id(app, "显示", "显示", true, None::<&str>)?;
     // let switch_account_item = MenuItem::with_id(app, "switch_account", "一键换号", true, None::<&str>)?;
     // let switch_account_manual = MenuItem::with_id(app, "switch_account_manual", "切换账号", true, None::<&str>)?;
     let switch_machine = MenuItem::with_id(app, "switch_machine", "换机器码", true, None::<&str>)?;
@@ -37,6 +37,16 @@ pub fn setup_system_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .tooltip("Cursor Pool")
+        .on_tray_icon_event(|tray, event| match event {
+            TrayIconEvent::Click {
+                button: MouseButton::Left,
+                button_state: MouseButtonState::Up,
+                ..
+            } => {
+                show_and_focus_window(&tray.app_handle());
+            }
+            _ => {}
+        })
         .on_menu_event(move |app, event| {
             match event.id.as_ref() {
                 "quit" => {

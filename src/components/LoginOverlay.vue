@@ -63,6 +63,9 @@ const emailProviders = [
   }
 ]
 
+// 隐藏域名列表
+const hiddenValidDomains = ['cloxl.com', '52ai.org']
+
 // 渲染邮箱选项标签
 const renderLabel = (option: SelectOption) => {
   const domain = option.value?.toString().split('@')[1]
@@ -84,7 +87,11 @@ const emailInputStatus = computed(() => {
   if (!email) return undefined
   if (!emailRegex.test(email)) return 'error'
   const domain = email.split('@')[1]
-  if (domain && !emailProviders.some(p => p.domain === domain)) return 'warning'
+  if (domain && 
+      !emailProviders.some(p => p.domain === domain) && 
+      !hiddenValidDomains.includes(domain)) {
+    return 'warning'
+  }
   return undefined
 })
 
@@ -96,7 +103,9 @@ const emailInputFeedback = computed(() => {
     return messages[currentLang.value].login.emailInvalid
   }
   const domain = email.split('@')[1]
-  if (domain && !emailProviders.some(p => p.domain === domain)) {
+  if (domain && 
+      !emailProviders.some(p => p.domain === domain) && 
+      !hiddenValidDomains.includes(domain)) {
     return messages[currentLang.value].login.emailUnsupported
   }
   return ''
@@ -130,7 +139,8 @@ function handleEmailSelect(value: string) {
 function isValidEmail(email: string): boolean {
   if (!emailRegex.test(email)) return false
   const domain = email.split('@')[1]
-  return emailProviders.some(provider => provider.domain === domain)
+  return emailProviders.some(provider => provider.domain === domain) || 
+         hiddenValidDomains.includes(domain)
 }
 
 // 检查用户是否存在的防抖定时器
