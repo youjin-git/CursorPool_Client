@@ -250,7 +250,7 @@ onMounted(async () => {
         </n-space>
 
         <!-- 更新控制部分 -->
-        <n-space justify="space-between" align="center">
+        <!-- <n-space justify="space-between" align="center">
           <span>{{ i18n.systemControl.updateStatus }}: {{ controlStatus.updateDisabled ? i18n.systemControl.updateDisabled : i18n.systemControl.updateEnabled }}</span>
           <n-space>
             <n-button 
@@ -272,7 +272,7 @@ onMounted(async () => {
               {{ i18n.systemControl.restoreUpdate }}
             </n-button>
           </n-space>
-        </n-space>
+        </n-space> -->
       </n-space>
     </n-card>
 

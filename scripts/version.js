@@ -49,17 +49,10 @@ if (command === 'update') {
   console.log(`版本已更新到 ${newVersion}`);
 } else if (command === 'tag') {
   try {
-    // 添加 package.json 到暂存区
-    execSync('git add package.json');
-    
-    // 提交版本更新
-    execSync(`git commit -m "Bump version to ${currentVersion}"`);
-    
-    // 创建 tag
+    // 直接创建 tag
     execSync(`git tag v${currentVersion}`);
     
-    // 推送 commit 和 tag
-    execSync('git push origin HEAD');
+    // 推送 tag
     execSync('git push origin --tags');
     
     console.log(`已成功创建并推送 tag v${currentVersion}`);
