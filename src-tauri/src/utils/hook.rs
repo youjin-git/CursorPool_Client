@@ -4,15 +4,16 @@ use lazy_static::lazy_static;
 use md5::{Md5, Digest};
 use regex::Regex;
 use crate::utils::paths::AppPaths;
+use reqwest;
+use std::time::Duration;
 
 lazy_static! {
     static ref MAIN_JS_MD5: HashMap<&'static str, Vec<&'static str>> = {
         
         let mut m = HashMap::new();
-        // 0.45.2~0.45.10 来源 https://github.com/Angels-Ray/fake-rosrus/blob/2ef9115e37631df38b8313ef914a2ef736f0d1a0/utils/mainjs.js#L6C1-L16C3
-        m.insert("1f53d40367d0ac76f3f123c83b901497", vec!["0.45.2~0.45.8[-5]"]);
+        // 来源 https://gist.githubusercontent.com/Angels-Ray/11a0c8990750f4f563292a55c42465f1/raw
+        m.insert("1f53d40367d0ac76f3f123c83b901497", vec!["0.45.2~0.45.8[-5]", "0.45.11[-5]"]);
         m.insert("1650464dc26313c87c789da60c0495d0", vec!["0.45.10[-5]"]);
-        m.insert("1f53d40367d0ac76f3f123c83b901497", vec!["0.45.11[-5]"]);
         m.insert("6114002d8e2bb53853f4a49e228e8c74", vec!["0.45.2"]);
         m.insert("fde15c3fe02b6c48a2a8fa788ff3ed2a", vec!["0.45.3"]);
         m.insert("0052f48978fa8e322e2cb7e0c101d6b2", vec!["0.45.4"]);
@@ -32,6 +33,12 @@ lazy_static! {
         r#"async\s+(\w+)\s*\(\)\s*\{\s*return\s+this\.[\w.]+(?:\?\?|\?)\s*this\.([\w.]+)\.macMachineId\s*\}"#
     ).unwrap();
 }
+
+const REMOTE_HASH_URL: &str = "https://gist.githubusercontent.com/Angels-Ray/11a0c8990750f4f563292a55c42465f1/raw";
+const PROXY_URLS: [&str; 2] = [
+    "https://gh-proxy.com/",
+    "https://gh-proxy.com/https://"
+];
 
 pub struct Hook;
 
@@ -83,8 +90,63 @@ impl Hook {
         Ok(Self::calculate_md5_without_last_lines(&content, 5))
     }
 
-    /// 修补 main.js 文件内容
-    pub fn update_main_js_content() -> Result<(), String> {
+    // 添加新的远程获取函数
+    async fn fetch_remote_hash_map(url: &str) -> Result<HashMap<String, Vec<String>>, String> {
+        let client = reqwest::Client::new();
+        let response = client
+            .get(url)
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+            .map_err(|e| format!("请求失败: {}", e))?;
+
+        let text = response
+            .text()
+            .await
+            .map_err(|e| format!("读取响应失败: {}", e))?;
+
+        serde_json::from_str(&text)
+            .map_err(|e| format!("解析 JSON 失败: {}", e))
+    }
+
+    // 修改现有的版本检查函数
+    pub async fn check_version_compatibility(md5: &str) -> Result<bool, String> {
+        // 首先检查本地映射
+        if MAIN_JS_MD5.contains_key(md5) {
+            return Ok(true);
+        }
+
+        // 尝试从远程获取
+        let mut urls = vec![REMOTE_HASH_URL.to_string()];
+        // 添加代理 URL
+        for proxy in PROXY_URLS.iter() {
+            urls.push(format!("{}{}", proxy, REMOTE_HASH_URL));
+        }
+
+        for url in urls {
+            match Self::fetch_remote_hash_map(&url).await {
+                Ok(remote_map) => {
+                    if remote_map.contains_key(md5) {
+                        return Ok(true);
+                    }
+                }
+                Err(e) => {
+                    println!("从 {} 获取远程映射失败: {}", url, e);
+                    continue;
+                }
+            }
+        }
+
+        // 如果所有尝试都失败，返回不支持的版本错误
+        let versions: Vec<&str> = MAIN_JS_MD5.values().flatten().copied().collect();
+        Err(format!(
+            "不支持的 Cursor 版本或 main.js 已被修补。\n支持的版本: {}",
+            versions.join(", ")
+        ))
+    }
+
+    /// 修改现有的更新函数
+    pub async fn update_main_js_content() -> Result<(), String> {
         let paths = AppPaths::new()?;
         let file_path = &paths.main_js;
         
@@ -95,13 +157,9 @@ impl Hook {
         // 计算MD5
         let md5 = Self::calculate_md5_without_last_lines(&content, 5);
 
-        // 检查版本兼容性
-        if !MAIN_JS_MD5.contains_key(md5.as_str()) {
-            let versions: Vec<&str> = MAIN_JS_MD5.values().flatten().copied().collect();
-            return Err(format!(
-                "不支持的 Cursor 版本或 main.js 已被修补。\n支持的版本: {}",
-                versions.join(", ")
-            ));
+        // 检查版本兼容性（包括远程检查）
+        if !Self::check_version_compatibility(&md5).await? {
+            return Err("版本不兼容".to_string());
         }
 
         // 创建备份
@@ -185,15 +243,15 @@ mod tests {
         assert_ne!(full_hash, trimmed_hash, "去掉最后5行的hash应该与完整文件hash不同");
     }
 
-    #[test]
-    fn test_update_and_restore() {
+    #[tokio::test]
+    async fn test_update_and_restore() {
         // 先获取原始hash
         let original_hash = Hook::get_main_js_hash()
             .unwrap_or_else(|e| panic!("获取原始hash失败: {}", e));
         println!("原始 main.js 的 MD5: {}", original_hash);
 
         // 尝试修补
-        match Hook::update_main_js_content() {
+        match Hook::update_main_js_content().await {
             Ok(_) => {
                 println!("成功修补 main.js");
                 // 获取修补后的hash

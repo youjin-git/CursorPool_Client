@@ -331,7 +331,7 @@ pub async fn hook_main_js(force_kill: bool) -> Result<(), String> {
     }
 
     // 执行 hook 操作
-    Hook::update_main_js_content()
+    Hook::update_main_js_content().await
 }
 
 /// 从备份恢复 main.js 文件
