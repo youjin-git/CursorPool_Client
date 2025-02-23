@@ -4,6 +4,8 @@ run-name: ${{ github.ref_name }}
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
@@ -33,21 +35,19 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
-      - name: Get Version (Windows)
-        if: matrix.platform == 'windows-latest'
-        id: get_version_windows
-        shell: pwsh
-        run: |
-          $VERSION = (node -p "require('./package.json').version")
-          echo "version=v$VERSION" >> $env:GITHUB_OUTPUT
-
-      - name: Get Version (Unix)
-        if: matrix.platform != 'windows-latest'
-        id: get_version_unix
+      - name: Get Version Info
+        id: version_info
         shell: bash
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=v$VERSION" >> $GITHUB_OUTPUT
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            DATE=$(date +'%Y%m%d')
+            echo "version=v${BASE_VERSION}.dev${DATE}" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+          else
+            echo "version=v${BASE_VERSION}" >> $GITHUB_OUTPUT
+            echo "is_release=true" >> $GITHUB_OUTPUT
+          fi
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -68,14 +68,14 @@ jobs:
         run: npm install
 
       - name: Create Release
-        if: matrix.platform == 'macos-14'  # 只在一个平台上创建 release
+        if: steps.version_info.outputs.is_release == 'true' && matrix.platform == 'macos-14'
         id: create_release
-        uses: softprops/action-gh-release@v1  # 替换为更现代的 action
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ steps.get_version_unix.outputs.version }}
-          name: ${{ steps.get_version_unix.outputs.version }}
+          tag_name: ${{ steps.version_info.outputs.version }}
+          name: ${{ steps.version_info.outputs.version }}
           draft: false
           prerelease: false
 
@@ -83,8 +83,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
-          releaseName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
+          tagName: ${{ steps.version_info.outputs.version }}
+          releaseName: ${{ steps.version_info.outputs.version }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Upload Artifacts
+        if: steps.version_info.outputs.is_release == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-build
+          path: |
+            src-tauri/target/**/*.dmg
+            src-tauri/target/**/*.msi
+            src-tauri/target/**/*.exe
+          retention-days: 5
