@@ -172,8 +172,17 @@ const pendingForceKillAction = ref<{
   params?: any
 } | null>(null)
 
+// 添加 CC 状态检查模态框
+const showCCStatusModal = ref(false)
+
 // 修改机器码更换处理函数
 const handleMachineCodeChange = async (force_kill: boolean = false) => {
+  // 先检查 CC 状态
+  if (!deviceInfo.value.hookStatus) {
+    showCCStatusModal.value = true
+    return
+  }
+
   try {
     await resetMachineId(force_kill)
     message.success(i18n.value.dashboard.machineChangeSuccess)
@@ -219,13 +228,19 @@ const checkUnusedCredits = () => {
 
 // 修改账户切换处理函数
 const handleAccountSwitch = async () => {
-  // 先检查未使用的积分
+  // 先检查 CC 状态
+  if (!deviceInfo.value.hookStatus) {
+    showCCStatusModal.value = true
+    return
+  }
+
+  // 再检查未使用的积分
   if (checkUnusedCredits()) {
     pendingAction.value = 'account'
     return
   }
 
-  // 再检查 Cursor 是否在运行
+  // 最后检查 Cursor 是否在运行
   const isRunning = await checkCursorRunning()
   if (isRunning) {
     showCursorRunningModal.value = true
@@ -238,13 +253,19 @@ const handleAccountSwitch = async () => {
 
 // 修改一键切换处理函数
 const handleQuickChange = async () => {
-  // 先检查未使用的积分
+  // 先检查 CC 状态
+  if (!deviceInfo.value.hookStatus) {
+    showCCStatusModal.value = true
+    return
+  }
+
+  // 再检查未使用的积分
   if (checkUnusedCredits()) {
     pendingAction.value = 'quick'
     return
   }
 
-  // 再检查 Cursor 是否在运行
+  // 最后检查 Cursor 是否在运行
   const isRunning = await checkCursorRunning()
   if (isRunning) {
     showCursorRunningModal.value = true
@@ -818,6 +839,29 @@ const handleHistoryDownload = async () => {
       <template #action>
         <n-button type="error" @click="handleExit" block>
           退出程序
+        </n-button>
+      </template>
+    </n-modal>
+
+    <!-- 添加 CC 状态检查模态框 -->
+    <n-modal
+      v-model:show="showCCStatusModal"
+      preset="dialog"
+      title="CC 客户端未注入"
+      :closable="true"
+      :mask-closable="true"
+    >
+      <template #default>
+        <p>检测到 Cursor 客户端未注入，在此状态下进行操作可能会导致：</p>
+        <ul style="margin: 12px 0; padding-left: 20px; color: #ff4d4f;">
+          <li>账户更换失败</li>
+          <li>积分异常扣除</li>
+        </ul>
+        <p>请确保 Cursor 客户端正常注入后再进行操作</p>
+      </template>
+      <template #action>
+        <n-button type="primary" @click="showCCStatusModal = false">
+          我知道了
         </n-button>
       </template>
     </n-modal>
