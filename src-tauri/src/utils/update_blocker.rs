@@ -108,7 +108,7 @@ impl UpdateBlocker {
 
         // 移除所有现有权限并只设置当前用户的读取权限
         let output = Command::new("icacls")
-            .args(&[
+            .args([
                 updater_path.to_str().unwrap(),
                 "/reset"
             ])
@@ -120,7 +120,7 @@ impl UpdateBlocker {
 
         // 禁用继承
         let output = Command::new("icacls")
-            .args(&[
+            .args([
                 updater_path.to_str().unwrap(),
                 "/inheritance:d"
             ])
@@ -132,7 +132,7 @@ impl UpdateBlocker {
 
         // 移除所有权限
         let output = Command::new("icacls")
-            .args(&[
+            .args([
                 updater_path.to_str().unwrap(),
                 "/remove", "Everyone",
                 "/remove", "Users",
@@ -146,7 +146,7 @@ impl UpdateBlocker {
 
         // 设置当前用户只读权限
         let output = Command::new("icacls")
-            .args(&[
+            .args([
                 updater_path.to_str().unwrap(),
                 "/grant:r",
                 &format!("{}:(R)", username)
@@ -159,7 +159,7 @@ impl UpdateBlocker {
 
         // 设置系统权限（可能需要保留）
         let output = Command::new("icacls")
-            .args(&[
+            .args([
                 updater_path.to_str().unwrap(),
                 "/grant:r",
                 "SYSTEM:(R)"
@@ -172,7 +172,7 @@ impl UpdateBlocker {
 
         // 设置只读属性
         Command::new("attrib")
-            .args(&["+r", "+s", "+h", updater_path.to_str().unwrap()])  // 添加系统和隐藏属性
+            .args(["+r", "+s", "+h", updater_path.to_str().unwrap()])  // 添加系统和隐藏属性
             .output()
             .map_err(|e| format!("设置文件属性失败: {}", e))?;
 
@@ -227,7 +227,7 @@ impl UpdateBlocker {
     fn disable_linux_update(&self, updater_path: &PathBuf) -> Result<(), String> {
         // 执行命令序列
         Command::new("sh")
-            .args(&[
+            .args([
                 "-c",
                 &format!(
                     "rm -rf '{}' && \
@@ -262,13 +262,13 @@ impl UpdateBlocker {
         if updater_path.exists() {
             // 先移除文件属性
             Command::new("attrib")
-                .args(&["-r", "-s", "-h", updater_path.to_str().unwrap()])
+                .args(["-r", "-s", "-h", updater_path.to_str().unwrap()])
                 .output()
                 .map_err(|e| format!("移除文件属性失败: {}", e))?;
 
             // 重置权限
             Command::new("icacls")
-                .args(&[
+                .args([
                     updater_path.to_str().unwrap(),
                     "/reset"
                 ])
@@ -350,7 +350,7 @@ impl UpdateBlocker {
     /// Linux 平台恢复更新
     fn restore_linux_update(&self, updater_path: &PathBuf) -> Result<(), String> {
         Command::new("sh")
-            .args(&[
+            .args([
                 "-c",
                 &format!(
                     "sudo chattr -i '{}' 2>/dev/null; \

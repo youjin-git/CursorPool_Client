@@ -26,7 +26,7 @@ pub fn request_admin_privileges(exe_path: &str) -> Result<bool, String> {
     // 使用  Start-Process
     let result = Command::new("powershell")
         .creation_flags(CREATE_NO_WINDOW)
-        .args(&[
+        .args([
             "Start-Process",
             exe_path,
             "-Verb",

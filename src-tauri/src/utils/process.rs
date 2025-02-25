@@ -51,7 +51,7 @@ impl ProcessManager {
 
             // 直接强制结束进程
             for pid in &processes {
-                let _ = self.kill_process(&pid);
+                let _ = self.kill_process(pid);
                 thread::sleep(Duration::from_millis(200));
             }
 
