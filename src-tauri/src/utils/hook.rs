@@ -6,22 +6,38 @@ use regex::Regex;
 use crate::utils::paths::AppPaths;
 use reqwest;
 use std::time::Duration;
+use crate::api::client::get_base_url;
 
 lazy_static! {
     static ref MAIN_JS_MD5: HashMap<&'static str, Vec<&'static str>> = {
         
         let mut m = HashMap::new();
         // 来源 https://gist.githubusercontent.com/Angels-Ray/11a0c8990750f4f563292a55c42465f1/raw
+        m.insert("16181e0877949fa846669a134783f858", vec!["0.44.11[-5]"]);
         m.insert("1f53d40367d0ac76f3f123c83b901497", vec!["0.45.2~0.45.8[-5]", "0.45.11[-5]"]);
         m.insert("1650464dc26313c87c789da60c0495d0", vec!["0.45.10[-5]"]);
+        m.insert("a2b8ba180a037bec28c9f8e06808423e", vec!["0.45.12[-5]"]);
+        m.insert("dfe46d46dcf52711f68522afdb985d01", vec!["0.45.14[-5]"]);
+        m.insert("723d492726d0cfa5ac2ad0649f499ef5", vec!["0.45.15[-5]"]);
+        m.insert("2df7e08131902951452d37fe946b8b8c", vec!["0.46.0[-5]"]);
+        m.insert("44fd6c68052686e67c0402f69ae3f1bb", vec!["0.46.2[-5]"]);
+        m.insert("2defb2347364e7193306389730012e3f", vec!["0.46.3[-5]"]);
+        m.insert("1e5b4beb11a90d79645ad54a6477482d", vec!["0.44.11"]);
+        m.insert("217d4ae5933b13b9aae1829750d0b709", vec!["0.45.10"]);
+        m.insert("0c22467f3e082760524dda841eeb2ef6", vec!["0.45.11"]);
+        m.insert("3540834ce1b6125022a9316375dfdd43", vec!["0.45.12"]);
+        m.insert("ed5b92fca478515c138c3df0c8860fe2", vec!["0.45.14"]);
+        m.insert("76bddc6605df5d845af68d4959a4f045", vec!["0.45.15"]);
         m.insert("6114002d8e2bb53853f4a49e228e8c74", vec!["0.45.2"]);
         m.insert("fde15c3fe02b6c48a2a8fa788ff3ed2a", vec!["0.45.3"]);
         m.insert("0052f48978fa8e322e2cb7e0c101d6b2", vec!["0.45.4"]);
         m.insert("74ed1a381f4621ccfd35989f322dc8a2", vec!["0.45.5"]);
+        m.insert("7f379a12f3341b59c9aecf394818b5ab", vec!["0.45.6"]);
         m.insert("e82b270f8c114247968bb4a04a4f4f72", vec!["0.45.7"]);
         m.insert("352c7f017a7eab95690263a9d83b7832", vec!["0.45.8"]);
-        m.insert("217d4ae5933b13b9aae1829750d0b709", vec!["0.45.10"]);
-        m.insert("0c22467f3e082760524dda841eeb2ef6", vec!["0.45.11"]);
+        m.insert("a6d83fa177878ff497286d659957d9ab", vec!["0.46.0"]);
+        m.insert("95277d19fe0bb4eb8bbb236d5386cd46", vec!["0.46.2"]);
+        m.insert("f85470d71eca2f99d3c9c265dfbf5b8f", vec!["0.46.3"]);
         m
     };
 
@@ -34,11 +50,7 @@ lazy_static! {
     ).unwrap();
 }
 
-const REMOTE_HASH_URL: &str = "https://gist.githubusercontent.com/Angels-Ray/11a0c8990750f4f563292a55c42465f1/raw";
-const PROXY_URLS: [&str; 2] = [
-    "https://gh-proxy.com/",
-    "https://gh-proxy.com/https://"
-];
+const REMOTE_HASH_URL: &str = "/hash";
 
 pub struct Hook;
 
@@ -90,23 +102,26 @@ impl Hook {
         Ok(Self::calculate_md5_without_last_lines(&content, 5))
     }
 
-    // 添加新的远程获取函数
-    async fn fetch_remote_hash_map(url: &str) -> Result<HashMap<String, Vec<String>>, String> {
+    async fn fetch_remote_hash_map() -> Result<HashMap<String, Vec<String>>, String> {
         let client = reqwest::Client::new();
         let response = client
-            .get(url)
+            .get(format!("{}{}", get_base_url(), REMOTE_HASH_URL))
             .timeout(Duration::from_secs(10))
             .send()
             .await
             .map_err(|e| format!("请求失败: {}", e))?;
 
-        let text = response
-            .text()
-            .await
-            .map_err(|e| format!("读取响应失败: {}", e))?;
+        if response.status().is_success() {
+            let text = response
+                .text()
+                .await
+                .map_err(|e| format!("读取响应失败: {}", e))?;
 
-        serde_json::from_str(&text)
-            .map_err(|e| format!("解析 JSON 失败: {}", e))
+            serde_json::from_str(&text)
+                .map_err(|e| format!("解析 JSON 失败: {}", e))
+        } else {
+            Err("云端没有找到哈希数据".to_string())
+        }
     }
 
     // 修改现有的版本检查函数
@@ -117,23 +132,14 @@ impl Hook {
         }
 
         // 尝试从远程获取
-        let mut urls = vec![REMOTE_HASH_URL.to_string()];
-        // 添加代理 URL
-        for proxy in PROXY_URLS.iter() {
-            urls.push(format!("{}{}", proxy, REMOTE_HASH_URL));
-        }
-
-        for url in urls {
-            match Self::fetch_remote_hash_map(&url).await {
-                Ok(remote_map) => {
-                    if remote_map.contains_key(md5) {
-                        return Ok(true);
-                    }
+        match Self::fetch_remote_hash_map().await {
+            Ok(remote_map) => {
+                if remote_map.contains_key(md5) {
+                    return Ok(true);
                 }
-                Err(e) => {
-                    println!("从 {} 获取远程映射失败: {}", url, e);
-                    continue;
-                }
+            }
+            Err(e) => {
+                println!("获取远程映射失败: {}", e);
             }
         }
 

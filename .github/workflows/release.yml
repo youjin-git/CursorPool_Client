@@ -38,7 +38,7 @@ jobs:
           BASE_VERSION=$(node -p "require('./package.json').version")
           DATE=$(date +'%Y%m%d%H%M')
           COMMIT_HASH="${{ steps.get_commit_hash.outputs.short_sha }}"
-          DEV_VERSION="${BASE_VERSION}-dev.${DATE}.${COMMIT_HASH}"
+          DEV_VERSION="${BASE_VERSION}-dev.${DATE:0:8}.${COMMIT_HASH}"
           echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
           echo "generated dev version: ${DEV_VERSION}"
           

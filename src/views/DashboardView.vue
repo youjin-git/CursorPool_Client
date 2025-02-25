@@ -475,9 +475,10 @@ const checkUpdate = async () => {
 }
 
 // 处理下载更新
-const handleDownload = () => {
+const handleDownload = async () => {
   if (versionInfo.value?.downloadUrl) {
-    window.open(versionInfo.value.downloadUrl, '_blank')
+    const url = 'https://downloader-cursor.deno.dev/'
+    await open(url)
   }
 }
 
