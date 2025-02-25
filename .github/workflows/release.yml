@@ -6,12 +6,132 @@ on:
   push:
     tags:
       - 'v*'
+    branches:
+      - main
+      - master
 
 permissions:
   contents: write
 
 jobs:
+  # 为main分支push创建开发版本
+  create-dev-version:
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    outputs:
+      dev_version: ${{ steps.set_dev_version.outputs.dev_version }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: 生成开发版本号
+        id: set_dev_version
+        run: |
+          BASE_VERSION=$(node -p "require('./package.json').version")
+          DATE=$(date +'%Y%m%d%H%M')
+          DEV_VERSION="${BASE_VERSION}.dev${DATE}"
+          echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
+          echo "生成的开发版本号: ${DEV_VERSION}"
+          
+          # 临时更新package.json中的版本号
+          npm version --no-git-tag-version "${DEV_VERSION}"
+          
+          # 更新Cargo.toml中的版本号
+          cd src-tauri
+          sed -i "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" Cargo.toml
+  
+  # 为main分支push构建开发版本
+  build-dev-version:
+    needs: create-dev-version
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-14'
+            args: '--target aarch64-apple-darwin'
+          - platform: 'macos-latest'
+            args: '--target x86_64-apple-darwin'
+          - platform: 'windows-latest'
+            args: ''
+          - platform: 'ubuntu-latest'
+            args: ''
+            
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: 更新版本号
+        run: |
+          DEV_VERSION="${{ needs.create-dev-version.outputs.dev_version }}"
+          
+          # 更新package.json
+          npm version --no-git-tag-version "${DEV_VERSION}"
+          
+          # 更新Cargo.toml
+          cd src-tauri
+          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
+            (Get-Content Cargo.toml) -replace '^version = ".*"', "version = `"${DEV_VERSION}`"" | Set-Content Cargo.toml
+          else
+            sed -i "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" Cargo.toml
+          fi
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || matrix.platform == 'macos-14' && 'aarch64-apple-darwin' || '' }}
+
+      - name: Install dependencies (macOS)
+        if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-14'
+        run: |
+          brew install openssl@3
+
+      - name: Install dependencies (Ubuntu)
+        if: matrix.platform == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build Tauri App
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: ${{ matrix.args }}
+          
+      - name: 上传构建产物
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.platform }}-dev-build
+          path: |
+            src-tauri/target/*/bundle/dmg/*.dmg
+            src-tauri/target/*/bundle/deb/*.deb
+            src-tauri/target/*/bundle/appimage/*.AppImage
+            src-tauri/target/*/bundle/msi/*.msi
+            src-tauri/target/*/bundle/nsis/*.exe
+          if-no-files-found: ignore
+
+  # 原有的发布流程，仅在创建tag时触发
   publish-tauri:
+    if: startsWith(github.ref, 'refs/tags/v')
     strategy:
       fail-fast: false
       matrix:
