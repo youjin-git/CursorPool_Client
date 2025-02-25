@@ -37,15 +37,12 @@ pub fn setup_system_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
         .menu(&menu)
         .show_menu_on_left_click(false)
         .tooltip("Cursor Pool")
-        .on_tray_icon_event(|tray, event| match event {
-            TrayIconEvent::Click {
-                button: MouseButton::Left,
-                button_state: MouseButtonState::Up,
-                ..
-            } => {
-                show_and_focus_window(&tray.app_handle());
-            }
-            _ => {}
+        .on_tray_icon_event(|tray, event| if let TrayIconEvent::Click {
+            button: MouseButton::Left,
+            button_state: MouseButtonState::Up,
+            ..
+        } = event {
+            show_and_focus_window(tray.app_handle());
         })
         .on_menu_event(move |app, event| {
             match event.id.as_ref() {

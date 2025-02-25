@@ -1,5 +1,6 @@
 use std::path::PathBuf;
 use std::fs;
+use std::path::Path;
 
 pub struct AppPaths {
     pub storage: PathBuf,
@@ -126,7 +127,7 @@ impl AppPaths {
     }
 
     // 确保父目录存在
-    pub fn ensure_parent_exists(&self, path: &PathBuf) -> Result<(), String> {
+    pub fn ensure_parent_exists(&self, path: &Path) -> Result<(), String> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .map_err(|e| format!("创建目录失败: {}", e))?;
@@ -158,10 +159,8 @@ impl AppPaths {
         } else if self.cursor_updater.is_dir() {
             // 可选: 列出目录内容用于调试
             if let Ok(entries) = std::fs::read_dir(&self.cursor_updater) {
-                for entry in entries {
-                    if let Ok(entry) = entry {
-                        println!("- {:?}", entry.path());
-                    }
+                for entry in entries.flatten() {
+                    println!("- {:?}", entry.path());
                 }
             }
             Ok(())

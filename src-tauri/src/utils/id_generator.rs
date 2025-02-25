@@ -19,14 +19,14 @@ pub fn generate_new_ids() -> HashMap<String, String> {
     );
     
     // 生成MAC机器ID
-    let mac_id = Sha512::digest(&random_bytes_64);
+    let mac_id = Sha512::digest(random_bytes_64);
     ids.insert(
         "telemetry.macMachineId".to_string(),
         hex::encode(mac_id)
     );
     
     // 生成机器ID
-    let machine_id = Sha256::digest(&random_bytes_32);
+    let machine_id = Sha256::digest(random_bytes_32);
     ids.insert(
         "telemetry.machineId".to_string(),
         hex::encode(machine_id)

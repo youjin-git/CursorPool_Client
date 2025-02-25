@@ -100,7 +100,7 @@ impl UpdateBlocker {
 
         // 获取当前用户名
         let output = Command::new("powershell")
-            .args(&["-Command", "$env:USERNAME"])
+            .args(["-Command", "$env:USERNAME"])
             .output()
             .map_err(|e| format!("获取用户名失败: {}", e))?;
         
@@ -371,6 +371,12 @@ impl UpdateBlocker {
             .map_err(|e| format!("执行命令失败: {}", e))?;
 
         Ok(())
+    }
+}
+
+impl Default for UpdateBlocker {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

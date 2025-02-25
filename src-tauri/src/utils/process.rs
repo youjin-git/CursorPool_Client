@@ -154,10 +154,10 @@ impl ProcessManager {
         if pattern.starts_with('*') && pattern.ends_with('*') {
             let search = &pattern[1..pattern.len() - 1];
             line.contains(search)
-        } else if pattern.starts_with('*') {
-            line.ends_with(&pattern[1..])
-        } else if pattern.ends_with('*') {
-            line.starts_with(&pattern[..pattern.len() - 1])
+        } else if let Some(stripped) = pattern.strip_prefix('*') {
+            line.ends_with(stripped)
+        } else if let Some(stripped) = pattern.strip_suffix('*') {
+            line.starts_with(stripped)
         } else {
             line == pattern
         }
@@ -201,6 +201,12 @@ impl ProcessManager {
             .map_err(|e| format!("终止进程失败: {}", e))?;
 
         Ok(())
+    }
+}
+
+impl Default for ProcessManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
