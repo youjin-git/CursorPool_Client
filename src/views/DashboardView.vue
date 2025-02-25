@@ -397,15 +397,15 @@ const handleForceKill = async () => {
         switch (pendingForceKillAction.value.type) {
             case 'machine':
                 await handleMachineCodeChange()
-                message.success(i18n.value.common.copySuccess + ', 正在清理进程, 15秒后将自动重启Cursor')
+                message.success(i18n.value.common.copySuccess + ', 正在清理进程, 稍后将自动重启Cursor')
                 break
             case 'account':
                 await executeAccountSwitch()
-                message.success(i18n.value.dashboard.accountChangeSuccess + ', 正在清理进程, 15秒后将自动重启Cursor')
+                message.success(i18n.value.dashboard.accountChangeSuccess + ', 正在清理进程, 稍后将自动重启Cursor')
                 break
             case 'quick':
                 await executeQuickChange()
-                message.success(i18n.value.common.copySuccess + ', 正在清理进程, 15秒后将自动重启Cursor')
+                message.success(i18n.value.common.copySuccess + ', 正在清理进程, 稍后将自动重启Cursor')
                 break
         }
     } catch (error) {

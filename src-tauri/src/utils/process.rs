@@ -1,11 +1,11 @@
-use std::process::Command;
+use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
 use crate::utils::paths::AppPaths;
 
 const MAX_ATTEMPTS: i32 = 2;
 const RETRY_DELAY: Duration = Duration::from_secs(1);
-const CLEANUP_DELAY: Duration = Duration::from_secs(15);
+const CLEANUP_DELAY: Duration = Duration::from_secs(1);
 
 pub struct ProcessManager;
 
@@ -73,6 +73,25 @@ impl ProcessManager {
         Ok(())
     }
 
+    /// 在Windows平台上，创建不显示窗口的命令
+    fn create_hidden_command(&self, cmd: &str) -> Command {
+        let mut command = Command::new(cmd);
+        
+        #[cfg(target_os = "windows")]
+        {
+            use std::os::windows::process::CommandExt;
+            const CREATE_NO_WINDOW: u32 = 0x08000000;
+            command.creation_flags(CREATE_NO_WINDOW);
+        }
+        
+        // 重定向标准输入输出，进一步确保不显示窗口
+        command.stdin(Stdio::null())
+               .stdout(Stdio::piped())
+               .stderr(Stdio::null());
+               
+        command
+    }
+
     /// 获取所有Cursor进程的PID
     fn get_cursor_processes(&self) -> Result<Vec<String>, String> {
         let (cmd, args) = match std::env::consts::OS {
@@ -82,7 +101,8 @@ impl ProcessManager {
             _ => return Err("不支持的操作系统".to_string()),
         };
 
-        let output = Command::new(cmd)
+        let mut command = self.create_hidden_command(cmd);
+        let output = command
             .args(&args)
             .output()
             .map_err(|e| format!("执行命令失败: {}", e))?;
@@ -174,7 +194,8 @@ impl ProcessManager {
             _ => return Err("不支持的操作系统".to_string()),
         };
 
-        Command::new(cmd)
+        let mut command = self.create_hidden_command(cmd);
+        command
             .args(&args)
             .output()
             .map_err(|e| format!("终止进程失败: {}", e))?;
