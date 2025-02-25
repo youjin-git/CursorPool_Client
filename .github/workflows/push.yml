@@ -9,7 +9,7 @@ on:
 jobs:
   code-quality:
     name: 代码质量检查
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -31,7 +31,7 @@ jobs:
         
   security-scan:
     name: 安全漏洞扫描
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
           
   rust-analysis:
     name: Rust代码分析
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -83,7 +83,7 @@ jobs:
   build-test:
     name: 构建测试
     needs: [code-quality, security-scan, rust-analysis]
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -96,11 +96,6 @@ jobs:
           
       - name: 安装Rust
         uses: dtolnay/rust-toolchain@stable
-          
-      - name: 安装系统依赖
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
           
       - name: 安装前端依赖
         run: npm ci

@@ -1,5 +1,5 @@
 name: Release
-run-name: ${{ github.ref_name }}
+run-name: ${{ github.sha != '' && format('Release {0}', github.sha) || github.workflow }}
 
 on:
   workflow_dispatch:
@@ -14,37 +14,39 @@ permissions:
   contents: write
 
 jobs:
-  # 为main分支push创建开发版本
   create-dev-version:
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     outputs:
       dev_version: ${{ steps.set_dev_version.outputs.dev_version }}
+      commit_hash: ${{ steps.get_commit_hash.outputs.short_sha }}
     steps:
       - uses: actions/checkout@v4
+      
+      - name: Get commit hash
+        id: get_commit_hash
+        run: echo "short_sha=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
       
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           
-      - name: 生成开发版本号
+      - name: generate dev version
         id: set_dev_version
         run: |
           BASE_VERSION=$(node -p "require('./package.json').version")
           DATE=$(date +'%Y%m%d%H%M')
-          DEV_VERSION="${BASE_VERSION}.dev${DATE}"
+          COMMIT_HASH="${{ steps.get_commit_hash.outputs.short_sha }}"
+          DEV_VERSION="${BASE_VERSION}-dev.${DATE}.${COMMIT_HASH}"
           echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
-          echo "生成的开发版本号: ${DEV_VERSION}"
+          echo "generated dev version: ${DEV_VERSION}"
           
-          # 临时更新package.json中的版本号
           npm version --no-git-tag-version "${DEV_VERSION}"
           
-          # 更新Cargo.toml中的版本号
           cd src-tauri
-          sed -i "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" Cargo.toml
+          sed -i "" "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" Cargo.toml
   
-  # 为main分支push构建开发版本
   build-dev-version:
     needs: create-dev-version
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -58,8 +60,6 @@ jobs:
             args: '--target x86_64-apple-darwin'
           - platform: 'windows-latest'
             args: ''
-          - platform: 'ubuntu-latest'
-            args: ''
             
     runs-on: ${{ matrix.platform }}
     steps:
@@ -71,20 +71,25 @@ jobs:
           node-version: '20'
           cache: 'npm'
           
-      - name: 更新版本号
+      - name: update version (Windows)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          $DEV_VERSION="${{ needs.create-dev-version.outputs.dev_version }}"
+          npm version --no-git-tag-version $DEV_VERSION
+          
+          cd src-tauri
+          (Get-Content Cargo.toml) -replace '^version = ".*"', "version = `"$DEV_VERSION`"" | Set-Content Cargo.toml
+          
+      - name: update version (macOS)
+        if: matrix.platform != 'windows-latest'
+        shell: bash
         run: |
           DEV_VERSION="${{ needs.create-dev-version.outputs.dev_version }}"
-          
-          # 更新package.json
           npm version --no-git-tag-version "${DEV_VERSION}"
           
-          # 更新Cargo.toml
           cd src-tauri
-          if [ "${{ matrix.platform }}" = "windows-latest" ]; then
-            (Get-Content Cargo.toml) -replace '^version = ".*"', "version = `"${DEV_VERSION}`"" | Set-Content Cargo.toml
-          else
-            sed -i "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" Cargo.toml
-          fi
+          sed -i "" "s/^version = \".*\"/version = \"${DEV_VERSION}\"/" Cargo.toml
 
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -95,12 +100,6 @@ jobs:
         if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-14'
         run: |
           brew install openssl@3
-
-      - name: Install dependencies (Ubuntu)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -117,10 +116,10 @@ jobs:
         with:
           args: ${{ matrix.args }}
           
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v3
+      - name: upload build artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.platform }}-dev-build
+          name: ${{ matrix.platform }}-${{ needs.create-dev-version.outputs.commit_hash }}
           path: |
             src-tauri/target/*/bundle/dmg/*.dmg
             src-tauri/target/*/bundle/deb/*.deb
@@ -129,7 +128,6 @@ jobs:
             src-tauri/target/*/bundle/nsis/*.exe
           if-no-files-found: ignore
 
-  # 原有的发布流程，仅在创建tag时触发
   publish-tauri:
     if: startsWith(github.ref, 'refs/tags/v')
     strategy:
@@ -188,9 +186,9 @@ jobs:
         run: npm install
 
       - name: Create Release
-        if: matrix.platform == 'macos-14'  # 只在一个平台上创建 release
+        if: matrix.platform == 'macos-14'
         id: create_release
-        uses: softprops/action-gh-release@v1  # 替换为更现代的 action
+        uses: softprops/action-gh-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
