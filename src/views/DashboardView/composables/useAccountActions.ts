@@ -10,6 +10,7 @@ import {
 import { addHistoryRecord } from '../../../utils/history'
 import { useDashboardState } from './useDashboardState'
 import { useDeviceInfo } from './useDeviceInfo'
+import { computed, ref } from 'vue'
 
 export function useAccountActions() {
   const message = useMessage()
@@ -23,10 +24,19 @@ export function useAccountActions() {
   } = useDashboardState()
   
   const { deviceInfo, fetchUserInfo, fetchMachineIds, fetchCursorInfo } = useDeviceInfo()
+  
+  // 添加新的状态
+  const showInsufficientCreditsModal = ref(false)
+  const pendingCreditAction = ref<'account' | 'quick' | null>(null)
+  
+  // 计算用户当前积分
+  const userCredits = computed(() => {
+    if (!deviceInfo.value.userInfo) return 0
+    return (deviceInfo.value.userInfo.totalCount - deviceInfo.value.userInfo.usedCount) * 50
+  })
 
   // 修改机器码
   const handleMachineCodeChange = async () => {
-    console.log('handleMachineCodeChange')
     // 先检查 CC 状态
     try {
       // 重新检查 Hook 状态，确保获取最新状态
@@ -36,7 +46,6 @@ export function useAccountActions() {
       if (!deviceInfo.value.hookStatus) {
         originalActionBeforeHook.value = { type: 'machine' }
         showCCStatusModal.value = true
-        console.log('showCCStatusModal.value', showCCStatusModal.value)
         return
       }
 
@@ -79,6 +88,13 @@ export function useAccountActions() {
       if (isRunning) {
         showCursorRunningModal.value = true
         pendingForceKillAction.value = { type: 'account' }
+        return
+      }
+      
+      // 检查积分是否足够
+      if (userCredits.value < 50) {
+        showInsufficientCreditsModal.value = true
+        pendingCreditAction.value = 'account'
         return
       }
 
@@ -154,6 +170,13 @@ export function useAccountActions() {
         pendingForceKillAction.value = { type: 'quick' }
         return
       }
+      
+      // 检查积分是否足够
+      if (userCredits.value < 50) {
+        showInsufficientCreditsModal.value = true
+        pendingCreditAction.value = 'quick'
+        return
+      }
 
       await executeQuickChange()
     } catch (error) {
@@ -216,6 +239,24 @@ export function useAccountActions() {
       message.error(i18n.value.common.copyFailed)
     }
   }
+  
+  // 处理激活成功
+  const handleActivateSuccess = async () => {
+    // 重新获取用户信息
+    await fetchUserInfo()
+    
+    // 如果积分已经足够，继续执行之前的操作
+    if (userCredits.value >= 50) {
+      if (pendingCreditAction.value === 'account') {
+        await executeAccountSwitch()
+      } else if (pendingCreditAction.value === 'quick') {
+        await executeQuickChange()
+      }
+      pendingCreditAction.value = null
+    } else {
+      message.info('积分仍然不足，请继续充值或联系客服')
+    }
+  }
 
   // 监听事件，在注入成功后继续执行原始操作
   window.addEventListener('continue_original_action', ((event: CustomEvent) => {
@@ -234,6 +275,10 @@ export function useAccountActions() {
     handleAccountSwitch,
     handleQuickChange,
     executeAccountSwitch,
-    executeQuickChange
+    executeQuickChange,
+    showInsufficientCreditsModal,
+    pendingCreditAction,
+    userCredits,
+    handleActivateSuccess
   }
 } 

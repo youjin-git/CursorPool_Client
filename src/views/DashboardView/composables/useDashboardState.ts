@@ -1,4 +1,4 @@
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
 import type { VersionInfo } from '@/api/types'
 import type { OriginalAction, PendingForceKillAction } from '../types'
 
@@ -8,15 +8,12 @@ const showUpdateModal = ref(false)
 const showCursorRunningModal = ref(false)
 const showAdminPrivilegeModal = ref(false)
 const showCCStatusModal = ref(false)
+const showInsufficientCreditsModal = ref(false)
 const pendingForceKillAction = ref<PendingForceKillAction | null>(null)
+const pendingCreditAction = ref<'account' | 'quick' | null>(null)
 const versionInfo = ref<VersionInfo | null>(null)
 const applyHookLoading = ref(false)
 const originalActionBeforeHook = ref<OriginalAction>({ type: null })
-
-// 添加调试代码
-watch(showCCStatusModal, (newVal) => {
-  console.log('useDashboardState showCCStatusModal changed', newVal)
-})
 
 export function useDashboardState() {
   return {
@@ -25,7 +22,9 @@ export function useDashboardState() {
     showCursorRunningModal,
     showAdminPrivilegeModal,
     showCCStatusModal,
+    showInsufficientCreditsModal,
     pendingForceKillAction,
+    pendingCreditAction,
     versionInfo,
     applyHookLoading,
     originalActionBeforeHook

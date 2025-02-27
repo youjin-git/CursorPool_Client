@@ -51,7 +51,6 @@ export function useDeviceInfo() {
     try {
       const token = deviceInfo.value.cursorToken
       if (!token) {
-        console.log('未找到 Cursor Token，跳过获取 Cursor 账户信息')
         return
       }
 

@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onMounted, ref, watch, computed } from 'vue'
 import { useMessage } from 'naive-ui'
 import { NGrid, NGridItem, NSpace } from 'naive-ui'
-import { killCursorProcess, waitForCursorClose } from '@/api'
+import { 
+  killCursorProcess, 
+  waitForCursorClose, 
+  checkHookStatus, 
+  checkCursorRunning 
+} from '@/api'
 
 import UserInfoCard from './components/UserInfoCard.vue'
 import UsageStatsCard from './components/UsageStatsCard.vue'
@@ -12,6 +17,7 @@ import CursorRunningModal from './components/CursorRunningModal.vue'
 import AdminPrivilegeModal from './components/AdminPrivilegeModal.vue'
 import CCStatusModal from './components/CCStatusModal.vue'
 import DashboardTour from './components/DashboardTour.vue'
+import InsufficientCreditsModal from './components/InsufficientCreditsModal.vue'
 
 import { useDashboardState } from './composables/useDashboardState'
 import { useDeviceInfo } from './composables/useDeviceInfo'
@@ -58,12 +64,110 @@ const {
 // 导入账户操作相关方法
 const {
   handleMachineCodeChange,
-  handleAccountSwitch,
-  handleQuickChange
+  executeAccountSwitch,
+  executeQuickChange
 } = useAccountActions()
 
 // 导入注入相关方法
 const { handleApplyHook } = useHookActions()
+
+// 添加新的状态
+const showInsufficientCreditsModal = ref(false)
+const pendingCreditAction = ref<'account' | 'quick' | null>(null)
+
+// 计算用户当前积分
+const userCredits = computed(() => {
+  if (!deviceInfo.value.userInfo) return 0
+  return (deviceInfo.value.userInfo.totalCount - deviceInfo.value.userInfo.usedCount) * 50
+})
+
+// 修改账户切换方法
+const handleAccountSwitch = async () => {
+  try {
+    // 重新检查 Hook 状态，确保获取最新状态
+    const hookStatus = await checkHookStatus()
+    deviceInfo.value.hookStatus = hookStatus
+    
+    // 先检查 CC 状态
+    if (!deviceInfo.value.hookStatus) {
+      originalActionBeforeHook.value = { type: 'account' }
+      showCCStatusModal.value = true
+      return
+    }
+
+    // 检查 Cursor 是否在运行
+    const isRunning = await checkCursorRunning()
+    if (isRunning) {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'account' }
+      return
+    }
+
+    // 检查积分是否足够
+    if (userCredits.value < 50) {
+      showInsufficientCreditsModal.value = true
+      pendingCreditAction.value = 'account'
+      return
+    }
+
+    await executeAccountSwitch()
+  } catch (error) {
+    message.error('操作失败: ' + (error instanceof Error ? error.message : String(error)))
+  }
+}
+
+// 修改一键切换方法
+const handleQuickChange = async () => {
+  try {
+    // 重新检查 Hook 状态，确保获取最新状态
+    const hookStatus = await checkHookStatus()
+    deviceInfo.value.hookStatus = hookStatus
+    
+    // 先检查 CC 状态
+    if (!deviceInfo.value.hookStatus) {
+      originalActionBeforeHook.value = { type: 'quick' }
+      showCCStatusModal.value = true
+      return
+    }
+
+    // 检查 Cursor 是否在运行
+    const isRunning = await checkCursorRunning()
+    if (isRunning) {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'quick' }
+      return
+    }
+
+    // 检查积分是否足够
+    if (userCredits.value < 50) {
+      showInsufficientCreditsModal.value = true
+      pendingCreditAction.value = 'quick'
+      return
+    }
+
+    await executeQuickChange()
+  } catch (error) {
+    message.error('操作失败: ' + (error instanceof Error ? error.message : String(error)))
+  }
+}
+
+// 处理激活成功
+const handleActivateSuccess = async () => {
+  // 重新获取用户信息
+  await fetchUserInfo()
+  
+  // 如果积分已经足够，继续执行之前的操作
+  if (userCredits.value >= 50) {
+    if (pendingCreditAction.value === 'account') {
+      await executeAccountSwitch()
+    } else if (pendingCreditAction.value === 'quick') {
+      await executeQuickChange()
+    }
+    pendingCreditAction.value = null
+  } else {
+    message.info('积分仍然不足，请继续充值或联系客服')
+  }
+}
 
 // 处理强制关闭
 const handleForceKill = async () => {
@@ -105,7 +209,6 @@ const shouldShowTour = ref(false)
 
 // 初始化
 onMounted(async () => {
-  console.log('DashboardView mounted')
   
   try {
     // 加载设备信息
@@ -118,13 +221,6 @@ onMounted(async () => {
     
     // 检查管理员权限
     await checkPrivileges()
-    
-    // 调试信息
-    const container = document.querySelector('.dashboard-container')
-    console.log('Container height:', container?.clientHeight)
-    console.log('Container scroll height:', container?.scrollHeight)
-    console.log('Window height:', window.innerHeight)
-    console.log('Body height:', document.body.clientHeight)
     
     // 在所有检查完成后，如果没有模态框显示，则显示引导
     setTimeout(() => {
@@ -205,6 +301,14 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showCCS
       :show="showCCStatusModal" 
       :original-action="originalActionBeforeHook" 
       @update:show="showCCStatusModal = $event"
+    />
+
+    <!-- 添加新的模态窗口 -->
+    <InsufficientCreditsModal 
+      :show="showInsufficientCreditsModal" 
+      :user-credits="userCredits"
+      @update:show="showInsufficientCreditsModal = $event"
+      @activate-success="handleActivateSuccess"
     />
 
     <!-- 引导组件 - 只在没有模态框显示时显示 -->

@@ -77,7 +77,6 @@ async function closeWindow() {
 onMounted(async () => {
   try {
     currentPlatform.value = await platform()
-    console.log('Current platform:', currentPlatform.value)
   } catch (error) {
     console.error('Failed to detect platform:', error)
   }

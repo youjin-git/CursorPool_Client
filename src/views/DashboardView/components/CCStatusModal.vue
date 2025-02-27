@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { NModal, NSpace, NButton } from 'naive-ui'
 import { useHookActions } from '../composables/useHookActions'
-import { watch, onMounted } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   show: boolean
   originalAction: { type: 'machine' | 'account' | 'quick' | null }
 }>()
@@ -15,18 +14,8 @@ const emit = defineEmits<{
 const { applyHookLoading, handleApplyHook } = useHookActions()
 
 const updateShow = (value: boolean) => {
-  console.log('CCStatusModal updateShow', value)
   emit('update:show', value)
 }
-
-// 添加调试代码
-onMounted(() => {
-  console.log('CCStatusModal mounted')
-})
-
-watch(() => props.show, (newVal) => {
-  console.log('CCStatusModal show changed', newVal)
-})
 </script>
 
 <template>
