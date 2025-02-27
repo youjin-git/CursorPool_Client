@@ -17,7 +17,8 @@ import {
     checkAdminPrivileges,
     checkUpdateDisabled,
     checkHookStatus,
-    checkIsWindows
+    checkIsWindows,
+    applyHook
 } from '@/api'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
 import { addHistoryRecord } from '../utils/history'
@@ -168,17 +169,26 @@ async function fetchCursorInfo() {
 // 添加新的 ref
 const showCursorRunningModal = ref(false)
 const pendingForceKillAction = ref<{
-  type: 'machine' | 'account' | 'quick',
+  type: 'machine' | 'account' | 'quick' | 'hook',
   params?: any
 } | null>(null)
 
 // 添加 CC 状态检查模态框
 const showCCStatusModal = ref(false)
 
+// 添加注入相关的状态
+const applyHookLoading = ref(false)
+
+// 添加一个变量来跟踪注入前要执行的原始操作
+const originalActionBeforeHook = ref<{
+  type: 'machine' | 'account' | 'quick' | null
+}>({ type: null })
+
 // 修改机器码更换处理函数
 const handleMachineCodeChange = async (force_kill: boolean = false) => {
   // 先检查 CC 状态
   if (!deviceInfo.value.hookStatus) {
+    originalActionBeforeHook.value = { type: 'machine' }
     showCCStatusModal.value = true
     return
   }
@@ -230,6 +240,7 @@ const checkUnusedCredits = () => {
 const handleAccountSwitch = async () => {
   // 先检查 CC 状态
   if (!deviceInfo.value.hookStatus) {
+    originalActionBeforeHook.value = { type: 'account' }
     showCCStatusModal.value = true
     return
   }
@@ -255,6 +266,7 @@ const handleAccountSwitch = async () => {
 const handleQuickChange = async () => {
   // 先检查 CC 状态
   if (!deviceInfo.value.hookStatus) {
+    originalActionBeforeHook.value = { type: 'quick' }
     showCCStatusModal.value = true
     return
   }
@@ -381,6 +393,54 @@ const handleKillCursorProcess = async () => {
     }
 }
 
+// 添加注入处理函数
+const handleApplyHook = async () => {
+  try {
+    applyHookLoading.value = true
+    
+    // 检查 Cursor 是否在运行
+    const isRunning = await checkCursorRunning()
+    if (isRunning) {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'hook' }
+      return
+    }
+    
+    await applyHook(false)
+    message.success(i18n.value.systemControl.messages.applyHookSuccess)
+    deviceInfo.value.hookStatus = true
+    showCCStatusModal.value = false
+    addHistoryRecord('系统控制', i18n.value.systemControl.history.applyHook)
+    
+    // 注入成功后，继续执行原始操作
+    if (originalActionBeforeHook.value.type) {
+      switch (originalActionBeforeHook.value.type) {
+        case 'machine':
+          await handleMachineCodeChange()
+          break
+        case 'account':
+          await handleAccountSwitch()
+          break
+        case 'quick':
+          await handleQuickChange()
+          break
+      }
+      // 重置原始操作
+      originalActionBeforeHook.value.type = null
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error)
+    if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
+      showCursorRunningModal.value = true
+      pendingForceKillAction.value = { type: 'hook' }
+      return
+    }
+    message.error(error instanceof Error ? error.message : '注入失败')
+  } finally {
+    applyHookLoading.value = false
+  }
+}
+
 // 修改强制关闭处理函数
 const handleForceKill = async () => {
     showCursorRunningModal.value = false
@@ -406,6 +466,30 @@ const handleForceKill = async () => {
             case 'quick':
                 await executeQuickChange()
                 message.success(i18n.value.common.copySuccess + ', 正在清理进程, 稍后将自动重启Cursor')
+                break
+            case 'hook':
+                await applyHook(false)
+                deviceInfo.value.hookStatus = true
+                showCCStatusModal.value = false
+                message.success(i18n.value.systemControl.messages.applyHookSuccess + ', 正在清理进程, 稍后将自动重启Cursor')
+                addHistoryRecord('系统控制', i18n.value.systemControl.history.applyHook)
+                
+                // 注入成功后，继续执行原始操作
+                if (originalActionBeforeHook.value.type) {
+                  switch (originalActionBeforeHook.value.type) {
+                    case 'machine':
+                      await handleMachineCodeChange()
+                      break
+                    case 'account':
+                      await handleAccountSwitch()
+                      break
+                    case 'quick':
+                      await handleQuickChange()
+                      break
+                  }
+                  // 重置原始操作
+                  originalActionBeforeHook.value.type = null
+                }
                 break
         }
     } catch (error) {
@@ -608,9 +692,9 @@ const handleHistoryDownload = async () => {
                     style="font-size: 14px; cursor: pointer;" 
                     @click="deviceInfo.cursorInfo.userInfo?.email && copyText(deviceInfo.cursorInfo.userInfo?.email)"
                   >{{ deviceInfo.cursorInfo.userInfo?.email || '未绑定' }}</span>
-                  <n-tag :type="deviceInfo.cursorInfo.userInfo?.email_verified ? 'success' : 'warning'" size="tiny" style="transform: scale(0.9)">
+                  <!-- <n-tag :type="deviceInfo.cursorInfo.userInfo?.email_verified ? 'success' : 'warning'" size="tiny" style="transform: scale(0.9)">
                     {{ deviceInfo.cursorInfo.userInfo?.email_verified ? i18n.systemControl.clientVerified : i18n.systemControl.clientUnverified }}
-                  </n-tag>
+                  </n-tag> -->
                 </n-space>
               </n-space>
               <n-space :size="8" style="line-height: 1.2;">
@@ -861,9 +945,14 @@ const handleHistoryDownload = async () => {
         <p>请确保 Cursor 客户端正常注入后再进行操作</p>
       </template>
       <template #action>
-        <n-button type="primary" @click="showCCStatusModal = false">
-          我知道了
-        </n-button>
+        <n-space justify="end">
+          <n-button tertiary @click="showCCStatusModal = false" style="margin-right: auto">
+            我知道了
+          </n-button>
+          <n-button type="primary" @click="handleApplyHook" :loading="applyHookLoading">
+            自动注入
+          </n-button>
+        </n-space>
       </template>
     </n-modal>
 

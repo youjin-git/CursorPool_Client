@@ -48,6 +48,32 @@ lazy_static! {
     static ref MAC_MACHINE_ID_REGEX: Regex = Regex::new(
         r#"async\s+(\w+)\s*\(\)\s*\{\s*return\s+this\.[\w.]+(?:\?\?|\?)\s*this\.([\w.]+)\.macMachineId\s*\}"#
     ).unwrap();
+
+    // 提取所有可能的行数
+    static ref LINE_COUNTS_TO_REMOVE: Vec<usize> = {
+        let mut counts = Vec::new();
+        for versions in MAIN_JS_MD5.values() {
+            for version in versions {
+                if let Some(pos) = version.find("[-") {
+                    if let Some(end_pos) = version[pos..].find("]") {
+                        if let Ok(count) = version[pos+2..pos+end_pos].parse::<usize>() {
+                            if !counts.contains(&count) {
+                                counts.push(count);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // 确保默认的5和0也在列表中
+        if !counts.contains(&5) {
+            counts.push(5);
+        }
+        if !counts.contains(&0) {
+            counts.push(0);
+        }
+        counts
+    };
 }
 
 const REMOTE_HASH_URL: &str = "/hash";
@@ -68,7 +94,7 @@ impl Hook {
     }
 
     /// 计算文件内容的MD5（排除最后几行）
-    fn calculate_md5_without_last_lines(content: &str, line_count_to_remove: usize) -> String {
+    pub fn calculate_md5_without_last_lines(content: &str, line_count_to_remove: usize) -> String {
         // 1. 按行分割, 保留空行
         let lines: Vec<&str> = content.split('\n').collect();
         
@@ -86,60 +112,76 @@ impl Hook {
             String::new()
         };
 
-        // 5. 计算 MD5
+        // 4. 计算 MD5
         let mut hasher = Md5::new();
         hasher.update(content.as_bytes());
-        let result = format!("{:x}", hasher.finalize());
-        
-        result
+        format!("{:x}", hasher.finalize())
     }
 
-    /// 获取当前系统 main.js 的 MD5
-    pub fn get_main_js_hash() -> Result<String, String> {
+    /// 获取当前系统 main.js 的内容
+    fn get_main_js_content() -> Result<String, String> {
         let paths = AppPaths::new()?;
-        let content = fs::read_to_string(&paths.main_js)
-            .map_err(|e| format!("读取 main.js 失败: {}", e))?;
-        Ok(Self::calculate_md5_without_last_lines(&content, 5))
+        fs::read_to_string(&paths.main_js)
+            .map_err(|e| format!("读取 main.js 失败: {}", e))
     }
 
-    async fn fetch_remote_hash_map() -> Result<HashMap<String, Vec<String>>, String> {
-        let client = reqwest::Client::new();
-        let response = client
-            .get(format!("{}{}", get_base_url(), REMOTE_HASH_URL))
-            .timeout(Duration::from_secs(10))
-            .send()
-            .await
-            .map_err(|e| format!("请求失败: {}", e))?;
-
-        if response.status().is_success() {
-            let text = response
-                .text()
-                .await
-                .map_err(|e| format!("读取响应失败: {}", e))?;
-
-            serde_json::from_str(&text)
-                .map_err(|e| format!("解析 JSON 失败: {}", e))
-        } else {
-            Err("云端没有找到哈希数据".to_string())
+    /// 获取当前系统 main.js 的 MD5，尝试所有可能的行数
+    fn calculate_hashes_with_all_line_counts(content: &str, line_counts: &[usize]) -> Vec<(String, usize)> {
+        let mut results = Vec::new();
+        
+        for &count in line_counts {
+            let hash = Self::calculate_md5_without_last_lines(content, count);
+            results.push((hash, count));
         }
+        
+        results
     }
 
-    // 修改现有的版本检查函数
-    pub async fn check_version_compatibility(md5: &str) -> Result<bool, String> {
-        // 首先检查本地映射
-        if MAIN_JS_MD5.contains_key(md5) {
-            return Ok(true);
+    // 修改版本检查函数
+    pub async fn check_version_compatibility() -> Result<bool, String> {
+        // 获取当前系统的main.js内容
+        let content = Self::get_main_js_content()?;
+        
+        // 先尝试从远程获取最新的哈希映射
+        let remote_map = match Self::fetch_remote_hash_map().await {
+            Ok(map) => Some(map),
+            Err(_) => None
+        };
+        
+        // 从远程哈希表中提取行数信息
+        let mut line_counts = LINE_COUNTS_TO_REMOVE.clone();
+        if let Some(ref map) = remote_map {
+            for versions in map.values() {
+                for version in versions {
+                    if let Some(pos) = version.find("[-") {
+                        if let Some(end_pos) = version[pos..].find("]") {
+                            if let Ok(count) = version[pos+2..pos+end_pos].parse::<usize>() {
+                                if !line_counts.contains(&count) {
+                                    line_counts.push(count);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-
-        // 尝试从远程获取
-        match Self::fetch_remote_hash_map().await {
-            Ok(remote_map) => {
-                if remote_map.contains_key(md5) {
+        
+        // 使用所有可能的行数计算哈希
+        let hash_results = Self::calculate_hashes_with_all_line_counts(&content, &line_counts);
+        
+        // 先检查远程映射（如果有）
+        if let Some(ref map) = remote_map {
+            for (hash, _) in &hash_results {
+                if map.contains_key(hash) {
                     return Ok(true);
                 }
             }
-            Err(e) => {
-                println!("获取远程映射失败: {}", e);
+        }
+        
+        // 然后检查本地映射
+        for (hash, _) in &hash_results {
+            if MAIN_JS_MD5.contains_key(hash.as_str()) {
+                return Ok(true);
             }
         }
 
@@ -151,20 +193,16 @@ impl Hook {
         ))
     }
 
-    /// 修改现有的更新函数
+    /// 修改更新函数
     pub async fn update_main_js_content() -> Result<(), String> {
         let paths = AppPaths::new()?;
         let file_path = &paths.main_js;
         
         // 读取文件内容
-        let content = fs::read_to_string(file_path)
-            .map_err(|e| format!("读取文件失败: {}", e))?;
+        let content = Self::get_main_js_content()?;
 
-        // 计算MD5
-        let md5 = Self::calculate_md5_without_last_lines(&content, 5);
-
-        // 检查版本兼容性（包括远程检查）
-        if !Self::check_version_compatibility(&md5).await? {
+        // 检查版本兼容性
+        if !Self::check_version_compatibility().await? {
             return Err("版本不兼容".to_string());
         }
 
@@ -214,6 +252,61 @@ impl Hook {
 
         Ok(())
     }
+
+    async fn fetch_remote_hash_map() -> Result<HashMap<String, Vec<String>>, String> {
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!("{}{}", get_base_url(), REMOTE_HASH_URL))
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+            .map_err(|e| format!("请求失败: {}", e))?;
+        
+        if response.status().is_success() {
+            let text = response
+                .text()
+                .await
+                .map_err(|e| format!("读取响应失败: {}", e))?;
+            
+            let result: Result<HashMap<String, Vec<String>>, _> = serde_json::from_str(&text)
+                .map_err(|e| format!("解析 JSON 失败: {}", e));
+            
+            result
+        } else {
+            Err("云端没有找到哈希数据".to_string())
+        }
+    }
+
+    /// 获取所有可能的行数
+    pub fn get_all_possible_line_counts() -> Vec<usize> {
+        LINE_COUNTS_TO_REMOVE.clone()
+    }
+
+    /// 从远程获取所有可能的行数
+    pub async fn get_all_line_counts_with_remote() -> Result<Vec<usize>, String> {
+        // 先获取本地的行数
+        let mut line_counts = LINE_COUNTS_TO_REMOVE.clone();
+        
+        // 尝试从远程获取最新的哈希映射
+        if let Ok(map) = Self::fetch_remote_hash_map().await {
+            // 从远程哈希表中提取行数信息
+            for versions in map.values() {
+                for version in versions {
+                    if let Some(pos) = version.find("[-") {
+                        if let Some(end_pos) = version[pos..].find("]") {
+                            if let Ok(count) = version[pos+2..pos+end_pos].parse::<usize>() {
+                                if !line_counts.contains(&count) {
+                                    line_counts.push(count);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(line_counts)
+    }
 }
 
 #[cfg(test)]
@@ -252,8 +345,9 @@ mod tests {
     #[tokio::test]
     async fn test_update_and_restore() {
         // 先获取原始hash
-        let original_hash = Hook::get_main_js_hash()
-            .unwrap_or_else(|e| panic!("获取原始hash失败: {}", e));
+        let paths = AppPaths::new().unwrap();
+        let content = fs::read_to_string(&paths.main_js).unwrap();
+        let original_hash = Hook::calculate_md5_without_last_lines(&content, 5);
         println!("原始 main.js 的 MD5: {}", original_hash);
 
         // 尝试修补
@@ -261,7 +355,8 @@ mod tests {
             Ok(_) => {
                 println!("成功修补 main.js");
                 // 获取修补后的hash
-                let modified_hash = Hook::get_main_js_hash().unwrap();
+                let modified_content = fs::read_to_string(&paths.main_js).unwrap();
+                let modified_hash = Hook::calculate_md5_without_last_lines(&modified_content, 5);
                 println!("修补后的 MD5: {}", modified_hash);
                 assert_ne!(original_hash, modified_hash, "修补后的hash应该与原始hash不同");
             },
@@ -276,7 +371,8 @@ mod tests {
             Ok(_) => {
                 println!("成功恢复 main.js");
                 // 验证恢复后的hash是否与原始hash相同
-                let restored_hash = Hook::get_main_js_hash().unwrap();
+                let restored_content = fs::read_to_string(&paths.main_js).unwrap();
+                let restored_hash = Hook::calculate_md5_without_last_lines(&restored_content, 5);
                 println!("恢复后的 MD5: {}", restored_hash);
                 assert_eq!(original_hash, restored_hash, "恢复后的hash应该与原始hash相同");
             },

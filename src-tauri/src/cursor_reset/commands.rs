@@ -292,7 +292,7 @@ fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl 
 
 /// 检查 main.js 是否已被 hook
 #[tauri::command]
-pub fn is_hook() -> Result<bool, String> {
+pub async fn is_hook() -> Result<bool, String> {
     let paths = AppPaths::new()?;
     let content = fs::read_to_string(&paths.main_js)
         .map_err(|e| format!("读取 main.js 失败: {}", e))?;
@@ -306,12 +306,17 @@ pub fn is_hook() -> Result<bool, String> {
         return Ok(true);
     }
 
-    // 检查版本兼容性
-    let hash = Hook::get_main_js_hash()?;
-    if !Hook::main_js_md5().contains_key(hash.as_str()) {
-        return Ok(false);
+    // 从远程获取所有可能的行数
+    let line_counts = Hook::get_all_line_counts_with_remote().await?;
+    
+    for &count in &line_counts {
+        let hash = Hook::calculate_md5_without_last_lines(&content, count);
+        if Hook::main_js_md5().contains_key(hash.as_str()) {
+            return Ok(false);
+        }
     }
-
+    
+    // 如果没有匹配的哈希，说明版本不兼容
     Ok(false)
 }
 

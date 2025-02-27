@@ -81,7 +81,7 @@ pub fn safe_write(path: &Path, content: &str) -> Result<(), Error> {
     fs::write(path, content)?;
 
     // 设置文件为只读
-    set_read_only(path)?;
+    // set_read_only(path)?;
 
     Ok(())
 } 
