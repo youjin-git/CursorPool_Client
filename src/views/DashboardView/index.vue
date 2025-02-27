@@ -224,7 +224,9 @@ onMounted(async () => {
     
     // 在所有检查完成后，如果没有模态框显示，则显示引导
     setTimeout(() => {
-      if (!showUpdateModal.value && !showAdminPrivilegeModal.value && !showCursorRunningModal.value) {
+      // 检查是否已登录（存在API Key）并且没有模态框显示
+      const apiKey = localStorage.getItem('apiKey')
+      if (apiKey && !showUpdateModal.value && !showAdminPrivilegeModal.value && !showCursorRunningModal.value) {
         shouldShowTour.value = true
       }
     }, 1000)
@@ -241,8 +243,9 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showCCS
       shouldShowTour.value = false
     } else {
       // 如果所有模态框都关闭了，并且是首次访问，则显示引导
+      const apiKey = localStorage.getItem('apiKey')
       const hasTourShown = localStorage.getItem('dashboard_tour_shown')
-      if (!hasTourShown || hasTourShown === 'false') {
+      if (apiKey && (!hasTourShown || hasTourShown === 'false')) {
         shouldShowTour.value = true
       }
     }

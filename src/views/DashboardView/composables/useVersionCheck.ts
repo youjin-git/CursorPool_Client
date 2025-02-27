@@ -58,7 +58,7 @@ export function useVersionCheck(
   // 处理下载更新
   const handleDownload = async () => {
     if (versionInfo.value?.downloadUrl) {
-      const url = 'https://downloader-cursor.deno.dev/'
+      const url = versionInfo.value.downloadUrl
       await open(url)
     }
   }
