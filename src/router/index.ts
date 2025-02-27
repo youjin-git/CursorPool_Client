@@ -13,7 +13,7 @@ const routes = [
       {
         path: 'dashboard',
         name: 'dashboard',
-        component: () => import('../views/DashboardView.vue')
+        component: () => import('../views/DashboardView/index.vue')
       },
       {
         path: 'history',
@@ -30,7 +30,7 @@ const routes = [
 ]
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.BASE_URL),
   routes
 })
 
