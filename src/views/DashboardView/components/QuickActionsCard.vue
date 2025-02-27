@@ -29,7 +29,7 @@ const handleQuickChange = () => {
 </script>
 
 <template>
-  <n-card :title="i18n.dashboard.quickActions" style="user-select: none;">
+  <n-card :title="i18n.dashboard.quickActions" class="quick-actions-card" style="user-select: none;">
     <n-space vertical>
       <n-space justify="space-around">
         <n-button type="primary" @click="handleQuickChange" :disabled="!deviceInfo.userInfo">

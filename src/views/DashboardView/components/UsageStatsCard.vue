@@ -46,7 +46,7 @@ const cursorGpt35Percentage = computed(() => {
   <n-card :title="i18n.dashboard.usageStats" style="height: 100%; user-select: none;">
     <n-space vertical :size="24" style="height: 100%; justify-content: space-around;">
       <!-- 账户使用统计 -->
-      <n-space vertical :size="8">
+      <n-space vertical :size="8" class="cursor-pool-usage">
         <n-space justify="space-between">
           <span>{{ i18n.dashboard.cpUsage }}</span>
           <n-space :size="0">
@@ -70,7 +70,7 @@ const cursorGpt35Percentage = computed(() => {
       </n-space>
 
       <!-- Cursor GPT-4 使用统计 -->
-      <n-space vertical :size="8">
+      <n-space vertical :size="8" class="advanced-model-usage">
         <n-space justify="space-between">
           <span>{{ i18n.dashboard.advancedModelUsage }}</span>
           <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">
@@ -95,7 +95,7 @@ const cursorGpt35Percentage = computed(() => {
       </n-space>
 
       <!-- Cursor GPT-3.5 使用统计 -->
-      <n-space vertical :size="8">
+      <n-space vertical :size="8" class="basic-model-usage">
         <n-space justify="space-between">
           <span>{{ i18n.dashboard.basicModelUsage }}</span>
           <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">

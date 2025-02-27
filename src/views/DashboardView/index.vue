@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useMessage } from 'naive-ui'
 import { NGrid, NGridItem, NSpace } from 'naive-ui'
 import { killCursorProcess, waitForCursorClose } from '@/api'
@@ -11,6 +11,7 @@ import UpdateModal from './components/UpdateModal.vue'
 import CursorRunningModal from './components/CursorRunningModal.vue'
 import AdminPrivilegeModal from './components/AdminPrivilegeModal.vue'
 import CCStatusModal from './components/CCStatusModal.vue'
+import DashboardTour from './components/DashboardTour.vue'
 
 import { useDashboardState } from './composables/useDashboardState'
 import { useDeviceInfo } from './composables/useDeviceInfo'
@@ -67,86 +68,90 @@ const { handleApplyHook } = useHookActions()
 // 处理强制关闭
 const handleForceKill = async () => {
   try {
-    showCursorRunningModal.value = false
-    
-    // 强制关闭 Cursor 进程
     await killCursorProcess()
+    message.success('已强制关闭 Cursor')
+    
+    // 等待进程完全关闭
     await waitForCursorClose()
     
-    // 根据挂起的操作类型执行相应的操作
+    // 执行原始操作
     if (pendingForceKillAction.value) {
-      const actionType = pendingForceKillAction.value.type
+      const { type } = pendingForceKillAction.value
       
-      if (actionType === 'machine') {
-        await handleMachineCodeChange()
-      } else if (actionType === 'account') {
-        await handleAccountSwitch()
-      } else if (actionType === 'quick') {
-        await handleQuickChange()
-      } else if (actionType === 'hook') {
-        const originalAction = pendingForceKillAction.value.params?.originalAction
-        await handleApplyHook(originalAction)
+      if (type === 'machine') {
+        handleMachineCodeChange()
+      } else if (type === 'account') {
+        handleAccountSwitch()
+      } else if (type === 'quick') {
+        handleQuickChange()
+      } else if (type === 'hook') {
+        handleApplyHook(originalActionBeforeHook.value)
       }
       
-      // 清除挂起的操作
+      // 重置待处理操作
       pendingForceKillAction.value = null
     }
+    
+    // 关闭模态框
+    showCursorRunningModal.value = false
   } catch (error) {
-    console.error('强制关闭失败:', error)
-    message.error('强制关闭失败')
+    console.error('强制关闭 Cursor 失败:', error)
+    message.error('强制关闭 Cursor 失败')
   }
 }
 
-// 在组件挂载时获取所有信息
+// 控制是否显示引导
+const shouldShowTour = ref(false)
+
+// 初始化
 onMounted(async () => {
   console.log('DashboardView mounted')
   
   try {
-    // 检查是否需要强制刷新数据
-    const needRefresh = localStorage.getItem('need_refresh_dashboard')
-    if (!needRefresh && (deviceInfo.value.userInfo || deviceInfo.value.cursorInfo.userInfo)) {
-      return
-    }
-    // 清除刷新标记
-    localStorage.removeItem('need_refresh_dashboard')
-
-    loading.value = true
-    // 按顺序执行
+    // 加载设备信息
     await fetchUserInfo()
     await fetchMachineIds()
     await fetchCursorInfo()
     
-    await checkPrivileges()
+    // 检查版本更新
     await checkUpdate()
+    
+    // 检查管理员权限
+    await checkPrivileges()
+    
+    // 调试信息
+    const container = document.querySelector('.dashboard-container')
+    console.log('Container height:', container?.clientHeight)
+    console.log('Container scroll height:', container?.scrollHeight)
+    console.log('Window height:', window.innerHeight)
+    console.log('Body height:', document.body.clientHeight)
+    
+    // 在所有检查完成后，如果没有模态框显示，则显示引导
+    setTimeout(() => {
+      if (!showUpdateModal.value && !showAdminPrivilegeModal.value && !showCursorRunningModal.value) {
+        shouldShowTour.value = true
+      }
+    }, 1000)
   } catch (error) {
-    console.error('获取信息失败:', error)
-    message.error('获取信息失败')
-  } finally {
-    loading.value = false
+    console.error('初始化失败:', error)
+    message.error('加载数据失败')
   }
-
-  // 添加事件监听器
-  window.addEventListener('refresh_dashboard_data', async () => {
-    try {
-      loading.value = true
-      await fetchUserInfo()
-      await fetchMachineIds()
-      await fetchCursorInfo()
-    } catch (error) {
-      console.error('刷新数据失败:', error)
-      message.error('刷新数据失败')
-    } finally {
-      loading.value = false
-    }
-  })
-  
-  // 调试高度问题
-  const container = document.querySelector('.n-layout-scroll-container')
-  console.log('Container height:', container?.clientHeight)
-  console.log('Container scroll height:', container?.scrollHeight)
-  console.log('Window height:', window.innerHeight)
-  console.log('Body height:', document.body.clientHeight)
 })
+
+// 监听模态框状态变化，如果有模态框显示，则隐藏引导
+watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showCCStatusModal], 
+  ([updateModal, adminModal, cursorModal, ccModal]) => {
+    if (updateModal || adminModal || cursorModal || ccModal) {
+      shouldShowTour.value = false
+    } else {
+      // 如果所有模态框都关闭了，并且是首次访问，则显示引导
+      const hasTourShown = localStorage.getItem('dashboard_tour_shown')
+      if (!hasTourShown || hasTourShown === 'false') {
+        shouldShowTour.value = true
+      }
+    }
+  }
+)
 </script>
 
 <template>
@@ -201,6 +206,9 @@ onMounted(async () => {
       :original-action="originalActionBeforeHook" 
       @update:show="showCCStatusModal = $event"
     />
+
+    <!-- 引导组件 - 只在没有模态框显示时显示 -->
+    <DashboardTour v-if="shouldShowTour" />
   </n-space>
 </template>
 

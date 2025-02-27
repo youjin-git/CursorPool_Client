@@ -45,10 +45,10 @@ const copyText = (text: string) => {
 </script>
 
 <template>
-  <n-card :title="i18n.dashboard.userInfo" style="height: 100%; user-select: none;">
+  <n-card :title="i18n.dashboard.userInfo" class="user-info-card" style="height: 100%; user-select: none;">
     <n-space vertical>
       <n-space vertical :size="12" style="user-select: none;">
-        <n-space :size="8" style="line-height: 1.2;">
+        <n-space :size="8" style="line-height: 1.2;" class="user-info-username">
           <span style="width: 70px">{{ i18n.dashboard.username }}</span>
           <n-space :size="4" align="center">
             <span 
@@ -63,7 +63,7 @@ const copyText = (text: string) => {
 
         <n-divider style="margin: 0" />
 
-        <n-space :size="8" style="line-height: 1.2;">
+        <n-space :size="8" style="line-height: 1.2;" class="user-info-email">
           <span style="width: 70px">{{ i18n.dashboard.email }}</span>
           <n-space :size="4" align="center">
             <span 
@@ -72,13 +72,13 @@ const copyText = (text: string) => {
             >{{ deviceInfo.cursorInfo.userInfo?.email || '未绑定' }}</span>
           </n-space>
         </n-space>
-        <n-space :size="8" style="line-height: 1.2;">
+        <n-space :size="8" style="line-height: 1.2;" class="user-info-cc-status">
           <span style="width: 70px">{{ i18n.dashboard.ccStatus }}</span>
           <n-tag :type="deviceInfo.hookStatus === true ? 'success' : 'error'" size="small">
             {{ deviceInfo.hookStatus === true ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
           </n-tag>
         </n-space>
-        <n-space :size="8" style="line-height: 1.2;">
+        <n-space :size="8" style="line-height: 1.2;" class="user-info-register-time">
           <span style="width: 70px">{{ i18n.dashboard.registerTime }}</span>
           <span 
             style="font-size: 14px; cursor: pointer;" 
@@ -88,6 +88,7 @@ const copyText = (text: string) => {
         <span 
           style="font-size: 12px; color: #999; word-break: break-all; text-align: center; cursor: pointer;" 
           @click="copyText(deviceInfo.machineCode)"
+          class="user-info-machine-code"
         >{{ deviceInfo.machineCode }}</span>
       </n-space>
     </n-space>
