@@ -2,12 +2,12 @@ use tauri::{
     App,
     Manager,
     AppHandle,
-    Emitter,
+    // Emitter,
     menu::{Menu, MenuItem},
     tray::{TrayIconBuilder, MouseButton, MouseButtonState, TrayIconEvent}
 };
 
-use crate::cursor_reset::reset_machine_id;
+// use crate::cursor_reset::reset_machine_id;
 
 fn show_and_focus_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window("main") {
@@ -22,12 +22,12 @@ pub fn setup_system_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
     let show = MenuItem::with_id(app, "显示", "显示", true, None::<&str>)?;
     // let switch_account_item = MenuItem::with_id(app, "switch_account", "一键换号", true, None::<&str>)?;
     // let switch_account_manual = MenuItem::with_id(app, "switch_account_manual", "切换账号", true, None::<&str>)?;
-    let switch_machine = MenuItem::with_id(app, "switch_machine", "换机器码", true, None::<&str>)?;
+    // let switch_machine = MenuItem::with_id(app, "switch_machine", "换机器码", true, None::<&str>)?;
     
     let menu = Menu::with_items(app, &[
         // &switch_account_item,
         // &switch_account_manual,
-        &switch_machine,
+        // &switch_machine,
         &show,
         &quit,
     ])?;
@@ -75,20 +75,20 @@ pub fn setup_system_tray(app: &App) -> Result<(), Box<dyn std::error::Error>> {
                 //     // 手动换号 - 显示窗口
                 //     show_and_focus_window(app.app_handle());
                 // }
-                "switch_machine" => {
-                    // 换机器码
-                    let app_handle = app.app_handle().clone();
-                    tauri::async_runtime::spawn(async move {
-                        match reset_machine_id(true).await {
-                            Ok(_) => {
-                                if let Err(e) = app_handle.emit("machine-id-changed", ()) {
-                                    eprintln!("发送机器码变更事件失败: {}", e);
-                                }
-                            }
-                            Err(e) => eprintln!("重置机器码失败: {}", e),
-                        }
-                    });
-                }
+                // "switch_machine" => {
+                //     // 换机器码
+                //     let app_handle = app.app_handle().clone();
+                //     tauri::async_runtime::spawn(async move {
+                //         match reset_machine_id(true).await {
+                //             Ok(_) => {
+                //                 if let Err(e) = app_handle.emit("machine-id-changed", ()) {
+                //                     eprintln!("发送机器码变更事件失败: {}", e);
+                //                 }
+                //             }
+                //             Err(e) => eprintln!("重置机器码失败: {}", e),
+                //         }
+                //     });
+                // }
                 _ => (),
             }
         })

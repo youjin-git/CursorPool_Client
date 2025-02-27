@@ -7,6 +7,9 @@ use crate::utils::paths::AppPaths;
 use reqwest;
 use std::time::Duration;
 use crate::api::client::get_base_url;
+use crate::api::client::ApiClient;
+use crate::utils::ErrorReporter;
+use tauri::State;
 
 lazy_static! {
     static ref MAIN_JS_MD5: HashMap<&'static str, Vec<&'static str>> = {
@@ -185,6 +188,16 @@ impl Hook {
             }
         }
 
+        // 如果所有尝试都失败，检查是否可以直接使用正则替换
+        // 检查正则匹配
+        let machine_id_matches = Self::machine_id_regex().find_iter(&content).count();
+        let mac_machine_id_matches = Self::mac_machine_id_regex().find_iter(&content).count();
+
+        // 如果能找到匹配，说明可以尝试直接替换
+        if machine_id_matches > 0 && mac_machine_id_matches > 0 {
+            return Ok(true);
+        }
+
         // 如果所有尝试都失败，返回不支持的版本错误
         let versions: Vec<&str> = MAIN_JS_MD5.values().flatten().copied().collect();
         Err(format!(
@@ -193,8 +206,7 @@ impl Hook {
         ))
     }
 
-    /// 修改更新函数
-    pub async fn update_main_js_content() -> Result<(), String> {
+    pub async fn update_main_js_content(client: Option<State<'_, ApiClient>>) -> Result<(), String> {
         let paths = AppPaths::new()?;
         let file_path = &paths.main_js;
         
@@ -202,14 +214,43 @@ impl Hook {
         let content = Self::get_main_js_content()?;
 
         // 检查版本兼容性
-        if !Self::check_version_compatibility().await? {
+        let version_compatible = Self::check_version_compatibility().await.unwrap_or(false);
+        
+        // 如果版本不兼容但有正则匹配，仍然尝试替换
+        let machine_id_matches = Self::machine_id_regex().find_iter(&content).count();
+        let mac_machine_id_matches = Self::mac_machine_id_regex().find_iter(&content).count();
+        let can_try_regex = machine_id_matches > 0 && mac_machine_id_matches > 0;
+        
+        if !version_compatible && !can_try_regex {
+            // 上报错误
+            if let Some(ref client) = client {
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "update_main_js_content",
+                    "版本不兼容且无法使用正则替换",
+                    None,
+                    Some("high".to_string())
+                ).await;
+            }
             return Err("版本不兼容".to_string());
         }
 
         // 创建备份
         let backup_path = file_path.with_extension("js.backup");
-        fs::write(&backup_path, &content)
-            .map_err(|e| format!("创建备份失败: {}", e))?;
+        if let Err(e) = fs::write(&backup_path, &content) {
+            let err_msg = format!("创建备份失败: {}", e);
+            // 上报错误
+            if let Some(ref client) = client {
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "update_main_js_content",
+                    &err_msg,
+                    None,
+                    Some("medium".to_string())
+                ).await;
+            }
+            return Err(err_msg);
+        }
 
         // 替换内容
         let mut modified_content = content.clone();
@@ -224,31 +265,123 @@ impl Hook {
             format!("async {}() {{ return this.{}.macMachineId }}", &caps[1], &caps[2])
         }).to_string();
 
+        // 检查是否有实际修改
+        let has_changes = content != modified_content;
+        
         // 写入修改后的内容
-        fs::write(file_path, modified_content)
-            .map_err(|e| format!("写入文件失败: {}", e))?;
+        if let Err(e) = fs::write(file_path, &modified_content) {
+            let err_msg = format!("写入文件失败: {}", e);
+            // 上报错误
+            if let Some(ref client) = client {
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "update_main_js_content",
+                    &err_msg,
+                    None,
+                    Some("low".to_string())
+                ).await;
+            }
+            return Err(err_msg);
+        }
+
+        // 上报结果
+        if let Some(ref client) = client {
+            let status_msg = if has_changes {
+                format!("成功修改 main.js，版本兼容性: {}", version_compatible)
+            } else {
+                "main.js 未发生变化，可能已经被修改过".to_string()
+            };
+            
+            ErrorReporter::report_error(
+                client.clone(),
+                "update_main_js_content",
+                &status_msg,
+                None,
+                Some("low".to_string())
+            ).await;
+        }
 
         Ok(())
     }
 
-    /// 从备份恢复 main.js
-    pub fn restore_from_backup() -> Result<(), String> {
+    /// 从备份恢复 main.js，添加错误上报
+    pub async fn restore_from_backup(client: Option<State<'_, ApiClient>>) -> Result<(), String> {
         let paths = AppPaths::new()?;
         let file_path = &paths.main_js;
         let backup_path = file_path.with_extension("js.backup");
 
         if !backup_path.exists() {
-            return Err("备份文件不存在".to_string());
+            let err_msg = "备份文件不存在".to_string();
+            // 上报错误
+            if let Some(ref client) = client {
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "restore_from_backup",
+                    &err_msg,
+                    None,
+                    Some("medium".to_string())
+                ).await;
+            }
+            return Err(err_msg);
         }
 
-        let backup_content = fs::read_to_string(&backup_path)
-            .map_err(|e| format!("读取备份文件失败: {}", e))?;
+        let backup_content = match fs::read_to_string(&backup_path) {
+            Ok(content) => content,
+            Err(e) => {
+                let err_msg = format!("读取备份文件失败: {}", e);
+                // 上报错误
+                if let Some(ref client) = client {
+                    ErrorReporter::report_error(
+                        client.clone(),
+                        "restore_from_backup",
+                        &err_msg,
+                        None,
+                        Some("medium".to_string())
+                    ).await;
+                }
+                return Err(err_msg);
+            }
+        };
 
-        fs::write(file_path, backup_content)
-            .map_err(|e| format!("恢复文件失败: {}", e))?;
+        if let Err(e) = fs::write(file_path, &backup_content) {
+            let err_msg = format!("恢复文件失败: {}", e);
+            // 上报错误
+            if let Some(ref client) = client {
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "restore_from_backup",
+                    &err_msg,
+                    None,
+                    Some("medium".to_string())
+                ).await;
+            }
+            return Err(err_msg);
+        }
 
-        fs::remove_file(backup_path)
-            .map_err(|e| format!("删除备份文件失败: {}", e))?;
+        if let Err(e) = fs::remove_file(backup_path) {
+            let err_msg = format!("删除备份文件失败: {}", e);
+            // 上报错误，但不影响恢复结果
+            if let Some(ref client) = client {
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "restore_from_backup",
+                    &err_msg,
+                    None,
+                    Some("low".to_string())
+                ).await;
+            }
+        }
+
+        // 上报成功结果
+        if let Some(ref client) = client {
+            ErrorReporter::report_error(
+                client.clone(),
+                "restore_from_backup",
+                "成功从备份恢复 main.js",
+                None,
+                Some("low".to_string())
+            ).await;
+        }
 
         Ok(())
     }
@@ -351,7 +484,7 @@ mod tests {
         println!("原始 main.js 的 MD5: {}", original_hash);
 
         // 尝试修补
-        match Hook::update_main_js_content().await {
+        match Hook::update_main_js_content(None).await {
             Ok(_) => {
                 println!("成功修补 main.js");
                 // 获取修补后的hash
@@ -367,7 +500,7 @@ mod tests {
         std::thread::sleep(std::time::Duration::from_secs(1));
 
         // 从备份恢复
-        match Hook::restore_from_backup() {
+        match Hook::restore_from_backup(None).await {
             Ok(_) => {
                 println!("成功恢复 main.js");
                 // 验证恢复后的hash是否与原始hash相同

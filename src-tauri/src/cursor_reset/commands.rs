@@ -9,9 +9,15 @@ use crate::utils::UpdateBlocker;
 use crate::utils::hook::Hook;
 use crate::utils::file_utils::safe_write;
 use std::path::PathBuf;
+use crate::utils::ErrorReporter;
+use crate::api::client::ApiClient;
+use tauri::State;
 
 #[tauri::command]
-pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
+pub async fn reset_machine_id(
+    client: State<'_, ApiClient>,
+    force_kill: bool
+) -> Result<bool, String> {
     let process_manager = ProcessManager::new();
     
     // 检查Cursor进程
@@ -21,18 +27,70 @@ pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
 
     // 如果force_kill为true, 则强制终止Cursor进程
     if force_kill {
-        process_manager.kill_cursor_processes()?;
+        match process_manager.kill_cursor_processes() {
+            Ok(_) => {},
+            Err(e) => {
+                // 上报错误
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "reset_machine_id",
+                    &e,
+                    None,
+                    Some("low".to_string())
+                ).await;
+                return Err(e);
+            }
+        }
     }
 
-    let paths = AppPaths::new()?;
+    let paths = match AppPaths::new() {
+        Ok(p) => p,
+        Err(e) => {
+            // 上报错误
+            ErrorReporter::report_error(
+                client.clone(),
+                "reset_machine_id",
+                &e,
+                None,
+                Some("low".to_string())
+            ).await;
+            return Err(e);
+        }
+    };
+    
     let new_ids = generate_new_ids();
 
     // 更新 storage.json
     let mut storage_content = if paths.storage.exists() {
-        let content = fs::read_to_string(&paths.storage)
-            .map_err(|e| format!("读取 storage.json 失败: {}", e))?;
-        serde_json::from_str(&content)
-            .map_err(|e| format!("解析 storage.json 失败: {}", e))?
+        let content = match fs::read_to_string(&paths.storage) {
+            Ok(c) => c,
+            Err(e) => {
+                let err = format!("读取 storage.json 失败: {}", e);
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "reset_machine_id",
+                    &err,
+                    None,
+                    Some("low".to_string())
+                ).await;
+                return Err(err);
+            }
+        };
+        
+        match serde_json::from_str(&content) {
+            Ok(c) => c,
+            Err(e) => {
+                let err = format!("解析 storage.json 失败: {}", e);
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "reset_machine_id",
+                    &err,
+                    None,
+                    Some("low".to_string())
+                ).await;
+                return Err(err);
+            }
+        }
     } else {
         json!({})
     };
@@ -45,11 +103,32 @@ pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
     }
 
     // 使用 safe_write 代替 fs::write
-    let storage_content_str = serde_json::to_string_pretty(&storage_content)
-        .map_err(|e| format!("序列化 storage.json 失败: {}", e))?;
+    let storage_content_str = match serde_json::to_string_pretty(&storage_content) {
+        Ok(s) => s,
+        Err(e) => {
+            let err = format!("序列化 storage.json 失败: {}", e);
+            ErrorReporter::report_error(
+                client.clone(),
+                "reset_machine_id",
+                &err,
+                None,
+                Some("low".to_string())
+            ).await;
+            return Err(err);
+        }
+    };
     
-    safe_write(&paths.storage, &storage_content_str)
-        .map_err(|e| format!("写入 storage.json 失败: {}", e))?;
+    if let Err(e) = safe_write(&paths.storage, &storage_content_str) {
+        let err = format!("写入 storage.json 失败: {}", e);
+        ErrorReporter::report_error(
+            client.clone(),
+            "reset_machine_id",
+            &err,
+            None,
+            Some("low".to_string())
+        ).await;
+        return Err(err);
+    }
 
     // 更新数据库
     if paths.db.exists() {
@@ -59,7 +138,17 @@ pub async fn reset_machine_id(force_kill: bool) -> Result<bool, String> {
             ("machineId", new_ids.get("telemetry.machineId").unwrap()),
             ("sqm_id", new_ids.get("telemetry.sqmId").unwrap())
         ];
-        update_database(&paths.db, &updates)?;
+        
+        if let Err(e) = update_database(&paths.db, &updates) {
+            ErrorReporter::report_error(
+                client.clone(),
+                "reset_machine_id",
+                &e,
+                None,
+                Some("low".to_string())
+            ).await;
+            return Err(e);
+        }
     }
 
     Ok(true)
@@ -322,7 +411,10 @@ pub async fn is_hook() -> Result<bool, String> {
 
 /// Hook main.js 文件
 #[tauri::command]
-pub async fn hook_main_js(force_kill: bool) -> Result<(), String> {
+pub async fn hook_main_js(
+    client: State<'_, ApiClient>,
+    force_kill: bool
+) -> Result<(), String> {
     let process_manager = ProcessManager::new();
     
     // 检查 Cursor 进程
@@ -332,16 +424,32 @@ pub async fn hook_main_js(force_kill: bool) -> Result<(), String> {
 
     // 如果 force_kill 为 true, 则强制终止 Cursor 进程
     if force_kill {
-        process_manager.kill_cursor_processes()?;
+        match process_manager.kill_cursor_processes() {
+            Ok(_) => {},
+            Err(e) => {
+                // 上报错误
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "hook_main_js",
+                    &e,
+                    None,
+                    Some("medium".to_string())
+                ).await;
+                return Err(e);
+            }
+        }
     }
 
-    // 执行 hook 操作
-    Hook::update_main_js_content().await
+    // 执行 hook 操作，传递 client 用于错误上报
+    Hook::update_main_js_content(Some(client)).await
 }
 
 /// 从备份恢复 main.js 文件
 #[tauri::command]
-pub async fn restore_hook(force_kill: bool) -> Result<(), String> {
+pub async fn restore_hook(
+    client: State<'_, ApiClient>,
+    force_kill: bool
+) -> Result<(), String> {
     let process_manager = ProcessManager::new();
     
     // 检查 Cursor 进程
@@ -351,11 +459,24 @@ pub async fn restore_hook(force_kill: bool) -> Result<(), String> {
 
     // 如果 force_kill 为 true, 则强制终止 Cursor 进程
     if force_kill {
-        process_manager.kill_cursor_processes()?;
+        match process_manager.kill_cursor_processes() {
+            Ok(_) => {},
+            Err(e) => {
+                // 上报错误
+                ErrorReporter::report_error(
+                    client.clone(),
+                    "restore_hook",
+                    &e,
+                    None,
+                    Some("medium".to_string())
+                ).await;
+                return Err(e);
+            }
+        }
     }
 
-    // 执行恢复操作
-    Hook::restore_from_backup()
+    // 执行恢复操作，传递 client 用于错误上报
+    Hook::restore_from_backup(Some(client)).await
 }
 
 #[tauri::command]

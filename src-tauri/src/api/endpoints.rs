@@ -1,6 +1,24 @@
 use super::client::get_base_url;
 use super::types::*;
 use tauri::State;
+use chrono::Utc;
+use serde::{Deserialize, Serialize};
+use std::env;
+
+#[derive(Serialize, Deserialize)]
+pub struct BugReportRequest {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub api_key: Option<String>,
+    pub app_version: String,
+    pub os_version: String,
+    pub device_model: String,
+    pub cursor_version: String,
+    pub bug_description: String,
+    pub occurrence_time: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub screenshot_urls: Option<Vec<String>>,
+    pub severity: String,
+}
 
 #[tauri::command]
 pub async fn check_user(
@@ -265,4 +283,58 @@ pub async fn reset_password(
         .map_err(|e| e.to_string())?;
     
     response.json().await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn report_bug(
+    client: State<'_, super::client::ApiClient>,
+    severity: String,
+    bug_description: String,
+    api_key: Option<String>,
+    screenshot_urls: Option<Vec<String>>,
+    cursor_version: Option<String>,
+) -> Result<(), String> {
+    // 获取应用版本
+    let app_version = env!("CARGO_PKG_VERSION").to_string();
+    
+    // 获取操作系统信息
+    let os_info = os_info::get();
+    let os_version = format!("{} {}", os_info.os_type(), os_info.version());
+    
+    // 获取设备型号
+    let device_model = sys_info::hostname()
+        .unwrap_or_else(|_| "Unknown".to_string());
+    
+    // 获取当前时间，ISO 8601 格式
+    let occurrence_time = Utc::now().to_rfc3339();
+    
+    // 获取 Cursor 版本，如果未提供则从数据库获取
+    let cursor_version = cursor_version.unwrap_or_else(|| {
+        crate::utils::CursorVersion::get_version()
+            .unwrap_or_else(|_| "Unknown".to_string())
+    });
+    
+    // 创建请求体
+    let report = BugReportRequest {
+        api_key,
+        app_version,
+        os_version,
+        device_model,
+        cursor_version,
+        bug_description,
+        occurrence_time,
+        screenshot_urls,
+        severity,
+    };
+
+    // 发送请求
+    let _response = client
+        .0
+        .post(format!("{}/api/report", get_base_url()))
+        .json(&report)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
 }

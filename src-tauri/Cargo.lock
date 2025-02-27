@@ -392,8 +392,10 @@ checksum = "7e36cc9d416881d2e24f9a963be5fb1cd90966419ac844274161d10488b3e825"
 dependencies = [
  "android-tzdata",
  "iana-time-zone",
+ "js-sys",
  "num-traits",
  "serde",
+ "wasm-bindgen",
  "windows-targets 0.52.6",
 ]
 
@@ -622,10 +624,12 @@ dependencies = [
 name = "cursor-pool"
 version = "0.1.0"
 dependencies = [
+ "chrono",
  "dotenv",
  "hex",
  "lazy_static",
  "md-5",
+ "os_info",
  "rand 0.8.5",
  "regex",
  "reqwest 0.11.27",
@@ -633,6 +637,7 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+ "sys-info",
  "sysinfo",
  "tauri",
  "tauri-build",
@@ -3956,6 +3961,16 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.98",
+]
+
+[[package]]
+name = "sys-info"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b3a0d0aba8bf96a0e1ddfdc352fc53b3df7f39318c71854910c3c4b024ae52c"
+dependencies = [
+ "cc",
+ "libc",
 ]
 
 [[package]]
