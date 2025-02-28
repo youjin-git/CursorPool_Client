@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue'
 import { NModal, NSpace, NButton, NScrollbar } from 'naive-ui'
 import { getDisclaimer } from '@/api'
 
-const props = defineProps<{
+defineProps<{
   show: boolean
 }>()
 

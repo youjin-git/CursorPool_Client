@@ -150,15 +150,14 @@ export async function changePassword(apiKey: string, old_password: string, new_p
 }
 
 // 机器码和账户切换相关 API
-export async function resetMachineId(force_kill: boolean = false): Promise<void> {
+export async function resetMachineId(params: { forceKill?: boolean, machineId?: string } = {}): Promise<boolean> {
     try {
-        await invoke<void>('reset_machine_id', { forceKill: force_kill })
+        return await invoke<boolean>('reset_machine_id', { 
+            forceKill: params.forceKill || false,
+            machineId: params.machineId
+        })
     } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to reset machine ID'
-        if (errorMsg.includes('Cursor进程正在运行, 请先关闭Cursor')) {
-            throw new Error('请先关闭 Cursor 或选择强制终止进程')
-        }
-        throw error
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to reset machine id')
     }
 }
 

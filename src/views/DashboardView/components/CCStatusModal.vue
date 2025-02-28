@@ -2,7 +2,7 @@
 import { NModal, NSpace, NButton } from 'naive-ui'
 import { useHookActions } from '../composables/useHookActions'
 
-const props = defineProps<{
+defineProps<{
   show: boolean
   originalAction: { type: 'machine' | 'account' | 'quick' | null }
 }>()
@@ -18,7 +18,7 @@ const updateShow = (value: boolean) => {
 }
 
 const handleApplyHookClick = async () => {
-  await handleApplyHook(props.originalAction)
+  await handleApplyHook()
   updateShow(false)
 }
 </script>

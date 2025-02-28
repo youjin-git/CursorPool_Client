@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutSider, NMenu, NIcon } from 'naive-ui'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, provide } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { 
@@ -8,7 +8,8 @@ import {
   SettingsSharp,
   TimeSharp,
   Close,
-  RemoveOutline
+  RemoveOutline,
+  ArrowUndo
 } from '@vicons/ionicons5'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import LoginOverlay from '../components/LoginOverlay.vue'
@@ -17,6 +18,8 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 import { platform } from '@tauri-apps/plugin-os'
+import CursorRunningModal from '../views/DashboardView/components/CursorRunningModal.vue'
+import type { PendingForceKillAction } from '../views/DashboardView/types'
 
 const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
@@ -54,6 +57,11 @@ const menuOptions = computed(() => [
     label: messages[currentLang.value].menu.settings,
     key: 'settings',
     icon: renderIcon(SettingsSharp)
+  },
+  {
+    label: '历史账户',
+    key: 'accounts',
+    icon: renderIcon(ArrowUndo)
   }
 ])
 
@@ -63,6 +71,12 @@ function handleMenuClick(key: string) {
 
 const collapsed = ref(true)
 const contentMarginLeft = computed(() => collapsed.value ? '64px' : '200px')
+
+// 添加一个计算属性来获取当前路由路径
+const currentPath = computed(() => {
+  // 去掉路径开头的 '/'
+  return router.currentRoute.value.path.substring(1) || 'dashboard'
+})
 
 // 窗口控制函数
 async function minimizeWindow() {
@@ -81,6 +95,31 @@ onMounted(async () => {
     console.error('Failed to detect platform:', error)
   }
 })
+
+// 全局状态
+const showCursorRunningModal = ref(false)
+const pendingForceKillAction = ref<PendingForceKillAction | null>(null)
+
+// 提供给子组件的方法
+const showCursorModal = (action: PendingForceKillAction) => {
+  showCursorRunningModal.value = true
+  pendingForceKillAction.value = action
+}
+
+// 处理强制关闭
+const handleForceKill = async () => {
+  if (pendingForceKillAction.value) {
+    // 触发全局事件
+    window.dispatchEvent(new CustomEvent('force_kill_cursor', {
+      detail: pendingForceKillAction.value
+    }))
+  }
+  showCursorRunningModal.value = false
+  pendingForceKillAction.value = null
+}
+
+// 提供给子组件
+provide('showCursorModal', showCursorModal)
 
 </script>
 
@@ -141,7 +180,7 @@ onMounted(async () => {
         :collapsed-width="64"
         :collapsed-icon-size="24"
         :icon-size="24"
-        :default-value="menuOptions[0].key"
+        :default-value="currentPath"
         @update:value="handleMenuClick"
         style="-webkit-app-region: no-drag"
       />
@@ -157,6 +196,14 @@ onMounted(async () => {
       <router-view />
     </n-layout>
   </n-layout>
+
+  <!-- 全局 Cursor 运行提示模态框 -->
+  <cursor-running-modal
+    :show="showCursorRunningModal"
+    :pending-action="pendingForceKillAction"
+    @update:show="showCursorRunningModal = $event"
+    @force-kill="handleForceKill"
+  />
 </template>
 
 <style scoped>

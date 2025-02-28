@@ -19,6 +19,7 @@ jobs:
     runs-on: macos-latest
     outputs:
       dev_version: ${{ steps.set_dev_version.outputs.dev_version }}
+      dev_version_win: ${{ steps.set_dev_version.outputs.dev_version_win }}
       commit_hash: ${{ steps.get_commit_hash.outputs.short_sha }}
     steps:
       - uses: actions/checkout@v4
@@ -39,8 +40,11 @@ jobs:
           DATE=$(date +'%Y%m%d%H%M')
           COMMIT_HASH="${{ steps.get_commit_hash.outputs.short_sha }}"
           DEV_VERSION="${BASE_VERSION}-dev.${DATE:0:8}.${COMMIT_HASH}"
+          DEV_VERSION_WIN="${BASE_VERSION}.${DATE:0:8}"
           echo "dev_version=${DEV_VERSION}" >> $GITHUB_OUTPUT
+          echo "dev_version_win=${DEV_VERSION_WIN}" >> $GITHUB_OUTPUT
           echo "generated dev version: ${DEV_VERSION}"
+          echo "generated windows dev version: ${DEV_VERSION_WIN}"
           
           npm version --no-git-tag-version "${DEV_VERSION}"
           
@@ -75,7 +79,7 @@ jobs:
         if: matrix.platform == 'windows-latest'
         shell: pwsh
         run: |
-          $DEV_VERSION="${{ needs.create-dev-version.outputs.dev_version }}"
+          $DEV_VERSION="${{ needs.create-dev-version.outputs.dev_version_win }}"
           npm version --no-git-tag-version $DEV_VERSION
           
           cd src-tauri

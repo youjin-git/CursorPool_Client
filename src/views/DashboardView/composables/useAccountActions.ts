@@ -11,20 +11,24 @@ import {
 import { addHistoryRecord } from '../../../utils/history'
 import { useDashboardState } from './useDashboardState'
 import { useDeviceInfo } from './useDeviceInfo'
+import { saveAccountToHistory } from '@/utils/historyAccounts'
+import type { HistoryAccount } from '@/types/history'
+import type { PendingForceKillAction } from '../types'
+import { inject } from 'vue'
 
 export function useAccountActions() {
   const message = useMessage()
   const { i18n } = useI18n()
   
   const { 
-    showCursorRunningModal, 
-    pendingForceKillAction,
     userCredits,
     showInsufficientCreditsModal,
     pendingCreditAction
   } = useDashboardState()
   
   const { deviceInfo, fetchUserInfo, fetchMachineIds, fetchCursorInfo } = useDeviceInfo()
+  
+  const showCursorModal = inject<(action: PendingForceKillAction) => void>('showCursorModal')
   
   // 检查并自动注入
   const ensureHookApplied = async () => {
@@ -38,9 +42,14 @@ export function useAccountActions() {
   // 修改机器码
   const handleMachineCodeChange = async () => {
     try {
+      const isRunning = await checkCursorRunning()
+      if (isRunning) {
+        showCursorModal?.({ type: 'machine' })
+        return
+      }
       await ensureHookApplied()
 
-      await resetMachineId(false)
+      await resetMachineId({ forceKill: false })
       message.success(i18n.value.dashboard.machineChangeSuccess)
       addHistoryRecord(
         '机器码修改',
@@ -52,8 +61,7 @@ export function useAccountActions() {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
       if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
-        showCursorRunningModal.value = true
-        pendingForceKillAction.value = { type: 'machine' }
+        showCursorModal?.({ type: 'machine' })
         return
       }
       message.error(i18n.value.dashboard.machineChangeFailed)
@@ -63,13 +71,25 @@ export function useAccountActions() {
   // 账户切换
   const handleAccountSwitch = async () => {
     try {
+      // 保存当前账户到历史记录
+      if (deviceInfo.value.cursorInfo?.userInfo) {
+        const historyAccount: HistoryAccount = {
+          email: deviceInfo.value.cursorInfo.userInfo.email,
+          token: deviceInfo.value.cursorToken,
+          machineCode: deviceInfo.value.machineCode,
+          gpt4Count: deviceInfo.value.cursorInfo.usage?.['gpt-4']?.numRequests || 0,
+          gpt35Count: deviceInfo.value.cursorInfo.usage?.['gpt-3.5-turbo']?.numRequests || 0,
+          lastUsed: Date.now()
+        }
+        saveAccountToHistory(historyAccount)
+      }
+
       await ensureHookApplied()
 
       // 检查 Cursor 是否在运行
       const isRunning = await checkCursorRunning()
       if (isRunning) {
-        showCursorRunningModal.value = true
-        pendingForceKillAction.value = { type: 'account' }
+        showCursorModal?.({ type: 'account' })
         return
       }
       
@@ -125,8 +145,7 @@ export function useAccountActions() {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
       if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
-        showCursorRunningModal.value = true
-        pendingForceKillAction.value = { type: 'account' }
+        showCursorModal?.({ type: 'account' })
         return
       }
       console.error('切换账户失败:', error)
@@ -137,13 +156,25 @@ export function useAccountActions() {
   // 一键切换
   const handleQuickChange = async () => {
     try {
+      // 保存当前账户到历史记录
+      if (deviceInfo.value.cursorInfo?.userInfo) {
+        const historyAccount: HistoryAccount = {
+          email: deviceInfo.value.cursorInfo.userInfo.email,
+          token: deviceInfo.value.cursorToken,
+          machineCode: deviceInfo.value.machineCode,
+          gpt4Count: deviceInfo.value.cursorInfo.usage?.['gpt-4']?.numRequests || 0,
+          gpt35Count: deviceInfo.value.cursorInfo.usage?.['gpt-3.5-turbo']?.numRequests || 0,
+          lastUsed: Date.now()
+        }
+        saveAccountToHistory(historyAccount)
+      }
+
       await ensureHookApplied()
 
       // 检查 Cursor 是否在运行
       const isRunning = await checkCursorRunning()
       if (isRunning) {
-        showCursorRunningModal.value = true
-        pendingForceKillAction.value = { type: 'quick' }
+        showCursorModal?.({ type: 'quick' })
         return
       }
       
@@ -192,7 +223,7 @@ export function useAccountActions() {
       await fetchMachineIds()
       
       // 然后再修改机器码
-      await resetMachineId(false)
+      await resetMachineId({ forceKill: false })
       message.success(i18n.value.dashboard.machineChangeSuccess)
       addHistoryRecord(
         '机器码修改',
@@ -211,8 +242,7 @@ export function useAccountActions() {
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
       if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
-        showCursorRunningModal.value = true
-        pendingForceKillAction.value = { type: 'quick' }
+        showCursorModal?.({ type: 'quick' })
         return
       }
       message.error(i18n.value.common.copyFailed)

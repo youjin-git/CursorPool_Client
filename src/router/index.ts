@@ -1,5 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import MainLayout from '../layouts/MainLayout.vue'
+import DashboardView from '../views/DashboardView/index.vue'
+import HistoryAccountsView from '../views/HistoryAccountsView.vue'
+import HistoryView from '../views/HistoryView.vue'
 
 const routes = [
   {
@@ -13,12 +16,17 @@ const routes = [
       {
         path: 'dashboard',
         name: 'dashboard',
-        component: () => import('../views/DashboardView/index.vue')
+        component: DashboardView
       },
       {
         path: 'history',
         name: 'history',
-        component: () => import('../views/HistoryView.vue')
+        component: HistoryView
+      },
+      {
+        path: 'accounts',
+        name: 'accounts',
+        component: HistoryAccountsView
       },
       {
         path: 'settings',

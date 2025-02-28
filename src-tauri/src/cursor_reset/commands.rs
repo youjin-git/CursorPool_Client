@@ -16,7 +16,8 @@ use tauri::State;
 #[tauri::command]
 pub async fn reset_machine_id(
     client: State<'_, ApiClient>,
-    force_kill: bool
+    force_kill: bool,
+    machine_id: Option<String>
 ) -> Result<bool, String> {
     let process_manager = ProcessManager::new();
     
@@ -58,7 +59,16 @@ pub async fn reset_machine_id(
         }
     };
     
-    let new_ids = generate_new_ids();
+    let new_ids = if let Some(id) = machine_id {
+        // 生成随机 ID
+        let mut ids = generate_new_ids();
+        // 替换 devDeviceId
+        ids.insert("telemetry.devDeviceId".to_string(), id);
+        ids
+    } else {
+        // 否则随机生成
+        generate_new_ids()
+    };
 
     // 更新 storage.json
     let mut storage_content = if paths.storage.exists() {
@@ -183,6 +193,12 @@ pub async fn switch_account(
     ];
 
     update_database(&paths.db, &account_updates)?;
+
+    // 等待一段时间确保数据库更新完成
+    std::thread::sleep(std::time::Duration::from_millis(500));
+    
+    // 启动 Cursor
+    paths.launch_cursor()?;
 
     Ok(true)
 }

@@ -1,12 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, onUnmounted } from 'vue'
+import { onMounted, ref, watch, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import { NGrid, NGridItem, NSpace } from 'naive-ui'
 import { 
   killCursorProcess, 
-  waitForCursorClose, 
-  checkHookStatus, 
-  checkCursorRunning 
+  waitForCursorClose,
 } from '@/api'
 
 import UserInfoCard from './components/UserInfoCard.vue'
@@ -24,7 +22,6 @@ import { useDeviceInfo } from './composables/useDeviceInfo'
 import { useVersionCheck } from './composables/useVersionCheck'
 import { usePrivilegeCheck } from './composables/usePrivilegeCheck'
 import { useAccountActions } from './composables/useAccountActions'
-import { useHookActions } from './composables/useHookActions'
 
 const message = useMessage()
 

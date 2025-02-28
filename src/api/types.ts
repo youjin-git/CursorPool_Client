@@ -189,13 +189,14 @@ export interface HookResponse {
   success: boolean
 }
 
+// 重置密码请求
 export interface ResetPasswordRequest {
   email: string
   smsCode: string
   newPassword: string
 }
 
-// 添加新的类型定义
+// 系统信息
 export interface SystemInfo {
     isWindows: boolean;
 }
@@ -203,4 +204,10 @@ export interface SystemInfo {
 // 免责声明响应
 export interface DisclaimerResponse {
   content: string
+}
+
+// 重置机器码请求
+export interface ResetMachineIdRequest {
+  forceKill: boolean
+  machineId?: string  // 可选参数
 }
