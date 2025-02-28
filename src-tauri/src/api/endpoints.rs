@@ -330,11 +330,25 @@ pub async fn report_bug(
     // 发送请求
     let _response = client
         .0
-        .post(format!("{}/api/report", get_base_url()))
+        .post(format!("{}/report", get_base_url()))
         .json(&report)
         .send()
         .await
         .map_err(|e| e.to_string())?;
     
     Ok(())
+}
+
+#[tauri::command]
+pub async fn get_disclaimer(
+    client: State<'_, super::client::ApiClient>,
+) -> Result<ApiResponse<DisclaimerResponse>, String> {
+    let response = client
+        .0
+        .get(format!("{}/disclaimer", get_base_url()))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    response.json().await.map_err(|e| e.to_string())
 }

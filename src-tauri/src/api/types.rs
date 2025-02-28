@@ -232,3 +232,8 @@ pub struct ResetPasswordRequest {
     #[serde(rename = "newPassword")]
     pub new_password: String,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct DisclaimerResponse {
+    pub content: String,
+}

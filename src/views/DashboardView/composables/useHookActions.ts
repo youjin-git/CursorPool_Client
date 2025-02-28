@@ -1,10 +1,9 @@
 import { useMessage } from 'naive-ui'
 import { useI18n } from '../../../locales'
 import { applyHook, checkCursorRunning, checkHookStatus } from '@/api'
-import { addHistoryRecord } from '../../../utils/history'
 import { useDashboardState } from './useDashboardState'
 import { useDeviceInfo } from './useDeviceInfo'
-import type { OriginalAction } from '../types'
+import { addHistoryRecord } from '@/utils/history'
 
 export function useHookActions() {
   const message = useMessage()
@@ -13,7 +12,7 @@ export function useHookActions() {
   const { deviceInfo } = useDeviceInfo()
 
   // 处理注入
-  const handleApplyHook = async (originalAction: OriginalAction) => {
+  const handleApplyHook = async () => {
     try {
       applyHookLoading.value = true
       
@@ -22,8 +21,7 @@ export function useHookActions() {
       if (isRunning) {
         showCursorRunningModal.value = true
         pendingForceKillAction.value = { 
-          type: 'hook', 
-          params: { originalAction } 
+          type: 'hook'
         }
         return
       }
@@ -37,14 +35,6 @@ export function useHookActions() {
       // 触发全局刷新事件
       window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
       
-      // 注入成功后，继续执行原始操作
-      if (originalAction.type) {
-        // 这里需要触发原始操作
-        window.dispatchEvent(new CustomEvent('continue_original_action', {
-          detail: { actionType: originalAction.type }
-        }))
-      }
-      
       addHistoryRecord('系统控制', i18n.value.systemControl.history.applyHook)
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
@@ -52,7 +42,6 @@ export function useHookActions() {
         showCursorRunningModal.value = true
         pendingForceKillAction.value = { 
           type: 'hook',
-          params: { originalAction } 
         }
         return
       }

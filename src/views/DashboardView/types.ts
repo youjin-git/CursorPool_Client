@@ -12,10 +12,6 @@ export interface DeviceInfoState {
   hookStatus: boolean | null
 }
 
-export interface OriginalAction {
-  type: 'machine' | 'account' | 'quick' | null
-}
-
 export interface PendingForceKillAction {
   type: 'machine' | 'account' | 'quick' | 'hook'
   params?: any

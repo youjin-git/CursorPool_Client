@@ -12,7 +12,8 @@ import type {
     VersionInfo,
     PublicInfo,
     MachineInfo,
-    ActivateResponse
+    ActivateResponse,
+    DisclaimerResponse
 } from './types'
 
 // 错误处理
@@ -310,5 +311,15 @@ export async function checkIsWindows(): Promise<boolean> {
         return await invoke<boolean>('check_is_windows');
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to check if system is Windows');
+    }
+}
+
+// 获取免责声明
+export async function getDisclaimer(): Promise<DisclaimerResponse> {
+    try {
+        const response = await invoke<ApiResponse<DisclaimerResponse>>('get_disclaimer')
+        return handleApiResponse(response)
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get disclaimer')
     }
 }

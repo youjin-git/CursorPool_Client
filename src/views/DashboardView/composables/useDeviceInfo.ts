@@ -2,19 +2,20 @@ import { ref } from 'vue'
 import { getUserInfo, getMachineIds, getUsage, checkHookStatus } from '@/api'
 import type { DeviceInfoState } from '../types'
 
-export function useDeviceInfo() {
-  const deviceInfo = ref<DeviceInfoState>({
-    machineCode: '',
-    currentAccount: '',
-    cursorToken: '',
+// 创建单例状态
+const deviceInfo = ref<DeviceInfoState>({
+  machineCode: '',
+  currentAccount: '',
+  cursorToken: '',
+  userInfo: null,
+  cursorInfo: {
     userInfo: null,
-    cursorInfo: {
-      userInfo: null,
-      usage: null
-    },
-    hookStatus: null
-  })
+    usage: null
+  },
+  hookStatus: null
+})
 
+export function useDeviceInfo() {
   // 获取用户信息
   const fetchUserInfo = async () => {
     try {

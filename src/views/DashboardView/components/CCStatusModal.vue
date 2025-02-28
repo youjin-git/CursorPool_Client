@@ -2,7 +2,7 @@
 import { NModal, NSpace, NButton } from 'naive-ui'
 import { useHookActions } from '../composables/useHookActions'
 
-defineProps<{
+const props = defineProps<{
   show: boolean
   originalAction: { type: 'machine' | 'account' | 'quick' | null }
 }>()
@@ -15,6 +15,11 @@ const { applyHookLoading, handleApplyHook } = useHookActions()
 
 const updateShow = (value: boolean) => {
   emit('update:show', value)
+}
+
+const handleApplyHookClick = async () => {
+  await handleApplyHook(props.originalAction)
+  updateShow(false)
 }
 </script>
 
@@ -40,7 +45,7 @@ const updateShow = (value: boolean) => {
         <n-button tertiary @click="updateShow(false)" style="margin-right: auto">
           我知道了
         </n-button>
-        <n-button type="primary" @click="handleApplyHook(originalAction)" :loading="applyHookLoading">
+        <n-button type="primary" @click="handleApplyHookClick" :loading="applyHookLoading">
           自动注入
         </n-button>
       </n-space>

@@ -199,3 +199,8 @@ export interface ResetPasswordRequest {
 export interface SystemInfo {
     isWindows: boolean;
 }
+
+// 免责声明响应
+export interface DisclaimerResponse {
+  content: string
+}

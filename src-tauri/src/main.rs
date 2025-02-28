@@ -2,16 +2,14 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use cursor_pool_lib::*;
-use dotenv::dotenv;
 use tauri::Builder;
 use tauri::generate_handler;
 use tauri::generate_context;
 use crate::utils::privileges::{check_admin_privileges, request_admin_privileges};
+use crate::utils::process::ProcessManager;
 use std::env;
 
 fn main() {
-    dotenv().ok();  // 加载 .env 文件
-
     // Windows 平台下检查管理员权限
     #[cfg(target_os = "windows")]
     {
@@ -25,6 +23,15 @@ fn main() {
                 std::process::exit(0);
             }
         }
+    }
+
+    let process_manager = ProcessManager::new();
+    if process_manager.is_other_cursor_pool_running() {
+        if let Err(e) = process_manager.kill_other_cursor_pool_processes() {
+            eprintln!("终止其他 Cursor Pool 实例失败: {}", e);
+            std::process::exit(1);
+        }
+        std::thread::sleep(std::time::Duration::from_millis(500));
     }
 
     Builder::default()
@@ -47,6 +54,7 @@ fn main() {
             api::get_version,
             api::get_public_info,
             api::reset_password,
+            api::get_disclaimer,
             reset_machine_id,
             switch_account,
             get_machine_ids,

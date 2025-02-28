@@ -5,12 +5,12 @@ import {
   switchAccount, 
   getAccount, 
   checkCursorRunning,
+  applyHook,
   checkHookStatus
 } from '@/api'
 import { addHistoryRecord } from '../../../utils/history'
 import { useDashboardState } from './useDashboardState'
 import { useDeviceInfo } from './useDeviceInfo'
-import { computed, ref } from 'vue'
 
 export function useAccountActions() {
   const message = useMessage()
@@ -18,36 +18,27 @@ export function useAccountActions() {
   
   const { 
     showCursorRunningModal, 
-    showCCStatusModal, 
     pendingForceKillAction,
-    originalActionBeforeHook
+    userCredits,
+    showInsufficientCreditsModal,
+    pendingCreditAction
   } = useDashboardState()
   
   const { deviceInfo, fetchUserInfo, fetchMachineIds, fetchCursorInfo } = useDeviceInfo()
   
-  // 添加新的状态
-  const showInsufficientCreditsModal = ref(false)
-  const pendingCreditAction = ref<'account' | 'quick' | null>(null)
-  
-  // 计算用户当前积分
-  const userCredits = computed(() => {
-    if (!deviceInfo.value.userInfo) return 0
-    return (deviceInfo.value.userInfo.totalCount - deviceInfo.value.userInfo.usedCount) * 50
-  })
+  // 检查并自动注入
+  const ensureHookApplied = async () => {
+    const hookStatus = await checkHookStatus()
+    if (!hookStatus) {
+      await applyHook(false)
+      deviceInfo.value.hookStatus = true
+    }
+  }
 
   // 修改机器码
   const handleMachineCodeChange = async () => {
-    // 先检查 CC 状态
     try {
-      // 重新检查 Hook 状态，确保获取最新状态
-      const hookStatus = await checkHookStatus()
-      deviceInfo.value.hookStatus = hookStatus
-      
-      if (!deviceInfo.value.hookStatus) {
-        originalActionBeforeHook.value = { type: 'machine' }
-        showCCStatusModal.value = true
-        return
-      }
+      await ensureHookApplied()
 
       await resetMachineId(false)
       message.success(i18n.value.dashboard.machineChangeSuccess)
@@ -72,16 +63,7 @@ export function useAccountActions() {
   // 账户切换
   const handleAccountSwitch = async () => {
     try {
-      // 重新检查 Hook 状态，确保获取最新状态
-      const hookStatus = await checkHookStatus()
-      deviceInfo.value.hookStatus = hookStatus
-      
-      // 先检查 CC 状态
-      if (!deviceInfo.value.hookStatus) {
-        originalActionBeforeHook.value = { type: 'account' }
-        showCCStatusModal.value = true
-        return
-      }
+      await ensureHookApplied()
 
       // 检查 Cursor 是否在运行
       const isRunning = await checkCursorRunning()
@@ -90,6 +72,9 @@ export function useAccountActions() {
         pendingForceKillAction.value = { type: 'account' }
         return
       }
+      
+      // 确保先获取最新的用户信息
+      await fetchUserInfo()
       
       // 检查积分是否足够
       if (userCredits.value < 50) {
@@ -152,16 +137,7 @@ export function useAccountActions() {
   // 一键切换
   const handleQuickChange = async () => {
     try {
-      // 重新检查 Hook 状态，确保获取最新状态
-      const hookStatus = await checkHookStatus()
-      deviceInfo.value.hookStatus = hookStatus
-      
-      // 先检查 CC 状态
-      if (!deviceInfo.value.hookStatus) {
-        originalActionBeforeHook.value = { type: 'quick' }
-        showCCStatusModal.value = true
-        return
-      }
+      await ensureHookApplied()
 
       // 检查 Cursor 是否在运行
       const isRunning = await checkCursorRunning()
@@ -170,6 +146,9 @@ export function useAccountActions() {
         pendingForceKillAction.value = { type: 'quick' }
         return
       }
+      
+      // 确保先获取最新的用户信息
+      await fetchUserInfo()
       
       // 检查积分是否足够
       if (userCredits.value < 50) {

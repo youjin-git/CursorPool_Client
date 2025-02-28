@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, watch, computed } from 'vue'
+import { onMounted, ref, watch, computed, onUnmounted } from 'vue'
 import { useMessage } from 'naive-ui'
 import { NGrid, NGridItem, NSpace } from 'naive-ui'
 import { 
@@ -15,9 +15,9 @@ import QuickActionsCard from './components/QuickActionsCard.vue'
 import UpdateModal from './components/UpdateModal.vue'
 import CursorRunningModal from './components/CursorRunningModal.vue'
 import AdminPrivilegeModal from './components/AdminPrivilegeModal.vue'
-import CCStatusModal from './components/CCStatusModal.vue'
 import DashboardTour from './components/DashboardTour.vue'
 import InsufficientCreditsModal from './components/InsufficientCreditsModal.vue'
+import DisclaimerModal from './components/DisclaimerModal.vue'
 
 import { useDashboardState } from './composables/useDashboardState'
 import { useDeviceInfo } from './composables/useDeviceInfo'
@@ -34,10 +34,8 @@ const {
   showUpdateModal, 
   showCursorRunningModal,
   showAdminPrivilegeModal,
-  showCCStatusModal,
   pendingForceKillAction,
   versionInfo,
-  originalActionBeforeHook
 } = useDashboardState()
 
 // 导入设备信息和相关方法
@@ -64,110 +62,12 @@ const {
 // 导入账户操作相关方法
 const {
   handleMachineCodeChange,
-  executeAccountSwitch,
-  executeQuickChange
+  handleAccountSwitch,
+  handleQuickChange,
+  showInsufficientCreditsModal,
+  userCredits,
+  handleActivateSuccess
 } = useAccountActions()
-
-// 导入注入相关方法
-const { handleApplyHook } = useHookActions()
-
-// 添加新的状态
-const showInsufficientCreditsModal = ref(false)
-const pendingCreditAction = ref<'account' | 'quick' | null>(null)
-
-// 计算用户当前积分
-const userCredits = computed(() => {
-  if (!deviceInfo.value.userInfo) return 0
-  return (deviceInfo.value.userInfo.totalCount - deviceInfo.value.userInfo.usedCount) * 50
-})
-
-// 修改账户切换方法
-const handleAccountSwitch = async () => {
-  try {
-    // 重新检查 Hook 状态，确保获取最新状态
-    const hookStatus = await checkHookStatus()
-    deviceInfo.value.hookStatus = hookStatus
-    
-    // 先检查 CC 状态
-    if (!deviceInfo.value.hookStatus) {
-      originalActionBeforeHook.value = { type: 'account' }
-      showCCStatusModal.value = true
-      return
-    }
-
-    // 检查 Cursor 是否在运行
-    const isRunning = await checkCursorRunning()
-    if (isRunning) {
-      showCursorRunningModal.value = true
-      pendingForceKillAction.value = { type: 'account' }
-      return
-    }
-
-    // 检查积分是否足够
-    if (userCredits.value < 50) {
-      showInsufficientCreditsModal.value = true
-      pendingCreditAction.value = 'account'
-      return
-    }
-
-    await executeAccountSwitch()
-  } catch (error) {
-    message.error('操作失败: ' + (error instanceof Error ? error.message : String(error)))
-  }
-}
-
-// 修改一键切换方法
-const handleQuickChange = async () => {
-  try {
-    // 重新检查 Hook 状态，确保获取最新状态
-    const hookStatus = await checkHookStatus()
-    deviceInfo.value.hookStatus = hookStatus
-    
-    // 先检查 CC 状态
-    if (!deviceInfo.value.hookStatus) {
-      originalActionBeforeHook.value = { type: 'quick' }
-      showCCStatusModal.value = true
-      return
-    }
-
-    // 检查 Cursor 是否在运行
-    const isRunning = await checkCursorRunning()
-    if (isRunning) {
-      showCursorRunningModal.value = true
-      pendingForceKillAction.value = { type: 'quick' }
-      return
-    }
-
-    // 检查积分是否足够
-    if (userCredits.value < 50) {
-      showInsufficientCreditsModal.value = true
-      pendingCreditAction.value = 'quick'
-      return
-    }
-
-    await executeQuickChange()
-  } catch (error) {
-    message.error('操作失败: ' + (error instanceof Error ? error.message : String(error)))
-  }
-}
-
-// 处理激活成功
-const handleActivateSuccess = async () => {
-  // 重新获取用户信息
-  await fetchUserInfo()
-  
-  // 如果积分已经足够，继续执行之前的操作
-  if (userCredits.value >= 50) {
-    if (pendingCreditAction.value === 'account') {
-      await executeAccountSwitch()
-    } else if (pendingCreditAction.value === 'quick') {
-      await executeQuickChange()
-    }
-    pendingCreditAction.value = null
-  } else {
-    message.info('积分仍然不足，请继续充值或联系客服')
-  }
-}
 
 // 处理强制关闭
 const handleForceKill = async () => {
@@ -188,14 +88,12 @@ const handleForceKill = async () => {
         handleAccountSwitch()
       } else if (type === 'quick') {
         handleQuickChange()
-      } else if (type === 'hook') {
-        handleApplyHook(originalActionBeforeHook.value)
       }
       
       // 重置待处理操作
       pendingForceKillAction.value = null
     }
-    
+    message.success('cursor会自动重启')
     // 关闭模态框
     showCursorRunningModal.value = false
   } catch (error) {
@@ -206,6 +104,22 @@ const handleForceKill = async () => {
 
 // 控制是否显示引导
 const shouldShowTour = ref(false)
+// 控制是否显示免责声明
+const showDisclaimerModal = ref(false)
+
+const handleContinueOriginalAction = (event: Event) => {
+  const customEvent = event as CustomEvent;
+  if (customEvent.detail && customEvent.detail.actionType) {
+    const actionType = customEvent.detail.actionType;
+    if (actionType === 'account') {
+      handleAccountSwitch();
+    } else if (actionType === 'quick') {
+      handleQuickChange();
+    } else if (actionType === 'machine') {
+      handleMachineCodeChange();
+    }
+  }
+};
 
 // 初始化
 onMounted(async () => {
@@ -222,14 +136,41 @@ onMounted(async () => {
     // 检查管理员权限
     await checkPrivileges()
     
-    // 在所有检查完成后，如果没有模态框显示，则显示引导
+    // 在所有检查完成后，检查是否需要显示引导或免责声明
     setTimeout(() => {
-      // 检查是否已登录（存在API Key）并且没有模态框显示
       const apiKey = localStorage.getItem('apiKey')
-      if (apiKey && !showUpdateModal.value && !showAdminPrivilegeModal.value && !showCursorRunningModal.value) {
-        shouldShowTour.value = true
+      const disclaimerAccepted = localStorage.getItem('disclaimer_accepted')
+      
+      // 如果已登录且没有其他模态框显示
+      if (apiKey && 
+          !showUpdateModal.value && 
+          !showAdminPrivilegeModal.value && 
+          !showCursorRunningModal.value
+      ) {
+        // 如果未接受免责声明，显示免责声明
+        if (disclaimerAccepted !== 'true') {
+          showDisclaimerModal.value = true
+        } 
+        // 否则如果未显示过引导，显示引导
+        else if (!localStorage.getItem('dashboard_tour_shown')) {
+          shouldShowTour.value = true
+        }
       }
     }, 1000)
+
+    // 注册事件监听器（使用具名函数）
+    window.addEventListener('continue_original_action', handleContinueOriginalAction);
+    
+    // 添加事件监听器，处理刷新数据
+    window.addEventListener('refresh_dashboard_data', async () => {
+      try {
+        // 重新加载所有数据
+        window.location.reload()
+      } catch (error) {
+        console.error('刷新数据失败:', error)
+        message.error('刷新数据失败')
+      }
+    });
   } catch (error) {
     console.error('初始化失败:', error)
     message.error('加载数据失败')
@@ -237,9 +178,9 @@ onMounted(async () => {
 })
 
 // 监听模态框状态变化，如果有模态框显示，则隐藏引导
-watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showCCStatusModal], 
-  ([updateModal, adminModal, cursorModal, ccModal]) => {
-    if (updateModal || adminModal || cursorModal || ccModal) {
+watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal], 
+  ([updateModal, adminModal, cursorModal]) => {
+    if (updateModal || adminModal || cursorModal) {
       shouldShowTour.value = false
     } else {
       // 如果所有模态框都关闭了，并且是首次访问，则显示引导
@@ -251,6 +192,13 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showCCS
     }
   }
 )
+
+// 在组件卸载时移除事件监听器
+onUnmounted(() => {
+  // 正确移除事件监听器（使用具名函数）
+  window.removeEventListener('continue_original_action', handleContinueOriginalAction);
+  window.removeEventListener('refresh_dashboard_data', () => {});
+});
 </script>
 
 <template>
@@ -300,18 +248,17 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showCCS
       @exit="handleExit" 
     />
 
-    <CCStatusModal 
-      :show="showCCStatusModal" 
-      :original-action="originalActionBeforeHook" 
-      @update:show="showCCStatusModal = $event"
-    />
-
     <!-- 添加新的模态窗口 -->
     <InsufficientCreditsModal 
       :show="showInsufficientCreditsModal" 
       :user-credits="userCredits"
       @update:show="showInsufficientCreditsModal = $event"
       @activate-success="handleActivateSuccess"
+    />
+
+    <!-- 添加免责声明模态框 -->
+    <DisclaimerModal
+      v-model:show="showDisclaimerModal"
     />
 
     <!-- 引导组件 - 只在没有模态框显示时显示 -->

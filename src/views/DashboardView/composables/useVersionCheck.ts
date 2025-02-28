@@ -3,7 +3,9 @@ import { getVersion } from '@/api'
 import { open } from '@tauri-apps/plugin-shell'
 import { version as LOCAL_VERSION } from '../../../../package.json'
 import type { VersionInfo } from '@/api/types'
+import { Window } from '@tauri-apps/api/window'
 
+const appWindow = new Window('main')
 // 版本检查的时间间隔（毫秒）
 const VERSION_CHECK_INTERVAL = 3 * 60 * 60 * 1000 // 3小时
 
@@ -60,6 +62,7 @@ export function useVersionCheck(
     if (versionInfo.value?.downloadUrl) {
       const url = versionInfo.value.downloadUrl
       await open(url)
+      appWindow.close()
     }
   }
 

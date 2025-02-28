@@ -89,7 +89,7 @@ const tourSteps: Array<{
     element: '.user-info-machine-code',
     popover: {
       title: '机器码',
-      description: '本地Cursor账户的机器码',
+      description: '本地Cursor账户的机器码, 如果显示异常, 说明本地Cursor没有生成机器码, 这不是异常情况, 请不要截图询问为什么!',
       side: 'right' as Side,
       align: 'start'
     }
