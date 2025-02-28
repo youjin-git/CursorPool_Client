@@ -5,6 +5,9 @@ import { useDeviceInfo } from './useDeviceInfo'
 
 // 创建单例状态
 const loading = ref(true)
+const machineCodeLoading = ref(false)
+const accountSwitchLoading = ref(false)
+const quickChangeLoading = ref(false)
 const showUpdateModal = ref(false)
 const showCursorRunningModal = ref(false)
 const showAdminPrivilegeModal = ref(false)
@@ -27,6 +30,9 @@ export function useDashboardState() {
 
   return {
     loading,
+    machineCodeLoading,
+    accountSwitchLoading,
+    quickChangeLoading,
     showUpdateModal,
     showCursorRunningModal,
     showAdminPrivilegeModal,

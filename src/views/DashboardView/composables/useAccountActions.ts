@@ -14,7 +14,7 @@ import { useDeviceInfo } from './useDeviceInfo'
 import { saveAccountToHistory } from '@/utils/historyAccounts'
 import type { HistoryAccount } from '@/types/history'
 import type { PendingForceKillAction } from '../types'
-import { inject } from 'vue'
+import { inject, onMounted, onUnmounted } from 'vue'
 
 export function useAccountActions() {
   const message = useMessage()
@@ -23,13 +23,50 @@ export function useAccountActions() {
   const { 
     userCredits,
     showInsufficientCreditsModal,
-    pendingCreditAction
+    pendingCreditAction,
+    machineCodeLoading,
+    accountSwitchLoading,
+    quickChangeLoading
   } = useDashboardState()
   
   const { deviceInfo, fetchUserInfo, fetchMachineIds, fetchCursorInfo } = useDeviceInfo()
   
   const showCursorModal = inject<(action: PendingForceKillAction) => void>('showCursorModal')
   
+  // 监听强制关闭事件
+  onMounted(() => {
+    window.addEventListener('force_kill_cursor', async (e: Event) => {
+      const detail = (e as CustomEvent).detail as PendingForceKillAction
+      if (detail.type === 'machine') {
+        await handleMachineCodeForceKill()
+      } else if (detail.type === 'account') {
+        await executeAccountSwitch(true)
+      } else if (detail.type === 'quick') {
+        await executeQuickChange(true)
+      }
+    })
+  })
+
+  // 强制关闭后的机器码修改
+  const handleMachineCodeForceKill = async () => {
+    try {
+      machineCodeLoading.value = true
+      await ensureHookApplied()
+      await resetMachineId({ forceKill: true })
+      message.success(i18n.value.dashboard.machineChangeSuccess)
+      addHistoryRecord(
+        '机器码修改',
+        `修改机器码: ${deviceInfo.value.machineCode}`
+      )
+      await fetchMachineIds()
+      window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
+    } catch (error) {
+      message.error(i18n.value.dashboard.machineChangeFailed)
+    } finally {
+      machineCodeLoading.value = false
+    }
+  }
+
   // 检查并自动注入
   const ensureHookApplied = async () => {
     const hookStatus = await checkHookStatus()
@@ -42,6 +79,7 @@ export function useAccountActions() {
   // 修改机器码
   const handleMachineCodeChange = async () => {
     try {
+      machineCodeLoading.value = true
       const isRunning = await checkCursorRunning()
       if (isRunning) {
         showCursorModal?.({ type: 'machine' })
@@ -65,6 +103,8 @@ export function useAccountActions() {
         return
       }
       message.error(i18n.value.dashboard.machineChangeFailed)
+    } finally {
+      machineCodeLoading.value = false
     }
   }
 
@@ -110,8 +150,9 @@ export function useAccountActions() {
   }
 
   // 执行账户切换
-  const executeAccountSwitch = async () => {
+  const executeAccountSwitch = async (forceKill: boolean = false) => {
     try {
+      accountSwitchLoading.value = true
       const apiKey = localStorage.getItem('apiKey')
       if (!apiKey) {
         message.error(i18n.value.message.pleaseInputEmail)
@@ -126,7 +167,7 @@ export function useAccountActions() {
         return
       }
       
-      await switchAccount(accountInfo.email, accountInfo.token, false)
+      await switchAccount(accountInfo.email, accountInfo.token, forceKill)
       message.success(i18n.value.dashboard.accountChangeSuccess)
       addHistoryRecord(
         '账户切换',
@@ -150,6 +191,8 @@ export function useAccountActions() {
       }
       console.error('切换账户失败:', error)
       message.error(i18n.value.dashboard.accountChangeFailed)
+    } finally {
+      accountSwitchLoading.value = false
     }
   }
 
@@ -195,8 +238,9 @@ export function useAccountActions() {
   }
 
   // 执行一键切换
-  const executeQuickChange = async () => {
+  const executeQuickChange = async (forceKill: boolean = false) => {
     try {
+      quickChangeLoading.value = true
       // 先执行账户切换
       const apiKey = localStorage.getItem('apiKey')
       if (!apiKey) {
@@ -212,7 +256,7 @@ export function useAccountActions() {
         return
       }
       
-      await switchAccount(accountInfo.email, accountInfo.token, false)
+      await switchAccount(accountInfo.email, accountInfo.token, forceKill)
       message.success(i18n.value.dashboard.accountChangeSuccess)
       addHistoryRecord(
         '账户切换',
@@ -245,7 +289,9 @@ export function useAccountActions() {
         showCursorModal?.({ type: 'quick' })
         return
       }
-      message.error(i18n.value.common.copyFailed)
+      message.error(i18n.value.dashboard.accountChangeFailed)
+    } finally {
+      quickChangeLoading.value = false
     }
   }
   
@@ -267,8 +313,8 @@ export function useAccountActions() {
     }
   }
 
-  // 监听事件，在注入成功后继续执行原始操作
-  window.addEventListener('continue_original_action', ((event: CustomEvent) => {
+  // 创建具名的事件处理函数
+  const handleOriginalAction = ((event: CustomEvent) => {
     const { actionType } = event.detail
     if (actionType === 'machine') {
       handleMachineCodeChange()
@@ -277,7 +323,15 @@ export function useAccountActions() {
     } else if (actionType === 'quick') {
       handleQuickChange()
     }
-  }) as EventListener)
+  }) as EventListener
+
+  onMounted(() => {
+    window.addEventListener('continue_original_action', handleOriginalAction)
+  })
+
+  onUnmounted(() => {
+    window.removeEventListener('continue_original_action', handleOriginalAction)
+  })
 
   return {
     handleMachineCodeChange,
@@ -288,6 +342,9 @@ export function useAccountActions() {
     showInsufficientCreditsModal,
     pendingCreditAction,
     userCredits,
-    handleActivateSuccess
+    handleActivateSuccess,
+    machineCodeLoading,
+    accountSwitchLoading,
+    quickChangeLoading
   }
 } 

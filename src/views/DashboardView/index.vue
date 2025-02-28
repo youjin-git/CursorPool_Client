@@ -32,7 +32,7 @@ const {
   showCursorRunningModal,
   showAdminPrivilegeModal,
   pendingForceKillAction,
-  versionInfo,
+  versionInfo
 } = useDashboardState()
 
 // 导入设备信息和相关方法
@@ -63,7 +63,7 @@ const {
   handleQuickChange,
   showInsufficientCreditsModal,
   userCredits,
-  handleActivateSuccess
+  handleActivateSuccess,
 } = useAccountActions()
 
 // 处理强制关闭
@@ -118,6 +118,21 @@ const handleContinueOriginalAction = (event: Event) => {
   }
 };
 
+// 创建刷新函数
+const refreshDashboardData = async () => {
+  try {
+    loading.value = true
+    await fetchUserInfo()
+    await fetchMachineIds()
+    await fetchCursorInfo()
+  } catch (error) {
+    console.error('刷新数据失败:', error)
+    message.error('刷新数据失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 初始化
 onMounted(async () => {
   
@@ -158,16 +173,8 @@ onMounted(async () => {
     // 注册事件监听器（使用具名函数）
     window.addEventListener('continue_original_action', handleContinueOriginalAction);
     
-    // 添加事件监听器，处理刷新数据
-    window.addEventListener('refresh_dashboard_data', async () => {
-      try {
-        // 重新加载所有数据
-        window.location.reload()
-      } catch (error) {
-        console.error('刷新数据失败:', error)
-        message.error('刷新数据失败')
-      }
-    });
+    // 使用新的刷新函数
+    window.addEventListener('refresh_dashboard_data', refreshDashboardData)
   } catch (error) {
     console.error('初始化失败:', error)
     message.error('加载数据失败')
@@ -192,10 +199,10 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal],
 
 // 在组件卸载时移除事件监听器
 onUnmounted(() => {
-  // 正确移除事件监听器（使用具名函数）
-  window.removeEventListener('continue_original_action', handleContinueOriginalAction);
-  window.removeEventListener('refresh_dashboard_data', () => {});
-});
+  // 移除事件监听器
+  window.removeEventListener('refresh_dashboard_data', refreshDashboardData)
+  window.removeEventListener('continue_original_action', handleContinueOriginalAction)
+})
 </script>
 
 <template>
