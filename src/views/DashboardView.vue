@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon } from 'naive-ui'
+import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon, NForm, NFormItem, NInput } from 'naive-ui'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from '../locales'
 import { useMessage } from 'naive-ui'
@@ -864,6 +864,11 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showDis
     }
   }
 )
+
+// 添加表单数据
+const formValue = ref({
+  activationCode: ''
+})
 </script>
 
 <template>
@@ -1166,34 +1171,42 @@ watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showDis
       </template>
     </n-modal>
 
-    <!-- 添加积分不足模态框 -->
+    <!-- 修改积分不足模态框 -->
     <n-modal
       v-model:show="showInsufficientCreditsModal"
       preset="dialog"
-      title="积分不足"
+      title="额度不足"
       :closable="true"
       :mask-closable="false"
+      style="width: 500px"
     >
-      <template #default>
-        <n-form>
-          <p>您当前剩余积分不足，账户切换需要消耗50积分。</p>
+      <n-form
+        :model="formValue"
+        label-placement="left"
+        label-width="auto"
+        require-mark-placement="right-hanging"
+      >
+        <div style="margin-bottom: 16px">
+          <p>您当前对话额度不足，账户切换需要消耗50额度。</p>
           <p style="margin-top: 12px; color: #ff4d4f;">
-            当前积分: {{ userCredits }}，还需要: {{ Math.max(0, 50 - userCredits) }} 积分
+            当前额度: {{ userCredits }}，还需要: {{ Math.max(0, 50 - userCredits) }} 额度
           </p>
-          
-          <n-form-item :label="i18n.message.pleaseInputActivationCode" style="margin-top: 16px;">
-            <n-input 
-              v-model:value="activationCode" 
-              placeholder="请输入卡密" 
-              :disabled="activationLoading"
-            />
-          </n-form-item>
-          
-          <p v-if="activationError" style="color: #ff4d4f; margin-top: 8px;">
-            {{ activationError }}
-          </p>
-        </n-form>
-      </template>
+        </div>
+        
+        <n-form-item label="激活码">
+          <n-input
+            v-model:value="activationCode"
+            type="text"
+            placeholder="请输入卡密"
+            :disabled="activationLoading"
+          />
+        </n-form-item>
+        
+        <p v-if="activationError" style="color: #ff4d4f; margin-top: 8px;">
+          {{ activationError }}
+        </p>
+      </n-form>
+
       <template #action>
         <n-space justify="end">
           <n-button @click="showInsufficientCreditsModal = false" :disabled="activationLoading">

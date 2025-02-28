@@ -98,7 +98,7 @@ const tourSteps: Array<{
     element: '.user-info-machine-code',
     popover: {
       title: '机器码',
-      description: '本地Cursor账户的机器码, 如果显示异常, 说明本地Cursor没有生成机器码, 这不是异常情况, 请不要截图询问为什么!',
+      description: '本地Cursor账户的机器码, 如果显示异常, 说明本地Cursor没有生成机器码, 是因为cursor没打开,这是正常情况,请不要截图询问为什么',
       side: 'right' as Side,
       align: 'start'
     }
@@ -116,7 +116,7 @@ const tourSteps: Array<{
     element: '.advanced-model-usage',
     popover: {
       title: '高级模型使用量',
-      description: '本地Cursor高级模型使用情况, 例如gpt-4o, cluade-3.7-sonnet, 也就是对话额度',
+      description: '本地Cursor高级模型使用情况, 例如cluade-3.7-sonnet, 也就是对话额度',
       side: 'left' as Side,
       align: 'start'
     }
@@ -140,6 +140,7 @@ const tourSteps: Array<{
     }
   }
 ]
+
 
 // 创建 driver 实例
 const driverObj = ref<Driver | null>(null)
