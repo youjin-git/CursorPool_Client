@@ -5,7 +5,7 @@ import type { DataTableColumns } from 'naive-ui'
 import { NDataTable, NSpace, NButton, NCard, NModal } from 'naive-ui'
 import type { HistoryAccount } from '@/types/history'
 import { getHistoryAccounts, removeHistoryAccount } from '@/utils/historyAccounts'
-import { getUsage, switchAccount, resetMachineId, checkCursorRunning, checkHookStatus, applyHook, closeCursor, launchCursor } from '@/api'
+import { getUsage, switchAccount, resetMachineId, checkCursorRunning, checkHookStatus, applyHook, closeCursor, launchCursor, getMachineIds } from '@/api'
 import type { PendingForceKillAction } from '@/types/dashboard'
 
 const message = useMessage()
@@ -49,12 +49,14 @@ const columns: DataTableColumns<HistoryAccount> = [
     }
   },
   {
-    title: 'GPT-4 使用次数',
-    key: 'gpt4Count'
+    title: '高级模型',
+    key: 'gpt4Count',
+    width: 95
   },
   {
-    title: 'GPT-3.5 使用次数',
-    key: 'gpt35Count'
+    title: '基础模型',
+    key: 'gpt35Count',
+    width: 95
   },
   {
     title: '最后使用时间',
@@ -119,9 +121,37 @@ async function refreshUsage() {
 async function handleSwitch(account: HistoryAccount) {
   try {
     switchLoadingMap.value[account.email] = true
+    
+    // 获取当前账户信息并保存到历史记录
+    const currentAccount = await getMachineIds()
+    if (currentAccount.currentAccount && currentAccount.cursorToken) {
+      // 检查当前账户是否已在历史记录中
+      const existingAccount = accounts.value.find(a => a.email === currentAccount.currentAccount)
+      if (!existingAccount) {
+        // 获取当前账户的使用情况
+        try {
+          const usage = await getUsage(currentAccount.cursorToken)
+          const newHistoryAccount: HistoryAccount = {
+            email: currentAccount.currentAccount,
+            token: currentAccount.cursorToken,
+            machineCode: currentAccount.machineId,
+            gpt4Count: usage['gpt-4']?.numRequests || 0,
+            gpt35Count: usage['gpt-3.5-turbo']?.numRequests || 0,
+            lastUsed: Date.now()
+          }
+          // 保存到历史记录
+          accounts.value.unshift(newHistoryAccount)
+          // 更新本地存储
+          localStorage.setItem('history_accounts', JSON.stringify(accounts.value))
+        } catch (error) {
+          console.error('获取当前账户使用情况失败:', error)
+        }
+      }
+    }
+
+    // 继续原有的切换逻辑
     const isRunning = await checkCursorRunning()
     if (isRunning) {
-      // 显示自己的模态框
       pendingAccount.value = account
       showCursorRunningModal.value = true
       return
