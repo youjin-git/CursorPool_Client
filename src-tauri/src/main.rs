@@ -59,7 +59,6 @@ fn main() {
             switch_account,
             get_machine_ids,
             cursor_reset::commands::check_cursor_running,
-            cursor_reset::commands::kill_cursor_process,
             cursor_reset::commands::check_admin_privileges,
             cursor_reset::commands::disable_cursor_update,
             cursor_reset::commands::restore_cursor_update,
@@ -68,6 +67,8 @@ fn main() {
             cursor_reset::commands::hook_main_js,
             cursor_reset::commands::restore_hook,
             cursor_reset::commands::check_is_windows,
+            cursor_reset::commands::close_cursor,
+            cursor_reset::commands::launch_cursor,
         ])
         .manage(api::ApiClient::default())
         .run(generate_context!())

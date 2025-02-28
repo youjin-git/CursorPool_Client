@@ -322,3 +322,12 @@ export async function getDisclaimer(): Promise<DisclaimerResponse> {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to get disclaimer')
     }
 }
+
+// 添加关闭和启动Cursor的API
+export async function closeCursor(): Promise<boolean> {
+  return await invoke('close_cursor')
+}
+
+export async function launchCursor(): Promise<boolean> {
+  return await invoke('launch_cursor')
+}

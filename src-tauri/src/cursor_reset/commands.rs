@@ -4,7 +4,6 @@ use rusqlite::Connection;
 use crate::utils::paths::AppPaths;
 use crate::utils::id_generator::generate_new_ids;
 use crate::utils::ProcessManager;
-use std::thread;
 use crate::utils::UpdateBlocker;
 use crate::utils::hook::Hook;
 use crate::utils::file_utils::safe_write;
@@ -12,6 +11,43 @@ use std::path::PathBuf;
 use crate::utils::ErrorReporter;
 use crate::api::client::ApiClient;
 use tauri::State;
+
+#[tauri::command]
+pub async fn close_cursor() -> Result<bool, String> {
+    let process_manager = ProcessManager::new();
+    
+    // 检查Cursor是否在运行
+    if !process_manager.is_cursor_running() {
+        return Ok(false); // Cursor未运行，无需关闭
+    }
+    
+    // 关闭Cursor进程
+    process_manager.kill_cursor_processes()?;
+    
+    // 等待进程完全关闭
+    let mut attempts = 0;
+    while process_manager.is_cursor_running() && attempts < 10 {
+        std::thread::sleep(std::time::Duration::from_millis(500));
+        attempts += 1;
+    }
+    
+    // 检查是否成功关闭
+    if process_manager.is_cursor_running() {
+        return Err("无法完全关闭Cursor进程".to_string());
+    }
+    
+    Ok(true)
+}
+
+#[tauri::command]
+pub async fn launch_cursor() -> Result<bool, String> {
+    let paths = AppPaths::new()?;
+    
+    // 启动Cursor
+    paths.launch_cursor()?;
+    
+    Ok(true)
+}
 
 #[tauri::command]
 pub async fn reset_machine_id(
@@ -161,6 +197,7 @@ pub async fn reset_machine_id(
         }
     }
 
+    // 移除自动启动Cursor的代码
     Ok(true)
 }
 
@@ -196,9 +233,6 @@ pub async fn switch_account(
 
     // 等待一段时间确保数据库更新完成
     std::thread::sleep(std::time::Duration::from_millis(500));
-    
-    // 启动 Cursor
-    paths.launch_cursor()?;
 
     Ok(true)
 }
@@ -250,18 +284,6 @@ pub fn get_machine_ids() -> Result<Value, String> {
     }
 
     Ok(result)
-}
-
-#[tauri::command]
-pub async fn kill_cursor_process() -> Result<(), String> {
-    let process_manager = ProcessManager::new();
-    
-    // 启动新线程执行关闭和重启操作
-    thread::spawn(move || {
-        process_manager.kill_and_restart_cursor()
-    });
-    
-    Ok(())
 }
 
 #[tauri::command]

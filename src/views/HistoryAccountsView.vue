@@ -1,19 +1,39 @@
 <script setup lang="ts">
-import { ref, onMounted, h, inject } from 'vue'
+import { ref, onMounted, h } from 'vue'
 import { useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { NDataTable, NSpace, NButton, NCard } from 'naive-ui'
+import { NDataTable, NSpace, NButton, NCard, NModal } from 'naive-ui'
 import type { HistoryAccount } from '@/types/history'
 import { getHistoryAccounts, removeHistoryAccount } from '@/utils/historyAccounts'
-import { getUsage, switchAccount, resetMachineId, checkCursorRunning } from '@/api'
-import type { PendingForceKillAction } from '../views/DashboardView/types'
+import { getUsage, switchAccount, resetMachineId, checkCursorRunning, checkHookStatus, applyHook, closeCursor, launchCursor } from '@/api'
+import type { PendingForceKillAction } from '@/types/dashboard'
 
 const message = useMessage()
 const loading = ref(false)
 const switchLoadingMap = ref<Record<string, boolean>>({})
 const deleteLoadingMap = ref<Record<string, boolean>>({})
 const accounts = ref<HistoryAccount[]>([])
-const showCursorModal = inject<(action: PendingForceKillAction) => void>('showCursorModal')
+
+// 添加模态框相关状态
+const showCursorRunningModal = ref(false)
+const pendingAccount = ref<HistoryAccount | null>(null)
+
+const autoApplyHook = async (): Promise<boolean> => {
+  try {
+    message.loading('正在自动注入...', { duration: 0 })
+    await applyHook(false)
+    message.destroyAll()
+    message.success('注入成功')
+    
+    const hookStatus = await checkHookStatus()
+    return hookStatus === true
+  } catch (error) {
+    console.error('自动注入失败:', error)
+    message.destroyAll()
+    message.error(error instanceof Error ? error.message : '注入失败，请手动注入后再试')
+    return false
+  }
+}
 
 const columns: DataTableColumns<HistoryAccount> = [
   {
@@ -101,11 +121,18 @@ async function handleSwitch(account: HistoryAccount) {
     switchLoadingMap.value[account.email] = true
     const isRunning = await checkCursorRunning()
     if (isRunning) {
-      showCursorModal?.({
-        type: 'account',
-        params: account
-      })
+      // 显示自己的模态框
+      pendingAccount.value = account
+      showCursorRunningModal.value = true
       return
+    }
+
+    const hookStatus = await checkHookStatus()
+    if (!hookStatus) {
+      const hookSuccess = await autoApplyHook()
+      if (!hookSuccess) {
+        return
+      }
     }
 
     await resetMachineId({ machineId: account.machineCode })
@@ -114,14 +141,6 @@ async function handleSwitch(account: HistoryAccount) {
     message.success('切换账户成功')
     window.location.reload()
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error)
-    if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
-      showCursorModal?.({
-        type: 'account',
-        params: account
-      })
-      return
-    }
     message.error('切换账户失败')
   } finally {
     switchLoadingMap.value[account.email] = false
@@ -136,25 +155,56 @@ function handleRemove(account: HistoryAccount) {
   deleteLoadingMap.value[account.email] = false
 }
 
-const handleForceKill = async (account: HistoryAccount) => {
+const handleForceKill = async () => {
+  if (!pendingAccount.value) return
+  
   try {
+    showCursorRunningModal.value = false
+    const account = pendingAccount.value
     switchLoadingMap.value[account.email] = true
-    await resetMachineId({ 
-      machineId: account.machineCode,
-      forceKill: true 
-    })
-    await switchAccount(
-      account.email, 
-      account.token,
-      true
-    )
+    
+    message.loading('正在关闭 Cursor...', { duration: 0 })
+    await closeCursor()
     await new Promise(resolve => setTimeout(resolve, 1000))
+    message.destroyAll()
+    
+    // 检查是否需要注入
+    if (!(await checkHookStatus())) {
+      message.loading('正在注入...', { duration: 0 })
+      const hookSuccess = await autoApplyHook()
+      if (!hookSuccess) {
+        message.error('注入失败，请手动注入后再试')
+        return
+      }
+      message.destroyAll()
+    }
+    
+    // 执行账户切换
+    message.loading('正在切换账户...', { duration: 0 })
+    await resetMachineId({ machineId: account.machineCode })
+    await switchAccount(account.email, account.token, false)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    message.destroyAll()
     message.success('切换账户成功')
+    
+    // 直接启动Cursor
+    message.loading('正在启动 Cursor...', { duration: 0 })
+    try {
+      await launchCursor()
+      message.destroyAll()
+      message.success('Cursor 已启动')
+    } catch (launchError) {
+      message.destroyAll()
+      message.error('启动 Cursor 失败: ' + (launchError instanceof Error ? launchError.message : String(launchError)))
+    }
+    
     window.location.reload()
   } catch (error) {
+    message.destroyAll()
     message.error('切换账户失败')
   } finally {
-    switchLoadingMap.value[account.email] = false
+    switchLoadingMap.value[pendingAccount.value.email] = false
+    pendingAccount.value = null
   }
 }
 
@@ -163,8 +213,7 @@ onMounted(() => {
   window.addEventListener('force_kill_cursor', async (e: Event) => {
     const detail = (e as CustomEvent).detail as PendingForceKillAction
     if (detail.type === 'account') {
-      const account = detail.params as HistoryAccount
-      await handleForceKill(account)
+      await handleForceKill()
     }
   })
 })
@@ -190,4 +239,24 @@ onMounted(() => {
       />
     </n-space>
   </n-card>
+
+  <!-- 修改 Cursor 运行提示模态框 -->
+  <n-modal
+    v-model:show="showCursorRunningModal"
+    preset="dialog"
+    title="Cursor 正在运行"
+    :closable="true"
+    :mask-closable="false"
+  >
+    <template #default>
+      检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!
+    </template>
+    <template #action>
+      <n-space justify="end">
+        <n-button type="warning" @click="handleForceKill">
+          我已保存, 强制关闭
+        </n-button>
+      </n-space>
+    </template>
+  </n-modal>
 </template> 

@@ -13,6 +13,16 @@ export interface UserInfo {
   level: number
   isExpired: boolean
   username: string
+  email: string
+  credits: number
+  usage: {
+    'gpt-4': {
+      numRequests: number
+    }
+    'gpt-3.5-turbo': {
+      numRequests: number
+    }
+  }
 }
 
 // 账户信息
@@ -167,6 +177,7 @@ export interface MachineInfo {
   machineId: string
   currentAccount: string
   cursorToken: string
+  machineCode: string
 }
 
 // 管理员权限检查响应

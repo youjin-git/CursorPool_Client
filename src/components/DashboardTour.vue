@@ -1,11 +1,20 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from 'vue'
+import { onMounted, ref, computed, watch } from 'vue'
 import { driver, Driver } from 'driver.js'
 import type { DriveStep, Side } from 'driver.js'
 import 'driver.js/dist/driver.css'
-import { isDarkMode } from '../../../composables/theme'
+
+// 接收props
+const props = defineProps<{
+  show: boolean;
+  onComplete?: () => void;
+}>()
 
 // 根据当前主题计算颜色
+const isDarkMode = computed(() => {
+  return localStorage.getItem('theme-mode') === 'dark'
+})
+
 const themeColors = computed(() => {
   return isDarkMode.value 
     ? {
@@ -135,88 +144,103 @@ const tourSteps: Array<{
 // 创建 driver 实例
 const driverObj = ref<Driver | null>(null)
 
-onMounted(() => {
-  // 检查是否已经展示过引导
-  const hasTourShown = localStorage.getItem('dashboard_tour_shown')
-  
-  if (!hasTourShown || hasTourShown === 'false') {
-    // 等待组件渲染完成
-    setTimeout(() => {
-      // 初始化 driver
-      driverObj.value = driver({
-        showProgress: true,
-        steps: tourSteps as DriveStep[],
-        allowClose: false,
-        // @ts-ignore
-        overlayClickNext: false,
-        stagePadding: 0,
-        animate: true,
-        nextBtnText: '下一步',
-        prevBtnText: '上一步',
-        doneBtnText: '完成',
-        // 自定义主题
-        popoverClass: 'custom-driver-popover',
-        // 高亮元素的样式
-        stageBackground: themeColors.value.highlightBgColor,
-        // 高亮元素的 z-index
-        stageRadius: 5,
-        onHighlighted: (step) => {
-          if (!step) return;
-          
-          // 只在第一步显示跳过按钮
-          const skipBtn = document.querySelector('.driver-popover-footer .driver-close-btn')
-          if (skipBtn) {
-            // @ts-ignore
-            if (step.index === 0) {
-              skipBtn.textContent = '跳过'
-              skipBtn.classList.remove('driver-close-btn-hidden')
-            } else {
-              skipBtn.classList.add('driver-close-btn-hidden')
-            }
-          }
-          
-          // 应用当前主题的颜色
-          const popover = document.querySelector('.driver-popover')
-          if (popover) {
-            const style = popover.getAttribute('style') || ''
-            popover.setAttribute('style', `${style}; background-color: ${themeColors.value.backgroundColor} !important; color: ${themeColors.value.textColor} !important; box-shadow: ${themeColors.value.popoverShadow} !important;`)
-          }
-          
-          const title = document.querySelector('.driver-popover-title')
-          if (title) {
-            title.setAttribute('style', `color: ${themeColors.value.titleColor} !important;`)
-          }
-          
-          const description = document.querySelector('.driver-popover-description')
-          if (description) {
-            description.setAttribute('style', `color: ${themeColors.value.textColor} !important; background-color: ${themeColors.value.backgroundColor} !important;`)
-          }
-          
-          const nextBtn = document.querySelector('.driver-next-btn')
-          if (nextBtn) {
-            nextBtn.setAttribute('style', `background-color: ${themeColors.value.buttonBgColor} !important; color: ${themeColors.value.buttonTextColor} !important;`)
-          }
-          
-          const prevBtn = document.querySelector('.driver-prev-btn')
-          if (prevBtn) {
-            prevBtn.setAttribute('style', `border-color: ${themeColors.value.borderColor} !important; color: ${themeColors.value.textColor} !important;`)
-          }
-          
-          const closeBtn = document.querySelector('.driver-close-btn')
-          if (closeBtn) {
-            closeBtn.setAttribute('style', `border-color: ${themeColors.value.borderColor} !important; color: ${themeColors.value.textColor} !important;`)
-          }
-        },
-        onDeselected: () => {
-          // 当用户关闭或完成引导时，记录状态
-          localStorage.setItem('dashboard_tour_shown', 'true')
-        }
-      })
+// 启动引导
+const startTour = () => {
+  // 初始化 driver
+  driverObj.value = driver({
+    showProgress: true,
+    steps: tourSteps as DriveStep[],
+    allowClose: false,
+    // @ts-ignore
+    overlayClickNext: false,
+    stagePadding: 0,
+    animate: true,
+    nextBtnText: '下一步',
+    prevBtnText: '上一步',
+    doneBtnText: '完成',
+    // 自定义主题
+    popoverClass: 'custom-driver-popover',
+    // 高亮元素的样式
+    stageBackground: themeColors.value.highlightBgColor,
+    // 高亮元素的 z-index
+    stageRadius: 5,
+    onHighlighted: (step) => {
+      if (!step) return;
       
-      // 开始引导
-      if (driverObj.value) {
-        driverObj.value.drive()
+      // 只在第一步显示跳过按钮
+      const skipBtn = document.querySelector('.driver-popover-footer .driver-close-btn')
+      if (skipBtn) {
+        // @ts-ignore
+        if (step.index === 0) {
+          skipBtn.textContent = '跳过'
+          skipBtn.classList.remove('driver-close-btn-hidden')
+        } else {
+          skipBtn.classList.add('driver-close-btn-hidden')
+        }
       }
+      
+      // 应用当前主题的颜色
+      const popover = document.querySelector('.driver-popover')
+      if (popover) {
+        const style = popover.getAttribute('style') || ''
+        popover.setAttribute('style', `${style}; background-color: ${themeColors.value.backgroundColor} !important; color: ${themeColors.value.textColor} !important; box-shadow: ${themeColors.value.popoverShadow} !important;`)
+      }
+      
+      const title = document.querySelector('.driver-popover-title')
+      if (title) {
+        title.setAttribute('style', `color: ${themeColors.value.titleColor} !important;`)
+      }
+      
+      const description = document.querySelector('.driver-popover-description')
+      if (description) {
+        description.setAttribute('style', `color: ${themeColors.value.textColor} !important; background-color: ${themeColors.value.backgroundColor} !important;`)
+      }
+      
+      const nextBtn = document.querySelector('.driver-next-btn')
+      if (nextBtn) {
+        nextBtn.setAttribute('style', `background-color: ${themeColors.value.buttonBgColor} !important; color: ${themeColors.value.buttonTextColor} !important;`)
+      }
+      
+      const prevBtn = document.querySelector('.driver-prev-btn')
+      if (prevBtn) {
+        prevBtn.setAttribute('style', `border-color: ${themeColors.value.borderColor} !important; color: ${themeColors.value.textColor} !important;`)
+      }
+      
+      const closeBtn = document.querySelector('.driver-close-btn')
+      if (closeBtn) {
+        closeBtn.setAttribute('style', `border-color: ${themeColors.value.borderColor} !important; color: ${themeColors.value.textColor} !important;`)
+      }
+    },
+    onDeselected: () => {
+      // 当用户关闭或完成引导时，记录状态
+      localStorage.setItem('dashboard_tour_shown', 'true')
+      if (props.onComplete) {
+        props.onComplete()
+      }
+    }
+  })
+  
+  // 开始引导
+  if (driverObj.value) {
+    driverObj.value.drive()
+  }
+}
+
+// 监听 show 属性变化
+watch(() => props.show, (newVal) => {
+  if (newVal) {
+    // 延迟启动，确保DOM已经渲染
+    setTimeout(() => {
+      startTour()
+    }, 500)
+  }
+})
+
+// 组件挂载时，如果 show 为 true，则启动引导
+onMounted(() => {
+  if (props.show) {
+    setTimeout(() => {
+      startTour()
     }, 500)
   }
 })

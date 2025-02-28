@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutSider, NMenu, NIcon } from 'naive-ui'
-import { ref, computed, onMounted, provide } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { 
@@ -18,8 +18,6 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 import { platform } from '@tauri-apps/plugin-os'
-import CursorRunningModal from '../views/DashboardView/components/CursorRunningModal.vue'
-import type { PendingForceKillAction } from '../views/DashboardView/types'
 
 const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
@@ -49,6 +47,11 @@ const menuOptions = computed(() => [
     icon: renderIcon(HomeSharp)
   },
   {
+    label: '历史账户',
+    key: 'accounts',
+    icon: renderIcon(ArrowUndo)
+  },
+  {
     label: messages[currentLang.value].menu.history,
     key: 'history',
     icon: renderIcon(TimeSharp)
@@ -57,11 +60,6 @@ const menuOptions = computed(() => [
     label: messages[currentLang.value].menu.settings,
     key: 'settings',
     icon: renderIcon(SettingsSharp)
-  },
-  {
-    label: '历史账户',
-    key: 'accounts',
-    icon: renderIcon(ArrowUndo)
   }
 ])
 
@@ -95,31 +93,6 @@ onMounted(async () => {
     console.error('Failed to detect platform:', error)
   }
 })
-
-// 全局状态
-const showCursorRunningModal = ref(false)
-const pendingForceKillAction = ref<PendingForceKillAction | null>(null)
-
-// 提供给子组件的方法
-const showCursorModal = (action: PendingForceKillAction) => {
-  showCursorRunningModal.value = true
-  pendingForceKillAction.value = action
-}
-
-// 处理强制关闭
-const handleForceKill = async () => {
-  if (pendingForceKillAction.value) {
-    // 触发全局事件
-    window.dispatchEvent(new CustomEvent('force_kill_cursor', {
-      detail: pendingForceKillAction.value
-    }))
-  }
-  showCursorRunningModal.value = false
-  pendingForceKillAction.value = null
-}
-
-// 提供给子组件
-provide('showCursorModal', showCursorModal)
 
 </script>
 
@@ -196,14 +169,6 @@ provide('showCursorModal', showCursorModal)
       <router-view />
     </n-layout>
   </n-layout>
-
-  <!-- 全局 Cursor 运行提示模态框 -->
-  <cursor-running-modal
-    :show="showCursorRunningModal"
-    :pending-action="pendingForceKillAction"
-    @update:show="showCursorRunningModal = $event"
-    @force-kill="handleForceKill"
-  />
 </template>
 
 <style scoped>
