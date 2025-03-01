@@ -23,7 +23,7 @@ const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
 
 // 获取当前窗口实例
-const appWindow = new Window('main')
+const appWindow = Window.getCurrent()
 const currentPlatform = ref('')
 const isMacOS = computed(() => currentPlatform.value === 'macos')
 
@@ -98,11 +98,8 @@ onMounted(async () => {
 
 <template>
   <n-layout has-sider :style="isMacOS ? {} : { borderRadius: '6px' }" style="height: 100vh;">
-    <!-- macOS 拖拽区域 -->
-    <div v-if="isMacOS" class="drag-region-mac"></div>
-
-    <!-- Windows 拖拽区域 -->
-    <div v-else class="drag-region-windows"></div>
+    <!-- 统一的拖拽区域 -->
+    <div class="drag-region" data-tauri-drag-region></div>
 
     <!-- 登录遮罩 -->
     <login-overlay
@@ -110,7 +107,7 @@ onMounted(async () => {
       @login-success="handleLoginSuccess"
     />
 
-    <!-- 窗口控制按钮 - 调整位置 -->
+    <!-- 窗口控制按钮 -->
     <div class="window-controls" :class="{ 'mac-controls': isMacOS }">
       <div class="control-button minimize" @click="minimizeWindow">
         <n-icon>
@@ -141,7 +138,7 @@ onMounted(async () => {
         top: 0;
         z-index: 999;
       "
-      :style="isMacOS ? {} : { 'app-region': 'drag' }"
+      data-tauri-drag-region
     >
       <div class="logo">
         <h2 v-if="!collapsed" style="user-select: none;">{{ i18n.appName }}</h2>
@@ -194,29 +191,15 @@ onMounted(async () => {
   z-index: 1;
 }
 
-/* macOS 拖拽区域样式 */
-.drag-region-mac {
+/* 统一的拖拽区域样式 */
+.drag-region {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: 28px;
+  height: 32px;
   user-select: none;
   -webkit-user-select: none;
-  -webkit-app-region: drag;
-  z-index: 9999;
-}
-
-/* Windows 拖拽区域样式 */
-.drag-region-windows {
-  position: fixed;
-  top: 6px;
-  left: 6px;
-  right: 6px;
-  height: 28px;
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-app-region: drag;
   z-index: 9999;
 }
 
@@ -228,7 +211,6 @@ onMounted(async () => {
   display: flex;
   z-index: 10000;
   height: 32px;
-  -webkit-app-region: no-drag;
 }
 
 /* 控制按钮基础样式 */
@@ -240,7 +222,6 @@ onMounted(async () => {
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s;
-  -webkit-app-region: no-drag;
 }
 
 /* 最小化按钮悬停效果 */
