@@ -1,117 +1,23 @@
+
+
 # Cursor Pool
 
-Cursor Pool 是一个基于 Tauri + Vue3 + TypeScript 开发的桌面应用程序, 用于管理和优化 Cursor 账户使用。
+Cursor Pool 是一个免费开源的桌面应用程序，基于 Tauri + Vue3 + TypeScript 开发，专为优化 Cursor 编辑器账户使用体验而设计。
 
-## 功能特性
+## 软件功能
 
-- 账户管理
-  - 账户切换
-  - 机器码重置
-  - 一键切换（账户+机器码）
-  - 使用量统计
+Cursor Pool 让您轻松管理多个 Cursor 账户，实现一键切换账户和重置机器码，有效解决 Cursor 编辑器使用中的各种限制问题。软件还提供详细的使用量统计，帮助您监控 高级模型 和 低级模型 的使用情况，并通过会员系统提供更多高级功能。
 
-- 用户系统
-  - 会员等级
-  - 激活码兑换
-  - 密码修改
-  - 账户状态监控
+通过 Cursor Pool，您可以：
+- 快速切换不同的 Cursor 账户
+- 一键重置机器码，解决使用限制
+- 监控 AI 模型使用量和账户状态
+- 享受深色/浅色主题和多语言支持
 
-- 使用统计
-  - GPT-4 使用量
-  - GPT-3.5 使用量
-  - 账户使用记录
-  - 历史操作记录
+## 开源声明
 
-- 其他特性
-  - 多语言支持
-  - 深色/浅色主题
-  - 自动更新检查
-  - 操作历史记录
-
-## 开发环境
-
-### 推荐的 IDE 配置
-
-- [VS Code](https://code.visualstudio.com/) 
-- [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar)
-- [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode)
-- [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
-
-### 环境要求
-
-- Node.js >= 16
-- Rust >= 1.70
-- 系统要求
-  - Windows 10/11
-  - macOS 10.15+
-  - Linux (with WebKit2GTK installed)
-
-## 开发指南
-
-1. 安装依赖
-```bash
-npm install
-```
-
-2. 启动开发服务器
-```bash
-npm run tauri dev
-```
-
-3. 构建发布版本
-```bash
-npm run tauri build
-```
-
-## 项目结构
-
-```
-src/
-├── api/          # API 接口定义
-├── components/   # 通用组件
-├── locales/      # 国际化文件
-├── stores/       # 状态管理
-├── types/        # TypeScript 类型定义
-├── utils/        # 工具函数
-└── views/        # 页面组件
-
-src-tauri/
-├── src/
-│   ├── api/         # Rust API 实现
-│   ├── auth/        # 认证相关
-│   ├── cursor_reset/# Cursor 重置功能
-│   └── utils/       # 工具函数
-```
-
-## 技术栈
-
-- 前端
-  - Vue 3
-  - TypeScript
-  - Naive UI
-  - Vue Router
-  - Pinia
-
-- 后端
-  - Rust
-  - Tauri
-  - SQLite
-
-## 贡献指南
-
-1. Fork 项目
-2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 开启 Pull Request
+本软件代码完全开源，遵循 MIT 许可证。但请注意，软件名称"Cursor Pool"及相关图标等品牌资产**不包含**在开源许可中。如需基于本项目开发自己的应用，请更改这些品牌元素。
 
 ## 许可证
 
 [MIT License](LICENSE)
-
-## 版本历史
-
-- v0.1.0
-  - 初始版本发布
-  - 基础功能实现
-  - 多语言支持
