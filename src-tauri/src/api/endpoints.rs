@@ -4,7 +4,9 @@ use tauri::State;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::env;
+use crate::database::Database;
 
+// Bug报告请求结构
 #[derive(Serialize, Deserialize)]
 pub struct BugReportRequest {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -20,15 +22,15 @@ pub struct BugReportRequest {
     pub severity: String,
 }
 
+/// 检查用户是否存在
 #[tauri::command]
 pub async fn check_user(
     client: State<'_, super::client::ApiClient>,
-    username: String,
-) -> Result<ApiResponse<CheckUserResponse>, String> {
+    email: String,
+) -> Result<ApiResponse<()>, String> {
     let response = client
-        .0
-        .post(format!("{}/user/check", get_base_url()))
-        .json(&CheckUserRequest { username })
+        .post(format!("{}/checkUser", get_base_url()))
+        .form(&[("email", email)])
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -36,74 +38,77 @@ pub async fn check_user(
     response.json().await.map_err(|e| e.to_string())
 }
 
+/// 发送验证码
 #[tauri::command]
 pub async fn send_code(
     client: State<'_, super::client::ApiClient>,
-    username: String,
-    is_reset_password: Option<bool>,
-) -> Result<ApiResponse<SendCodeResponse>, String> {
+    email: String,
+    r#type: String,
+) -> Result<ApiResponse<()>, String> {
     let response = client
-        .0
-        .post(format!("{}/user/send_code", get_base_url()))
-        .json(&SendCodeRequest {
-            username,
-            is_reset_password,
-        })
+        .post(format!("{}/register/sendEmailCode", get_base_url()))
+        .form(&[("email", email), ("type", r#type)])
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    // 先获取响应文本
-    let response_text = response.text().await.map_err(|e| e.to_string())?;
-    // 打印响应文本用于调试
-    println!("Send code response: {}", response_text);
-    // 解析JSON响应
-    serde_json::from_str(&response_text).map_err(|e| e.to_string())
-    // response.json().await.map_err(|e| e.to_string())
+    response.json().await.map_err(|e| e.to_string())
 }
 
+/// 注册用户
+#[tauri::command]
+pub async fn register(
+    client: State<'_, super::client::ApiClient>,
+    email: String,
+    code: String,
+    password: String,
+    spread: String,
+) -> Result<ApiResponse<()>, String> {
+    let response = client
+        .post(format!("{}/emailRegister", get_base_url()))
+        .multipart([
+            ("email".to_string(), email),
+            ("code".to_string(), code),
+            ("password".to_string(), password),
+            ("spread".to_string(), "0".to_string()),
+        ])
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    let response_text = response.text().await.map_err(|e| e.to_string())?;
+    serde_json::from_str(&response_text).map_err(|e| e.to_string())
+}
+
+/// 用户登录
 #[tauri::command]
 pub async fn login(
     client: State<'_, super::client::ApiClient>,
-    username: String,
+    account: String,
     password: String,
-    device_id: String,
-    sms_code: Option<String>,
-) -> Result<LoginResponse, String> {
+    spread: String,
+) -> Result<ApiResponse<LoginResponse>, String> {
     let response = client
-        .0
-        .post(format!("{}/user/login", get_base_url()))
-        .json(&LoginRequest {
-            username,
-            password,
-            device_id,
-            sms_code,
-        })
+        .post(format!("{}/login", get_base_url()))
+        .form(&[
+            ("account", account),
+            ("password", password),
+            ("spread", spread),
+        ])
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    let api_response: ApiResponse<LoginResponse> = response.json().await
-        .map_err(|e| e.to_string())?;
-    
-    // 如果状态不是成功, 返回错误
-    if api_response.status != "success" {
-        return Err(api_response.message);
-    }
-    
-    // 从 ApiResponse 中提取 LoginResponse
-    api_response.data.ok_or_else(|| "No login data received".to_string())
+    response.json().await.map_err(|e| e.to_string())
 }
 
+/// 获取用户信息
 #[tauri::command]
 pub async fn get_user_info(
     client: State<'_, super::client::ApiClient>,
-    api_key: String,
 ) -> Result<ApiResponse<UserInfo>, String> {
     let response = client
-        .0
-        .get(format!("{}/user/info", get_base_url()))
-        .header("Authorization", format!("Bearer {}", api_key))
+        .get(format!("{}/user", get_base_url()))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -111,17 +116,15 @@ pub async fn get_user_info(
     response.json().await.map_err(|e| e.to_string())
 }
 
+/// 激活账户
 #[tauri::command]
 pub async fn activate(
     client: State<'_, super::client::ApiClient>,
-    api_key: String,
     code: String,
-) -> Result<ApiResponse<ActivateResponse>, String> {
+) -> Result<ApiResponse<()>, String> {
     let response = client
-        .0
         .post(format!("{}/user/activate", get_base_url()))
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&ActivateRequest { code })
+        .form(&[("code", code)])
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -129,69 +132,57 @@ pub async fn activate(
     response.json().await.map_err(|e| e.to_string())
 }
 
+/// 修改密码
 #[tauri::command]
 pub async fn change_password(
     client: State<'_, super::client::ApiClient>,
-    api_key: String,
     old_password: String,
     new_password: String,
-) -> Result<ApiResponse<LoginResponse>, String> {
+) -> Result<ApiResponse<()>, String> {
     let response = client
-        .0
-        .post(format!("{}/user/change_password", get_base_url()))
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&ChangePasswordRequest {
-            old_password,
-            new_password,
-        })
+        .post(format!("{}/user/updatePassword", get_base_url()))
+        .form(&[
+            ("old_password", old_password.clone()),
+            ("new_password", new_password.clone()),
+            ("confirm_password", new_password.clone()),
+        ])
         .send()
         .await
         .map_err(|e| e.to_string())?;
-
-    // 先打印原始响应内容
-    let raw_response = response.text().await.map_err(|e| e.to_string())?;
-    println!("Raw change password response: {}", raw_response);
-
-    // 尝试解析为JSON
-    let result: ApiResponse<LoginResponse> = serde_json::from_str(&raw_response)
-        .map_err(|e| format!("Failed to parse response: {}", e))?;
-    
-    Ok(result)
+    response.json().await.map_err(|e| e.to_string())
 }
 
+/// 获取账户信息
 #[tauri::command]
 pub async fn get_account(
     client: State<'_, super::client::ApiClient>,
-    api_key: String,
-) -> Result<ApiResponse<AccountDetail>, String> {
+    account: Option<String>,
+    usage_count: Option<String>,
+) -> Result<ApiResponse<AccountPoolInfo>, String> {
+    let mut url = format!("{}/accountpool/get", get_base_url());
+    
+    let mut query_params = Vec::new();
+    if let Some(acc) = account {
+        query_params.push(format!("account={}", acc));
+    }
+    if let Some(count) = usage_count {
+        query_params.push(format!("usage_count={}", count));
+    }
+    
+    if !query_params.is_empty() {
+        url = format!("{}?{}", url, query_params.join("&"));
+    }
+    
     let response = client
-        .0
-        .get(format!("{}/account/get", get_base_url()))
-        .header("Authorization", format!("Bearer {}", api_key))
+        .get(&url)
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    let account_response: ApiResponse<AccountInfo> = response
-        .json()
-        .await
-        .map_err(|e| e.to_string())?;
-    
-    // 只返回需要的字段
-    Ok(ApiResponse {
-        status: account_response.status,
-        message: account_response.message,
-        data: account_response.data.map(|account_info| {
-            let parts: Vec<&str> = account_info.token.split("%3A%3A").collect();
-            AccountDetail {
-                email: account_info.email,
-                user_id: parts[0].to_string(),
-                token: parts[1].to_string(),
-            }
-        }),
-    })
+    response.json().await.map_err(|e| e.to_string())
 }
 
+/// 获取 Cursor 使用情况
 #[tauri::command]
 pub async fn get_usage(
     client: State<'_, super::client::ApiClient>,
@@ -199,62 +190,70 @@ pub async fn get_usage(
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
     let user_id = "user_01000000000000000000000000";
     let response = client
-        .0
         .get("https://www.cursor.com/api/usage")
-        .header("Cookie", format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token))
+        .header("Cookie", format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token).as_str())
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    let usage_info: CursorUsageInfo = response.json().await.map_err(|e| e.to_string())?;
-    Ok(ApiResponse {
-        status: "success".to_string(),
-        message: "获取使用情况成功".to_string(),
-        data: Some(usage_info),
-    })
+    let response_text = response.text().await.map_err(|e| e.to_string())?;
+    
+    match serde_json::from_str::<CursorUsageInfo>(&response_text) {
+        Ok(usage_info) => {
+            Ok(ApiResponse {
+                status: 200,
+                msg: "获取使用情况成功".to_string(),
+                data: Some(usage_info),
+                code: Some("460001".to_string()),
+            })
+        },
+        Err(e) => Err(format!("Failed to parse Cursor usage info: {}", e))
+    }
 }
 
-#[tauri::command]
-pub async fn get_user_info_cursor(
-    client: State<'_, super::client::ApiClient>,
-    user_id: String,
-    token: String,
-) -> Result<ApiResponse<CursorUserInfo>, String> {
-    let response = client
-        .0
-        .get("https://www.cursor.com/api/auth/me")
-        .header("Cookie", format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    let user_info: CursorUserInfo = response.json().await.map_err(|e| e.to_string())?;
-    Ok(ApiResponse {
-        status: "success".to_string(),
-        message: "获取用户信息成功".to_string(),
-        data: Some(user_info),
-    })
-}
-
+/// 获取版本信息
 #[tauri::command]
 pub async fn get_version(
     client: State<'_, super::client::ApiClient>,
-) -> Result<ApiResponse<VersionInfo>, String> {
+) -> Result<serde_json::Value, String> {
     let response = client
-        .0
         .get(format!("{}/version", get_base_url()))
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    serde_json::from_str(&response.text().await.map_err(|e| e.to_string())?).map_err(|e| e.to_string())
+    let response_text = response.text().await.map_err(|e| e.to_string())?;
+    
+    let json_value: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| format!("Failed to parse response as JSON: {}", e))?;
+    
+    if let Some(status) = json_value.get("status") {
+        if status.is_string() && status.as_str().unwrap() == "success" {
+            if let Some(data) = json_value.get("data") {
+                return Ok(serde_json::json!({
+                    "status": 200,
+                    "msg": "获取版本信息成功",
+                    "data": data,
+                    "code": "460001"
+                }));
+            }
+        }
+    }
+    
+    Ok(serde_json::json!({
+        "status": 200,
+        "msg": "获取版本信息成功",
+        "data": json_value,
+        "code": "460001"
+    }))
 }
 
+/// 获取公告信息
 #[tauri::command]
 pub async fn get_public_info(
     client: State<'_, super::client::ApiClient>,
 ) -> Result<ApiResponse<PublicInfo>, String> {
     let response = client
-        .0
         .get(format!("{}/public/info", get_base_url()))
         .send()
         .await
@@ -263,28 +262,29 @@ pub async fn get_public_info(
     response.json().await.map_err(|e| e.to_string())
 }
 
+/// 重置密码
 #[tauri::command]
 pub async fn reset_password(
     client: State<'_, super::client::ApiClient>,
     email: String,
-    sms_code: String,
-    new_password: String,
+    code: String,
+    password: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
-        .0
-        .post(format!("{}/user/reset_password", get_base_url()))
-        .json(&ResetPasswordRequest {
-            email,
-            sms_code,
-            new_password,
-        })
+        .post(format!("{}/emailResetPassword", get_base_url()))
+        .form(&[
+            ("email", email),
+            ("code", code),
+            ("password", password),
+        ])
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
+
     response.json().await.map_err(|e| e.to_string())
 }
 
+/// 报告错误
 #[tauri::command]
 pub async fn report_bug(
     client: State<'_, super::client::ApiClient>,
@@ -293,62 +293,60 @@ pub async fn report_bug(
     api_key: Option<String>,
     screenshot_urls: Option<Vec<String>>,
     cursor_version: Option<String>,
-) -> Result<(), String> {
-    // 获取应用版本
-    let app_version = env!("CARGO_PKG_VERSION").to_string();
-    
-    // 获取操作系统信息
-    let os_info = os_info::get();
-    let os_version = format!("{} {}", os_info.os_type(), os_info.version());
-    
-    // 获取设备型号
-    let device_model = sys_info::hostname()
-        .unwrap_or_else(|_| "Unknown".to_string());
-    
-    // 获取当前时间，ISO 8601 格式
+) -> Result<ApiResponse<()>, String> {
+    let app_version = env::var("CARGO_PKG_VERSION").unwrap_or_else(|_| "unknown".to_string());
+    let os_version = os_info::get().to_string();
+    let device_model = "PC".to_string();
     let occurrence_time = Utc::now().to_rfc3339();
-    
-    // 获取 Cursor 版本，如果未提供则从数据库获取
-    let cursor_version = cursor_version.unwrap_or_else(|| {
-        crate::utils::CursorVersion::get_version()
-            .unwrap_or_else(|_| "Unknown".to_string())
-    });
-    
-    // 创建请求体
-    let report = BugReportRequest {
+
+    let request = BugReportRequest {
         api_key,
         app_version,
         os_version,
         device_model,
-        cursor_version,
+        cursor_version: cursor_version.unwrap_or_else(|| "unknown".to_string()),
         bug_description,
         occurrence_time,
         screenshot_urls,
         severity,
     };
 
-    // 发送请求
-    let _response = client
-        .0
-        .post(format!("{}/report", get_base_url()))
-        .json(&report)
+    let response = client
+        .post(format!("{}/bug/report", get_base_url()))
+        .json(&request)
         .send()
         .await
         .map_err(|e| e.to_string())?;
-    
-    Ok(())
+
+    response.json().await.map_err(|e| e.to_string())
 }
 
+/// 获取免责声明
 #[tauri::command]
 pub async fn get_disclaimer(
     client: State<'_, super::client::ApiClient>,
 ) -> Result<ApiResponse<DisclaimerResponse>, String> {
     let response = client
-        .0
         .get(format!("{}/disclaimer", get_base_url()))
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
     response.json().await.map_err(|e| e.to_string())
+}
+
+/// 用户登出
+#[tauri::command]
+pub async fn logout(
+    db: State<'_, Database>,
+) -> Result<ApiResponse<()>, String> {
+    db.delete_item("user.info.token")
+        .map_err(|e| e.to_string())?;
+    
+    Ok(ApiResponse {
+        status: 200,
+        msg: "登出成功".to_string(),
+        data: None,
+        code: Some("460001".to_string()),
+    })
 }

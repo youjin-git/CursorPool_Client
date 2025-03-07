@@ -1,7 +1,7 @@
 pub mod client;
+pub mod types;
 pub mod endpoints;
-mod types;
+pub mod interceptor;
 
-pub use client::ApiClient;
 pub use endpoints::*;
-pub use types::*;
+pub use client::ApiClient;
