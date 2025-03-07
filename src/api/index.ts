@@ -1,28 +1,27 @@
 import { invoke } from '@tauri-apps/api/core'
 import type {
     ApiResponse,
-    LoginRequest,
     LoginResponse,
     UserInfo,
-    CheckUserResponse,
-    SendCodeResponse,
-    AccountDetail,
+    AccountPoolInfo,
     UsageInfo,
-    UserInfoResponse,
     VersionInfo,
     PublicInfo,
     MachineInfo,
-    ActivateResponse,
     DisclaimerResponse
 } from './types'
 
 // 错误处理
 function handleApiResponse<T>(response: ApiResponse<T>): T {
-    if (response.status === 'success') {
-        // 成功时返回 data 或 message
-        return response.data || response.message as unknown as T
+    if (response.status === 200) {
+        // 成功时返回 data
+        if (response.data) {
+            return response.data
+        }
+        // 如果没有data，返回空对象
+        return {} as T
     }
-    throw new Error(response.message || 'API request failed')
+    throw new Error(response.msg || 'API request failed')
 }
 
 // API 错误类
@@ -34,51 +33,58 @@ export class ApiError extends Error {
 }
 
 // 用户认证相关 API
-export async function checkUser(username: string): Promise<CheckUserResponse> {
+export async function checkUser(email: string): Promise<ApiResponse<any>> {
     try {
-        const response = await invoke<ApiResponse<CheckUserResponse>>('check_user', { username })
-        return handleApiResponse(response)
+        const response = await invoke<ApiResponse<any>>('check_user', { email })
+        return response
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to check user')
     }
 }
 
-export async function sendCode(username: string, isResetPassword?: boolean): Promise<SendCodeResponse> {
+export async function sendCode(email: string, type: string): Promise<void> {
     try {
-        const response = await invoke<ApiResponse<SendCodeResponse>>('send_code', { username, isResetPassword })
-        return handleApiResponse(response)
+        const response = await invoke<ApiResponse<void>>('send_code', { email, type })
+        handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to send code')
     }
 }
 
-export async function login(params: LoginRequest): Promise<LoginResponse> {
+export async function register(email: string, code: string, password: string, spread: string): Promise<LoginResponse> {
     try {
-        const response = await invoke<LoginResponse>('login', {
-            username: params.username,
-            password: params.password,
-            deviceId: params.deviceId,
-            smsCode: params.smsCode
-        })
-        return response
+        const response = await invoke<ApiResponse<LoginResponse>>('register', { email, code, password, spread })
+        if (response.status === 200 && response.data?.token) {
+            return response.data as LoginResponse
+        }
+        return handleApiResponse(response)
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to register')
+    }
+}
+
+export async function login(account: string, password: string, spread: string): Promise<LoginResponse> {
+    try {
+        const response = await invoke<ApiResponse<LoginResponse>>('login', { account, password, spread })
+        return handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to login')
     }
 }
 
 // 用户信息相关 API
-export async function getUserInfo(apiKey: string): Promise<UserInfo> {
+export async function getUserInfo(): Promise<UserInfo> {
     try {
-        const response = await invoke<ApiResponse<UserInfo>>('get_user_info', { apiKey })
+        const response = await invoke<ApiResponse<UserInfo>>('get_user_info')
         return handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to get user info')
     }
 }
 
-export async function getAccount(apiKey: string): Promise<AccountDetail> {
+export async function getAccount(account?: string, usageCount?: string): Promise<AccountPoolInfo> {
     try {
-        const response = await invoke<ApiResponse<AccountDetail>>('get_account', { apiKey })
+        const response = await invoke<ApiResponse<AccountPoolInfo>>('get_account', { account, usageCount })
         return handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to get account info')
@@ -86,15 +92,6 @@ export async function getAccount(apiKey: string): Promise<AccountDetail> {
 }
 
 // Cursor 平台相关 API
-export async function getUserInfoCursor(token: string): Promise<UserInfoResponse> {
-    try {
-        const response = await invoke<ApiResponse<UserInfoResponse>>('get_user_info_cursor', { token })
-        return handleApiResponse(response)
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get cursor user info')
-    }
-}
-
 export async function getUsage(token: string): Promise<UsageInfo> {
     try {
         const response = await invoke<ApiResponse<UsageInfo>>('get_usage', { token })
@@ -124,26 +121,19 @@ export async function getVersion(): Promise<VersionInfo> {
 }
 
 // 账户管理相关 API
-export async function activate(apiKey: string, code: string): Promise<ActivateResponse> {
+export async function activate(code: string): Promise<void> {
     try {
-        const response = await invoke<ApiResponse<ActivateResponse>>('activate', { apiKey, code })
-        return handleApiResponse(response)
+        const response = await invoke<ApiResponse<void>>('activate', { code })
+        handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to activate')
     }
 }
 
-export async function changePassword(apiKey: string, old_password: string, new_password: string): Promise<LoginResponse> {
+export async function changePassword(oldPassword: string, newPassword: string): Promise<void> {
     try {
-        const response = await invoke<ApiResponse<LoginResponse>>(
-            'change_password',
-            {
-                apiKey,
-                oldPassword: old_password,
-                newPassword: new_password,
-            }
-        )
-        return handleApiResponse(response)
+        const response = await invoke<ApiResponse<void>>('change_password', { oldPassword, newPassword })
+        handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to change password')
     }
@@ -161,9 +151,9 @@ export async function resetMachineId(params: { forceKill?: boolean, machineId?: 
     }
 }
 
-export async function switchAccount(email: string, token: string, force_kill: boolean = false): Promise<void> {
+export async function switchAccount(email: string, token: string, forceKill: boolean = false): Promise<void> {
     try {
-        const result = await invoke<boolean>('switch_account', { email, token, forceKill: force_kill })
+        const result = await invoke<boolean>('switch_account', { email, token, forceKill })
         if (result !== true) {
             throw new Error('切换账户失败')
         }
@@ -226,9 +216,9 @@ export async function checkAdminPrivileges(): Promise<boolean> {
 }
 
 // Cursor 更新控制相关 API
-export async function disableCursorUpdate(force_kill: boolean = false): Promise<void> {
+export async function disableCursorUpdate(forceKill: boolean = false): Promise<void> {
     try {
-        await invoke<void>('disable_cursor_update', { forceKill: force_kill })
+        await invoke<void>('disable_cursor_update', { forceKill })
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to disable cursor update'
         if (errorMsg.includes('Cursor进程正在运行')) {
@@ -238,23 +228,15 @@ export async function disableCursorUpdate(force_kill: boolean = false): Promise<
     }
 }
 
-export async function restoreCursorUpdate(force_kill: boolean = false): Promise<void> {
+export async function restoreCursorUpdate(forceKill: boolean = false): Promise<void> {
     try {
-        await invoke<void>('restore_cursor_update', { forceKill: force_kill })
+        await invoke<void>('restore_cursor_update', { forceKill })
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to restore cursor update'
         if (errorMsg.includes('Cursor进程正在运行')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')
         }
         throw error
-    }
-}
-
-export async function checkUpdateDisabled(): Promise<boolean> {
-    try {
-        return await invoke<boolean>('check_update_disabled')
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to check update status')
     }
 }
 
@@ -267,9 +249,9 @@ export async function checkHookStatus(): Promise<boolean> {
     }
 }
 
-export async function applyHook(force_kill: boolean = false): Promise<void> {
+export async function applyHook(forceKill: boolean = false): Promise<void> {
     try {
-        await invoke<void>('hook_main_js', { forceKill: force_kill })
+        await invoke<void>('hook_main_js', { forceKill })
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to apply hook'
         if (errorMsg.includes('Cursor进程正在运行')) {
@@ -279,9 +261,9 @@ export async function applyHook(force_kill: boolean = false): Promise<void> {
     }
 }
 
-export async function restoreHook(force_kill: boolean = false): Promise<void> {
+export async function restoreHook(forceKill: boolean = false): Promise<void> {
     try {
-        await invoke<void>('restore_hook', { forceKill: force_kill })
+        await invoke<void>('restore_hook', { forceKill })
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : 'Failed to restore hook'
         if (errorMsg.includes('Cursor进程正在运行')) {
@@ -291,14 +273,14 @@ export async function restoreHook(force_kill: boolean = false): Promise<void> {
     }
 }
 
-export async function resetPassword(email: string, smsCode: string, newPassword: string): Promise<string> {
+export async function resetPassword(email: string, code: string, password: string): Promise<void> {
     try {
-        const response = await invoke<ApiResponse<string>>('reset_password', { 
+        const response = await invoke<ApiResponse<void>>('reset_password', { 
             email, 
-            smsCode, 
-            newPassword 
+            code, 
+            password 
         })
-        return handleApiResponse(response)
+        handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to reset password')
     }
@@ -330,4 +312,34 @@ export async function closeCursor(): Promise<boolean> {
 
 export async function launchCursor(): Promise<boolean> {
   return await invoke('launch_cursor')
+}
+
+// 报告Bug
+export async function reportBug(
+    severity: string,
+    bug_description: string,
+    screenshot_urls?: string[],
+    cursor_version?: string
+): Promise<void> {
+    try {
+        const response = await invoke<ApiResponse<void>>('report_bug', {
+            severity,
+            bug_description,
+            screenshot_urls,
+            cursor_version
+        })
+        handleApiResponse(response)
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to report bug')
+    }
+}
+
+// 登出
+export async function logout(): Promise<void> {
+    try {
+        const response = await invoke<ApiResponse<void>>('logout')
+        handleApiResponse(response)
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to logout')
+    }
 }
