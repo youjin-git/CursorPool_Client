@@ -12,8 +12,7 @@ import {
   NTag,
   NModal
 } from 'naive-ui'
-import { checkUser, sendCode, login, resetPassword } from '../api'
-import type { LoginRequest } from '../api/types'
+import { checkUser, sendCode, login, resetPassword, register } from '../api'
 import type { SelectOption } from 'naive-ui'
 import { h } from 'vue'
 import { useI18n } from '../locales'
@@ -24,11 +23,12 @@ const message = useMessage()
 const loading = ref(false)
 const showVerifyCode = ref(false)
 const countDown = ref(0)
+const emailError = ref('')
 
 const formData = ref({
   username: '',
   password: '',
-  sms_code: '',
+  smsCode: '',
 })
 
 // 邮箱验证正则
@@ -114,6 +114,12 @@ const emailInputFeedback = computed(() => {
 // 修改邮箱自动完成选项
 const emailOptions = computed(() => {
   const inputValue = formData.value.username
+  
+  // 如果已经是完整的有效邮箱，不显示选项
+  if (isValidEmail(inputValue)) {
+    return []
+  }
+  
   const atIndex = inputValue.lastIndexOf('@')
   
   // 只有当用户输入@后才显示选项
@@ -162,7 +168,7 @@ function toggleMode() {
   formData.value = {
     username: '',
     password: '',
-    sms_code: '',
+    smsCode: '',
   }
   // 注册模式下直接显示验证码框
   showVerifyCode.value = isRegisterMode.value
@@ -182,28 +188,35 @@ watch(() => formData.value.username, async (newValue) => {
     try {
       const result = await checkUser(newValue)
       
-      // 如果是注册模式,当用户存在时自动切换到登录
-      if (isRegisterMode.value && result.exists) {
-        message.info(messages[currentLang.value].login.userExists)
-        isRegisterMode.value = false
-        showVerifyCode.value = result.needCode
-      }
-      // 如果是登录模式,当用户不存在时只提示
-      else if (!isRegisterMode.value && !result.exists) {
-        message.error(messages[currentLang.value].login.userNotExists)
-        showVerifyCode.value = false
-      } 
-      // 其他情况
-      else {
-        // 注册模式始终显示验证码,登录模式根据needCode决定
-        showVerifyCode.value = isRegisterMode.value || result.needCode
+      // 根据响应消息判断用户是否存在
+      const userExists = result.msg === '已存在'
+      
+      if (isRegisterMode.value) {
+        // 注册模式：用户存在时显示错误并自动跳转到登录
+        if (userExists) {
+          emailError.value = '该邮箱已被注册'
+          message.info('该邮箱已注册，已切换到登录模式')
+          isRegisterMode.value = false
+          showVerifyCode.value = false
+        } else {
+          emailError.value = ''
+          showVerifyCode.value = true  // 注册模式且邮箱未注册时显示验证码
+        }
+      } else {
+        // 登录模式：用户不存在时显示错误
+        if (!userExists) {
+          emailError.value = '该邮箱未注册'
+          message.error('该邮箱未注册，请先注册账户')
+        } else {
+          emailError.value = ''
+        }
       }
     } catch (error) {
       console.error('Check user failed:', error)
       // 发生错误时,注册模式下保持验证码框显示
       showVerifyCode.value = isRegisterMode.value
     }
-  }, 500)
+  }, 300)
 })
 
 // 发送验证码
@@ -215,11 +228,12 @@ async function handleSendCode(email: string, isResetPassword?: boolean) {
   
   try {
     loading.value = true
-    const result = await sendCode(email, isResetPassword)
+    await sendCode(email, isResetPassword ? 'reset' : 'register')
+    // 成功消息来自后端
     message.success('验证码已发送')
     
     // 开始倒计时
-    countDown.value = result.expireIn
+    countDown.value = 60
     const timer = setInterval(() => {
       countDown.value--
       if (countDown.value <= 0) {
@@ -227,7 +241,8 @@ async function handleSendCode(email: string, isResetPassword?: boolean) {
       }
     }, 1000)
   } catch (error) {
-    message.error('发送验证码失败')
+    // 直接使用error.message，它包含后端的msg
+    message.error(error instanceof Error ? error.message : '发送验证码失败')
   } finally {
     loading.value = false
   }
@@ -257,38 +272,42 @@ const passwordInputFeedback = computed(() => {
 // 修改处理提交的逻辑, 添加密码验证
 async function handleSubmit() {
   if (!formData.value.username || !isValidEmail(formData.value.username)) {
-    message.error(messages[currentLang.value].login.emailError)
+    message.error('请输入有效的邮箱地址')
     return
   }
 
-  if (!formData.value.password || !passwordRegex.test(formData.value.password)) {
-    message.error(messages[currentLang.value].login.passwordInvalid)
+  if (!formData.value.password) {
+    message.error('请输入密码')
     return
   }
 
   try {
     loading.value = true
-    const deviceId = 'device-' + Math.random().toString(36).substr(2, 9)
     
-    const loginParams: LoginRequest = {
-      username: formData.value.username,
-      password: formData.value.password,
-      deviceId: deviceId,
-      smsCode: formData.value.sms_code || undefined
-    }
-
-    const result = await login(loginParams)
-    if (result.apiKey) {
-      localStorage.setItem('apiKey', result.apiKey)
-      message.success(messages[currentLang.value].login.loginSuccess)
-      emit('login-success')
-      // 手动触发刷新数据
-      window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
+    if (isRegisterMode.value) {
+      const loginResponse = await register(
+        formData.value.username,
+        formData.value.smsCode,
+        formData.value.password,
+        'web'
+      )
+      if (loginResponse && 'token' in loginResponse && loginResponse.token) {
+        emit('login-success')
+        return
+      }
+      message.success('注册成功')
+      isRegisterMode.value = false
     } else {
-      message.error(messages[currentLang.value].login.loginFailed)
+      await login(
+        formData.value.username,
+        formData.value.password,
+        'web'
+      )
+      message.success('登录成功')
     }
   } catch (error) {
-    message.error(messages[currentLang.value].login.loginFailed + ': ' + (error instanceof Error ? error.message : ''))
+    // 直接使用error.message，它包含后端的msg
+    message.error(error instanceof Error ? error.message : '操作失败')
   } finally {
     loading.value = false
   }
@@ -328,34 +347,34 @@ const handleForgotPassword = async () => {
     message.error('请输入有效的邮箱地址')
     return
   }
-
+  
   if (!forgotPasswordForm.value.smsCode) {
     message.error('请输入验证码')
     return
   }
-
-  if (!forgotPasswordForm.value.newPassword || !passwordRegex.test(forgotPasswordForm.value.newPassword)) {
-    message.error('新密码不符合要求')
+  
+  if (!forgotPasswordForm.value.newPassword) {
+    message.error('请输入新密码')
     return
   }
-
+  
   if (forgotPasswordForm.value.newPassword !== forgotPasswordForm.value.confirmPassword) {
     message.error('两次输入的密码不一致')
     return
   }
-
+  
+  forgotPasswordLoading.value = true
   try {
-    forgotPasswordLoading.value = true
-    const result = await resetPassword(
+    await resetPassword(
       forgotPasswordForm.value.email,
       forgotPasswordForm.value.smsCode,
       forgotPasswordForm.value.newPassword
     )
-    
-    // 处理成功响应
-    message.success(result || '密码重置成功')
+    // 成功消息来自后端
+    message.success('密码重置成功')
     showForgotPassword.value = false
   } catch (error) {
+    // 直接使用error.message，它包含后端的msg
     message.error(error instanceof Error ? error.message : '密码重置失败')
   } finally {
     forgotPasswordLoading.value = false
@@ -388,7 +407,7 @@ const handleForgotPassword = async () => {
             :input-props="inputProps"
           />
           <template #feedback>
-            {{ emailInputFeedback }}
+            {{ emailError || emailInputFeedback }}
           </template>
         </n-form-item>
         
@@ -410,7 +429,7 @@ const handleForgotPassword = async () => {
         <n-form-item v-if="showVerifyCode" :label="i18n.login.smsCodePlaceholder">
           <n-space>
             <n-input 
-              v-model:value="formData.sms_code"
+              v-model:value="formData.smsCode"
               :placeholder="i18n.login.smsCodePlaceholder"
               :disabled="loading"
             />

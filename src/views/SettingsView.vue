@@ -21,10 +21,10 @@ import {
   checkCursorRunning,
   disableCursorUpdate,
   restoreCursorUpdate,
-  checkUpdateDisabled,
   checkHookStatus,
   applyHook,
-  restoreHook
+  restoreHook,
+  logout
 } from '@/api'
 import { addHistoryRecord } from '../utils/history'
 import { version } from '../../package.json'
@@ -68,78 +68,70 @@ const passwordChangeLoading = ref(false)
 
 const handleActivate = async () => {
   if (!formValue.value.activationCode) {
-    message.warning(messages[currentLang.value].message.pleaseInputActivationCode)
+    message.error('请输入激活码')
     return
   }
-
+  
   activateLoading.value = true
   try {
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) {
-      throw new Error('未找到 API Key')
-    }
-
-    await activate(apiKey, formValue.value.activationCode)
-    message.success(messages[currentLang.value].message.activationSuccess)
+    await activate(formValue.value.activationCode)
+    message.success('激活成功')
     addHistoryRecord(
       '激活码兑换',
       '成功兑换激活码'
     )
     formValue.value.activationCode = ''
   } catch (error) {
-    console.error('激活失败:', error)
-    message.error(messages[currentLang.value].message.activationFailed)
+    message.error(error instanceof Error ? error.message : '激活失败')
   } finally {
     activateLoading.value = false
   }
 }
 
-const handlePasswordChange = async () => {
+const handleChangePassword = async () => {
   if (!formValue.value.currentPassword || !formValue.value.newPassword || !formValue.value.confirmPassword) {
-    message.warning(messages[currentLang.value].message.pleaseInputPassword)
+    message.error('请填写完整密码信息')
     return
   }
+  
   if (formValue.value.newPassword !== formValue.value.confirmPassword) {
-    message.error(messages[currentLang.value].message.passwordNotMatch)
+    message.error('两次输入的新密码不一致')
     return
   }
-
+  
   passwordChangeLoading.value = true
   try {
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) {
-      throw new Error('未找到 API Key')
-    }
-
-    await changePassword(apiKey, formValue.value.currentPassword, formValue.value.newPassword)
-    message.success(messages[currentLang.value].message.passwordChangeSuccess)
-    addHistoryRecord(
-      '密码修改',
-      '成功修改密码'
+    await changePassword(
+      formValue.value.currentPassword,
+      formValue.value.newPassword
     )
+    message.success('密码修改成功')
+    
     formValue.value.currentPassword = ''
     formValue.value.newPassword = ''
     formValue.value.confirmPassword = ''
     
     await handleLogout()
   } catch (error) {
-    message.error(messages[currentLang.value].message.passwordChangeFailed)
+    message.error(error instanceof Error ? error.message : '密码修改失败')
   } finally {
     passwordChangeLoading.value = false
   }
 }
 
 const handleLogout = async () => {
-  localStorage.removeItem('apiKey')
-  await router.push('/dashboard')
-  window.dispatchEvent(new CustomEvent('refresh_dashboard_data'))
-  window.location.reload()
+  try {
+    await logout()
+    // 清除本地状态
+    router.push('/dashboard')
+  } catch (error) {
+    message.error('登出失败')
+  }
 }
 
 // 检查控制状态
 const checkControlStatus = async () => {
   try {
-    controlStatus.value.updateDisabled = await checkUpdateDisabled()
     controlStatus.value.isHooked = await checkHookStatus()
   } catch (error) {
     console.error('检查控制状态失败:', error)
@@ -364,7 +356,7 @@ onMounted(async () => {
         <div style="margin-top: 24px">
           <n-button 
             type="primary" 
-            @click="handlePasswordChange"
+            @click="handleChangePassword"
             :loading="passwordChangeLoading"
           >
             {{ messages[currentLang].settings.changePassword }}

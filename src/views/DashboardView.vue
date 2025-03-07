@@ -13,7 +13,6 @@ import {
     getVersion, 
     checkCursorRunning,
     checkAdminPrivileges,
-    checkUpdateDisabled,
     checkHookStatus,
     checkIsWindows,
     getDisclaimer,
@@ -114,15 +113,12 @@ const cursorGpt35Percentage = computed(() => {
 // 获取用户信息
 const fetchUserInfo = async () => {
   try {
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) {
-      throw new Error('未找到 API Key')
-    }
-    const info = await getUserInfo(apiKey)
+    const info = await getUserInfo()
     deviceInfo.value.userInfo = info
   } catch (error) {
-    localStorage.removeItem('apiKey')
+    // 直接使用error.message，它包含后端的msg
     console.error('获取用户信息失败:', error)
+    message.error(error instanceof Error ? error.message : '获取用户信息失败')
   }
 }
 
@@ -159,7 +155,7 @@ async function fetchCursorInfo() {
         email_verified: true,
         name: deviceInfo.value.currentAccount.split('@')[0],
         sub: '',
-        updatedAt: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
         picture: null
       },
       usage: usageData
@@ -364,33 +360,23 @@ const handleCancelSwitch = () => {
 // 修改账户切换执行函数
 const executeAccountSwitch = async (force_kill: boolean = false) => {
   try {
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) {
-      message.error(i18n.value.message.pleaseInputEmail)
-      return
-    }
-
-    // 先检查 Cursor 是否在运行
-    const isRunning = await checkCursorRunning()
-    if (isRunning && !force_kill) {
-      showCursorRunningModal.value = true
-      pendingForceKillAction.value = { type: 'account' }
-      return
-    }
-
     // 获取账号信息并执行实际的切换
-    const accountInfo = await getAccount(apiKey)
+    const accountInfo = await getAccount(
+      undefined,
+      '1'
+    )
     
-    if (!accountInfo.email || !accountInfo.token) {
+    // 从account_info中获取email和token
+    if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
       message.error(i18n.value.dashboard.accountChangeFailed)
       return
     }
     
-    await switchAccount(accountInfo.email, accountInfo.token, force_kill)
+    await switchAccount(accountInfo.account_info.account, accountInfo.account_info.token, force_kill)
     message.success(i18n.value.dashboard.accountChangeSuccess)
     addHistoryRecord(
       '账户切换',
-      `切换到账户: ${accountInfo.email} 扣除50积分`
+      `切换到账户: ${accountInfo.account_info.account} 扣除50积分`
     )
     await Promise.all([
       fetchUserInfo(),
@@ -398,14 +384,8 @@ const executeAccountSwitch = async (force_kill: boolean = false) => {
       fetchCursorInfo()
     ])
   } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error)
-    if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
-      showCursorRunningModal.value = true
-      pendingForceKillAction.value = { type: 'account' }
-      return
-    }
-    console.error('切换账户失败:', error)
-    message.error(i18n.value.common.copyFailed)
+    console.error('账户切换失败:', error)
+    message.error(i18n.value.dashboard.accountChangeFailed)
   }
 }
 
@@ -547,9 +527,6 @@ const compareVersions = (v1: string, v2: string) => {
 // 检查版本更新
 const checkUpdate = async () => {
   try {
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) return
-    
     // 检查上次更新提示的时间
     const lastCheckTime = localStorage.getItem('last_version_check_time')
     const now = Date.now()
@@ -617,8 +594,6 @@ const handleExit = async () => {
   await appWindow.close()
 }
 
-// 添加更新状态 ref
-const updateDisabled = ref(false)
 
 // 在组件挂载时获取所有信息
 onMounted(async () => {
@@ -639,9 +614,6 @@ onMounted(async () => {
     
     await checkPrivileges()
     await checkUpdate()
-    
-    // 检查更新状态
-    updateDisabled.value = await checkUpdateDisabled()
     
     // 检查是否需要显示免责声明
     const disclaimerAccepted = localStorage.getItem('disclaimer_accepted')
@@ -806,51 +778,25 @@ const handleTourComplete = () => {
   localStorage.setItem('dashboard_tour_shown', 'true')
 }
 
-// 处理激活码提交
+// 激活码处理
 const handleActivate = async () => {
   if (!activationCode.value) {
-    activationError.value = i18n.value.message.pleaseInputActivationCode
+    activationError.value = '请输入激活码'
     return
   }
-
+  
+  activationLoading.value = true
   try {
-    activationLoading.value = true
-    activationError.value = ''
-    
-    // 获取API密钥
-    const apiKey = localStorage.getItem('apiKey')
-    if (!apiKey) {
-      throw new Error('未找到API密钥，请重新登录')
-    }
-    
-    // 调用激活API
-    await activate(apiKey, activationCode.value)
-    
-    // 记录操作历史
-    addHistoryRecord(
-      '卡密激活',
-      `激活卡密: ${activationCode.value.substring(0, 4)}****`
-    )
-    
-    // 清空输入
-    activationCode.value = ''
-    
-    // 关闭模态窗口
+    await activate(activationCode.value)
+    // 成功消息也应该来自后端
+    message.success('激活成功')
     showInsufficientCreditsModal.value = false
     
     // 刷新用户信息
     await fetchUserInfo()
-    
-    // 继续之前的操作
-    if (pendingCreditAction.value === 'account') {
-      handleAccountSwitch()
-    } else if (pendingCreditAction.value === 'quick') {
-      handleQuickChange()
-    }
-    
-    pendingCreditAction.value = null
   } catch (error) {
-    activationError.value = error instanceof Error ? error.message : '激活失败，请检查卡密是否正确'
+    // 直接使用error.message，它包含后端的msg
+    activationError.value = error instanceof Error ? error.message : '激活失败'
   } finally {
     activationLoading.value = false
   }

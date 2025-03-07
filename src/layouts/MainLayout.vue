@@ -18,6 +18,7 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 import { platform } from '@tauri-apps/plugin-os'
+import { getUserInfo } from '../api'
 
 const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
@@ -28,13 +29,21 @@ const currentPlatform = ref('')
 const isMacOS = computed(() => currentPlatform.value === 'macos')
 
 // 登录状态管理
-const isLoggedIn = ref(!!localStorage.getItem('apiKey'))
-const showLoginOverlay = computed(() => !isLoggedIn.value)
+const isLoggedIn = ref(false)
 
-// 处理登录成功
-function handleLoginSuccess() {
-  isLoggedIn.value = true
+// 检查登录状态
+const checkLoginStatus = async () => {
+  try {
+    await getUserInfo()
+    isLoggedIn.value = true
+  } catch (error) {
+    console.error('Failed to check login status:', error)
+    isLoggedIn.value = false
+  }
 }
+
+// 登录遮罩
+const showLoginOverlay = computed(() => !isLoggedIn.value)
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -85,14 +94,20 @@ async function closeWindow() {
   await appWindow.hide()
 }
 
-// 初始化平台检测
+// 初始化平台检测和登录状态
 onMounted(async () => {
   try {
     currentPlatform.value = await platform()
+    await checkLoginStatus()
   } catch (error) {
-    console.error('Failed to detect platform:', error)
+    console.error('Failed to initialize:', error)
   }
 })
+
+// 处理登录成功
+function handleLoginSuccess() {
+  isLoggedIn.value = true
+}
 
 </script>
 
