@@ -5,9 +5,12 @@ use cursor_pool_lib::*;
 use tauri::Builder;
 use tauri::generate_handler;
 use tauri::generate_context;
+use tauri::Manager;
 use crate::utils::privileges::{check_admin_privileges, request_admin_privileges};
 use crate::utils::process::ProcessManager;
 use std::env;
+use database::Database;
+use api::ApiClient;
 
 fn main() {
     // Windows 平台下检查管理员权限
@@ -39,6 +42,12 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_positioner::init())
         .setup(|app| {
+            let db = Database::new(&app.handle()).expect("数据库初始化失败");
+            app.manage(db);
+            
+            let api_client = ApiClient::new(Some(app.handle().clone()));
+            app.manage(api_client);
+            
             tray::setup_system_tray(app)?;
             Ok(())
         })
@@ -47,23 +56,21 @@ fn main() {
             api::get_user_info,
             api::activate,
             api::change_password,
+            api::logout,
             api::get_account,
             api::get_usage,
-            api::get_user_info_cursor,
             api::check_user,
             api::send_code,
             api::get_version,
             api::get_public_info,
             api::reset_password,
             api::get_disclaimer,
+            api::register,
             reset_machine_id,
             switch_account,
             get_machine_ids,
             cursor_reset::commands::check_cursor_running,
             cursor_reset::commands::check_admin_privileges,
-            cursor_reset::commands::disable_cursor_update,
-            cursor_reset::commands::restore_cursor_update,
-            cursor_reset::commands::check_update_disabled,
             cursor_reset::commands::is_hook,
             cursor_reset::commands::hook_main_js,
             cursor_reset::commands::restore_hook,
@@ -71,7 +78,6 @@ fn main() {
             cursor_reset::commands::close_cursor,
             cursor_reset::commands::launch_cursor,
         ])
-        .manage(api::ApiClient::default())
         .run(generate_context!())
         .expect("error while running tauri application");
 }
