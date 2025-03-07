@@ -51,7 +51,7 @@ export const messages = {
       confirmSwitch: '确认切换',
       cancelSwitch: '取消',
       ccStatus: '本地Curso状态',
-      registerTime: '本地 Cursor账户注册时间',
+      registerTime: '本地Cursor账户注册时间',
       email: '本地Cursor邮箱',
       cpUsage: 'Cursor Pool额度使用量',
       advancedModelUsage: '高级模型使用量',
