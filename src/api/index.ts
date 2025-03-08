@@ -182,61 +182,12 @@ export async function checkCursorRunning(): Promise<boolean> {
     }
 }
 
-// 添加新的 kill_cursor_process API
-export async function killCursorProcess(): Promise<void> {
-    try {
-        await invoke<void>('kill_cursor_process')
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to kill cursor process')
-    }
-}
-
-// 添加 waitForCursorClose 辅助函数
-export async function waitForCursorClose(timeout = 10000): Promise<boolean> {
-    const startTime = Date.now()
-    
-    while (Date.now() - startTime < timeout) {
-        const isRunning = await checkCursorRunning()
-        if (!isRunning) {
-            return true
-        }
-        await new Promise(resolve => setTimeout(resolve, 500))
-    }
-    
-    throw new ApiError('关闭 Cursor 超时')
-}
-
 // 管理员权限相关 API
 export async function checkAdminPrivileges(): Promise<boolean> {
     try {
         return await invoke<boolean>('check_admin_privileges')
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to check admin privileges')
-    }
-}
-
-// Cursor 更新控制相关 API
-export async function disableCursorUpdate(forceKill: boolean = false): Promise<void> {
-    try {
-        await invoke<void>('disable_cursor_update', { forceKill })
-    } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to disable cursor update'
-        if (errorMsg.includes('Cursor进程正在运行')) {
-            throw new Error('请先关闭 Cursor 或选择强制终止进程')
-        }
-        throw error
-    }
-}
-
-export async function restoreCursorUpdate(forceKill: boolean = false): Promise<void> {
-    try {
-        await invoke<void>('restore_cursor_update', { forceKill })
-    } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to restore cursor update'
-        if (errorMsg.includes('Cursor进程正在运行')) {
-            throw new Error('请先关闭 Cursor 或选择强制终止进程')
-        }
-        throw error
     }
 }
 
@@ -312,26 +263,6 @@ export async function closeCursor(): Promise<boolean> {
 
 export async function launchCursor(): Promise<boolean> {
   return await invoke('launch_cursor')
-}
-
-// 报告Bug
-export async function reportBug(
-    severity: string,
-    bug_description: string,
-    screenshot_urls?: string[],
-    cursor_version?: string
-): Promise<void> {
-    try {
-        const response = await invoke<ApiResponse<void>>('report_bug', {
-            severity,
-            bug_description,
-            screenshot_urls,
-            cursor_version
-        })
-        handleApiResponse(response)
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to report bug')
-    }
 }
 
 // 登出
