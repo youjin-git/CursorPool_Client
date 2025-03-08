@@ -304,6 +304,7 @@ async function handleSubmit() {
         'web'
       )
       message.success('登录成功')
+      emit('login-success')
     }
   } catch (error) {
     // 直接使用error.message，它包含后端的msg
@@ -443,40 +444,23 @@ const handleForgotPassword = async () => {
           </n-space>
         </n-form-item>
 
-        <n-space vertical :size="12">
-          <n-button 
-            type="primary" 
-            block 
-            @click="handleSubmit"
-            :loading="loading"
-            :disabled="!isValidEmail(formData.username)"
-          >
-            {{ buttonText }}
-          </n-button>
-
+        <n-form-item>
           <n-space justify="space-between">
             <n-button
-              text
-              tag="a"
-              @click="toggleMode"
-              :disabled="loading"
+              type="primary"
+              @click="handleSubmit"
+              :loading="loading"
             >
-              {{ isRegisterMode 
-                ? i18n.login.hasAccount 
-                : `${i18n.login.noAccount} ${i18n.login.register}`
-              }}
+              {{ buttonText }}
             </n-button>
             <n-button
-              v-if="!isRegisterMode"
               text
-              tag="a"
-              @click="showForgotPassword = true"
-              :disabled="loading"
+              @click="toggleMode"
             >
-              {{ i18n.common.forgotPassword }}
+              {{ isRegisterMode ? i18n.login.hasAccount : i18n.login.register }}
             </n-button>
           </n-space>
-        </n-space>
+        </n-form-item>
       </n-form>
     </n-card>
   </div>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NLayout, NLayoutSider, NMenu, NIcon } from 'naive-ui'
+import { NLayout, NLayoutSider, NMenu, NIcon, NSpin } from 'naive-ui'
 import { ref, computed, onMounted } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
@@ -30,20 +30,24 @@ const isMacOS = computed(() => currentPlatform.value === 'macos')
 
 // 登录状态管理
 const isLoggedIn = ref(false)
+const isCheckingLogin = ref(true)
 
 // 检查登录状态
 const checkLoginStatus = async () => {
   try {
+    isCheckingLogin.value = true
     await getUserInfo()
     isLoggedIn.value = true
   } catch (error) {
     console.error('Failed to check login status:', error)
     isLoggedIn.value = false
+  } finally {
+    isCheckingLogin.value = false
   }
 }
 
 // 登录遮罩
-const showLoginOverlay = computed(() => !isLoggedIn.value)
+const showLoginOverlay = computed(() => !isLoggedIn.value && !isCheckingLogin.value)
 
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
@@ -101,6 +105,7 @@ onMounted(async () => {
     await checkLoginStatus()
   } catch (error) {
     console.error('Failed to initialize:', error)
+    isCheckingLogin.value = false // 确保在出错时也设置检查状态为完成
   }
 })
 
@@ -121,6 +126,11 @@ function handleLoginSuccess() {
       v-if="showLoginOverlay"
       @login-success="handleLoginSuccess"
     />
+
+    <!-- 加载指示器 -->
+    <div v-if="isCheckingLogin" class="loading-overlay">
+      <n-spin size="large" />
+    </div>
 
     <!-- 窗口控制按钮 -->
     <div class="window-controls" :class="{ 'mac-controls': isMacOS }">
@@ -212,10 +222,9 @@ function handleLoginSuccess() {
   top: 0;
   left: 0;
   right: 0;
-  height: 32px;
-  user-select: none;
-  -webkit-user-select: none;
-  z-index: 9999;
+  height: 30px;
+  z-index: 1000;
+  -webkit-app-region: drag;
 }
 
 /* 窗口控制按钮容器 */
@@ -324,5 +333,19 @@ function handleLoginSuccess() {
 :deep(.n-menu.n-menu--collapsed .n-menu-item .n-icon) {
   margin-right: 0;
   margin-left: 4px;  /* 折叠时调整居中 */
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+  z-index: 1000;
 }
 </style>
