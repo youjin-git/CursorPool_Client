@@ -62,7 +62,6 @@ pub async fn register(
     email: String,
     code: String,
     password: String,
-    spread: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
         .post(format!("{}/emailRegister", get_base_url()))
