@@ -19,8 +19,6 @@ import {
   changePassword, 
   activate, 
   checkCursorRunning,
-  disableCursorUpdate,
-  restoreCursorUpdate,
   checkHookStatus,
   applyHook,
   restoreHook,
@@ -49,18 +47,15 @@ const formValue = ref<SettingsForm>({
 
 // 修改控制状态
 const controlStatus = ref({
-  updateDisabled: false,
   isHooked: false
 })
 
 // 为每个操作添加单独的加载状态
-const disableUpdateLoading = ref(false)
-const restoreUpdateLoading = ref(false)
 const applyHookLoading = ref(false)
 const restoreHookLoading = ref(false)
 
 const showControlRunningModal = ref(false)
-const pendingControlAction = ref<'disableUpdate' | 'restoreUpdate' | 'applyHook' | 'restoreHook' | null>(null)
+const pendingControlAction = ref<'applyHook' | 'restoreHook' | null>(null)
 
 // 为激活和修改密码添加独立的加载状态
 const activateLoading = ref(false)
@@ -139,11 +134,9 @@ const checkControlStatus = async () => {
 }
 
 // 修改 handleControlAction 函数
-const handleControlAction = async (action: 'disableUpdate' | 'restoreUpdate' | 'applyHook' | 'restoreHook', force_kill: boolean = false) => {
+const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_kill: boolean = false) => {
   // 根据操作设置对应的加载状态
   const loadingRef = {
-    'disableUpdate': disableUpdateLoading,
-    'restoreUpdate': restoreUpdateLoading,
     'applyHook': applyHookLoading,
     'restoreHook': restoreHookLoading
   }[action]
@@ -163,18 +156,6 @@ const handleControlAction = async (action: 'disableUpdate' | 'restoreUpdate' | '
     let historyAction = ''
     
     switch (action) {
-      case 'disableUpdate':
-        await disableCursorUpdate(force_kill)
-        successMessage = messages[currentLang.value].systemControl.messages.disableUpdateSuccess
-        historyAction = messages[currentLang.value].systemControl.history.disableUpdate
-        controlStatus.value.updateDisabled = true
-        break
-      case 'restoreUpdate':
-        await restoreCursorUpdate(force_kill)
-        successMessage = messages[currentLang.value].systemControl.messages.restoreUpdateSuccess
-        historyAction = messages[currentLang.value].systemControl.history.restoreUpdate
-        controlStatus.value.updateDisabled = false
-        break
       case 'applyHook':
         await applyHook(force_kill)
         successMessage = messages[currentLang.value].systemControl.messages.applyHookSuccess
@@ -240,31 +221,6 @@ onMounted(async () => {
             </n-button>
           </n-space>
         </n-space>
-
-        <!-- 更新控制部分 -->
-        <!-- <n-space justify="space-between" align="center">
-          <span>{{ i18n.systemControl.updateStatus }}: {{ controlStatus.updateDisabled ? i18n.systemControl.updateDisabled : i18n.systemControl.updateEnabled }}</span>
-          <n-space>
-            <n-button 
-              type="warning" 
-              :loading="disableUpdateLoading"
-              :disabled="controlStatus.updateDisabled"
-              @click="handleControlAction('disableUpdate')"
-              style="width: 120px"
-            >
-              {{ i18n.systemControl.disableUpdate }}
-            </n-button>
-            <n-button 
-              type="primary"
-              :loading="restoreUpdateLoading"
-              :disabled="!controlStatus.updateDisabled"
-              @click="handleControlAction('restoreUpdate')"
-              style="width: 120px"
-            >
-              {{ i18n.systemControl.restoreUpdate }}
-            </n-button>
-          </n-space>
-        </n-space> -->
       </n-space>
     </n-card>
 
