@@ -11,7 +11,6 @@ import {
   NModal,
   useMessage
 } from 'naive-ui'
-import { useRouter } from 'vue-router'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
@@ -21,15 +20,15 @@ import {
   checkCursorRunning,
   checkHookStatus,
   applyHook,
-  restoreHook,
-  logout
+  restoreHook
 } from '@/api'
 import { addHistoryRecord } from '../utils/history'
 import { version } from '../../package.json'
+import { useUserStore } from '../stores/user'
 
-const router = useRouter()
 const message = useMessage()
 const { currentLang, i18n } = useI18n()
+const userStore = useUserStore()
 
 interface SettingsForm {
   activationCode: string
@@ -116,9 +115,8 @@ const handleChangePassword = async () => {
 
 const handleLogout = async () => {
   try {
-    await logout()
-    // 清除本地状态
-    router.push('/dashboard')
+    await userStore.logout()
+    addHistoryRecord('用户操作', '用户登出')
   } catch (error) {
     message.error('登出失败')
   }

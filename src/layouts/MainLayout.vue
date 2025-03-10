@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { NLayout, NLayoutSider, NMenu, NIcon, NSpin } from 'naive-ui'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
 import { 
@@ -18,41 +18,48 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 import { platform } from '@tauri-apps/plugin-os'
-import { getUserInfo } from '../api'
+import { useUserStore } from '../stores/user'
 
+// 基础状态
 const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
-
-// 获取当前窗口实例
 const appWindow = Window.getCurrent()
+const userStore = useUserStore()
+
+// 平台相关状态
 const currentPlatform = ref('')
 const isMacOS = computed(() => currentPlatform.value === 'macos')
 
-// 登录状态管理
-const isLoggedIn = ref(false)
-const isCheckingLogin = ref(true)
+// 登录状态管理 - 使用计算属性从store获取状态
+const isCheckingLogin = computed(() => userStore.isCheckingLogin)
+const isLoggedIn = computed(() => userStore.isLoggedIn)
+const showLoginOverlay = computed(() => !isLoggedIn.value && !isCheckingLogin.value)
 
-// 检查登录状态
-const checkLoginStatus = async () => {
-  try {
-    isCheckingLogin.value = true
-    await getUserInfo()
-    isLoggedIn.value = true
-  } catch (error) {
-    console.error('Failed to check login status:', error)
-    isLoggedIn.value = false
-  } finally {
-    isCheckingLogin.value = false
+// 侧边栏状态
+const collapsed = ref(true)
+const contentMarginLeft = computed(() => collapsed.value ? '64px' : '200px')
+const currentPath = computed(() => router.currentRoute.value.path.substring(1) || 'dashboard')
+
+/**
+ * 监听用户登出事件
+ */
+const handleUserLogout = () => {
+  // 确保路由跳转到dashboard
+  if (router.currentRoute.value.path !== '/dashboard') {
+    router.push('/dashboard')
   }
 }
 
-// 登录遮罩
-const showLoginOverlay = computed(() => !isLoggedIn.value && !isCheckingLogin.value)
-
+/**
+ * 渲染菜单图标
+ */
 function renderIcon(icon: Component) {
   return () => h(NIcon, null, { default: () => h(icon) })
 }
 
+/**
+ * 菜单选项配置
+ */
 const menuOptions = computed(() => [
   {
     label: messages[currentLang.value].menu.dashboard,
@@ -76,44 +83,66 @@ const menuOptions = computed(() => [
   }
 ])
 
+/**
+ * 处理菜单点击事件
+ */
 function handleMenuClick(key: string) {
   router.push(`/${key}`)
 }
 
-const collapsed = ref(true)
-const contentMarginLeft = computed(() => collapsed.value ? '64px' : '200px')
-
-// 添加一个计算属性来获取当前路由路径
-const currentPath = computed(() => {
-  // 去掉路径开头的 '/'
-  return router.currentRoute.value.path.substring(1) || 'dashboard'
-})
-
-// 窗口控制函数
-async function minimizeWindow() {
-  await appWindow.minimize()
+/**
+ * 窗口控制函数
+ */
+const windowControls = {
+  async minimize() {
+    await appWindow.minimize()
+  },
+  
+  async close() {
+    await appWindow.hide()
+  }
 }
 
-async function closeWindow() {
-  await appWindow.hide()
+/**
+ * 处理登录成功
+ */
+const handleLoginSuccess = async () => {
+  // 使用store检查登录状态
+  await userStore.checkLoginStatus()
 }
 
-// 初始化平台检测和登录状态
+// 组件挂载时
 onMounted(async () => {
+  // 使用store检查登录状态
+  await userStore.checkLoginStatus()
+  
+  // 获取平台信息
   try {
     currentPlatform.value = await platform()
-    await checkLoginStatus()
   } catch (error) {
-    console.error('Failed to initialize:', error)
-    isCheckingLogin.value = false // 确保在出错时也设置检查状态为完成
+    console.error('获取平台信息失败:', error)
   }
+  
+  // 添加用户登出事件监听
+  window.addEventListener('user-logout', handleUserLogout)
 })
 
-// 处理登录成功
-function handleLoginSuccess() {
-  isLoggedIn.value = true
-}
+// 组件卸载时
+onUnmounted(() => {
+  // 移除事件监听
+  window.removeEventListener('user-logout', handleUserLogout)
+})
 
+// 监听store中的登录状态变化
+watch(() => userStore.isLoggedIn, (newValue) => {
+  if (!newValue) {
+    if (router.currentRoute.value.path !== '/dashboard') {
+      router.push('/dashboard')
+    } else {
+      router.replace('/dashboard')
+    }
+  }
+})
 </script>
 
 <template>
@@ -134,18 +163,19 @@ function handleLoginSuccess() {
 
     <!-- 窗口控制按钮 -->
     <div class="window-controls" :class="{ 'mac-controls': isMacOS }">
-      <div class="control-button minimize" @click="minimizeWindow">
+      <div class="control-button minimize" @click="windowControls.minimize">
         <n-icon>
           <RemoveOutline />
         </n-icon>
       </div>
-      <div class="control-button close" @click="closeWindow">
+      <div class="control-button close" @click="windowControls.close">
         <n-icon>
           <Close />
         </n-icon>
       </div>
     </div>
 
+    <!-- 侧边栏 -->
     <n-layout-sider
       bordered
       collapse-mode="width"
@@ -175,7 +205,7 @@ function handleLoginSuccess() {
         :collapsed-width="64"
         :collapsed-icon-size="24"
         :icon-size="24"
-        :default-value="currentPath"
+        :value="currentPath"
         @update:value="handleMenuClick"
         style="-webkit-app-region: no-drag"
       />
@@ -183,6 +213,8 @@ function handleLoginSuccess() {
         <theme-toggle style="-webkit-app-region: no-drag" />
       </div>
     </n-layout-sider>
+    
+    <!-- 主内容区 -->
     <n-layout 
       :native-scrollbar="false" 
       content-style="padding: 40px 24px 24px 24px;"
@@ -326,13 +358,13 @@ function handleLoginSuccess() {
 }
 
 :deep(.n-menu .n-menu-item .n-icon) {
-  font-size: 20px;  /* 增加图标基础大小 */
+  font-size: 20px;
   margin-right: 12px;
 }
 
 :deep(.n-menu.n-menu--collapsed .n-menu-item .n-icon) {
   margin-right: 0;
-  margin-left: 4px;  /* 折叠时调整居中 */
+  margin-left: 4px;
 }
 
 .loading-overlay {
