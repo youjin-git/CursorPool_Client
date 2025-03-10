@@ -8,7 +8,9 @@ import type {
     VersionInfo,
     PublicInfo,
     MachineInfo,
-    DisclaimerResponse
+    DisclaimerResponse,
+    HistoryRecord,
+    HistoryAccountRecord
 } from './types'
 
 // 错误处理
@@ -272,5 +274,75 @@ export async function logout(): Promise<void> {
         handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to logout')
+    }
+}
+
+// 历史记录相关 API
+export async function saveHistoryRecord(record: HistoryRecord): Promise<void> {
+    try {
+        await invoke<void>('save_history_record', { record })
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history record')
+    }
+}
+
+export async function saveHistoryRecords(records: HistoryRecord[]): Promise<void> {
+    try {
+        await invoke<void>('save_history_records', { records })
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history records')
+    }
+}
+
+export async function getHistoryRecords(): Promise<HistoryRecord[]> {
+    try {
+        return await invoke<HistoryRecord[]>('get_history_records')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history records')
+    }
+}
+
+/**
+ * 清除历史记录
+ * 通过保存空数组实现
+ */
+export async function clearHistoryRecords(): Promise<void> {
+    try {
+        await saveHistoryRecords([])
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history records')
+    }
+}
+
+// 历史账户相关 API
+export async function saveHistoryAccount(account: HistoryAccountRecord): Promise<void> {
+    try {
+        await invoke<void>('save_history_account', { account })
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history account')
+    }
+}
+
+export async function getHistoryAccounts(): Promise<HistoryAccountRecord[]> {
+    try {
+        return await invoke<HistoryAccountRecord[]>('get_history_accounts')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history accounts')
+    }
+}
+
+export async function removeHistoryAccount(email: string): Promise<void> {
+    try {
+        await invoke<void>('remove_history_account', { email })
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to remove history account')
+    }
+}
+
+export async function clearHistoryAccounts(): Promise<void> {
+    try {
+        await invoke<void>('clear_history_accounts')
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history accounts')
     }
 }

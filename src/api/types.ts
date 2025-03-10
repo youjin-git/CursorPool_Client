@@ -194,3 +194,24 @@ export interface CursorUserInfo {
   updated_at: string; // 确保使用下划线命名
   picture: string | null;
 }
+
+// 历史记录条目
+export interface HistoryRecord {
+  id: number
+  type_name: string
+  detail: string
+  timestamp: string
+  operator: string
+}
+
+// 历史账户记录
+export interface HistoryAccountRecord {
+  email: string
+  token: string
+  machine_code: string
+  gpt4_count: number
+  gpt35_count: number
+  last_used: number
+  gpt4_max_usage?: number | null
+  gpt35_max_usage?: number | null
+}

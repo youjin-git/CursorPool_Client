@@ -1,11 +1,9 @@
 use std::process::{Command, Stdio};
 use std::thread;
 use std::time::Duration;
-use crate::utils::paths::AppPaths;
 
 const MAX_ATTEMPTS: i32 = 2;
 const RETRY_DELAY: Duration = Duration::from_secs(1);
-const CLEANUP_DELAY: Duration = Duration::from_secs(1);
 const CURSOR_POOL_NAME: &str = "cursor-pool";
 
 pub struct ProcessManager;
@@ -22,21 +20,6 @@ impl ProcessManager {
         } else {
             false
         }
-    }
-
-    /// 终止所有Cursor进程并在清理后重启
-    pub fn kill_and_restart_cursor(&self) -> Result<(), String> {
-        // 先终止所有进程
-        self.kill_cursor_processes()?;
-
-        // 等待清理完成
-        thread::sleep(CLEANUP_DELAY);
-
-        // 获取路径并启动 Cursor
-        let paths = AppPaths::new()?;
-        paths.launch_cursor()?;
-
-        Ok(())
     }
 
     /// 终止所有Cursor进程
