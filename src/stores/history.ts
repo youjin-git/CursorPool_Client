@@ -3,7 +3,7 @@ import { ref, computed } from 'vue'
 import type { HistoryAccount } from './types'
 import type { HistoryRecords } from '../types/history'
 import { getHistoryList, syncLocalHistoryToBackend } from '../utils/history'
-import { getHistoryAccounts, removeHistoryAccount, saveAccountToHistory, syncLocalAccountsToBackend } from '../utils/historyAccounts'
+import { getHistoryAccounts, removeHistoryAccount, syncLocalAccountsToBackend } from '../utils/historyAccounts'
 import { getUsage, getMachineIds } from '@/api'
 
 export const useHistoryStore = defineStore('history', () => {
@@ -148,20 +148,18 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       const historyAccounts = await getHistoryAccounts()
       
-      // 并发更新使用情况
+      // 并发获取使用情况
       const updatePromises = historyAccounts.map(async (account) => {
         try {
           const usage = await getUsage(account.token)
           
-          // 更新使用量和最大使用量
+          // 更新前端账户数据
           account.gpt4Count = usage['gpt-4']?.numRequests || 0
           account.gpt35Count = usage['gpt-3.5-turbo']?.numRequests || 0
           account.gpt4MaxUsage = usage['gpt-4']?.maxRequestUsage || null
           account.gpt35MaxUsage = usage['gpt-3.5-turbo']?.maxRequestUsage || null
           account.lastUsed = Date.now()
           
-          // 保存更新后的账户信息
-          await saveAccountToHistory(account)
           return true
         } catch (error) {
           console.error(`获取账户 ${account.email} 使用情况失败:`, error)
@@ -247,35 +245,15 @@ export const useHistoryStore = defineStore('history', () => {
         // 记录当前账户的邮箱，用于过滤表格
         currentAccountEmail.value = currentAccount.currentAccount
         
-        // 检查当前账户是否已在历史记录中
-        const existingAccount = accounts.value.find(a => a.email === currentAccount.currentAccount)
-        if (!existingAccount) {
-          // 获取当前账户的使用情况
-          try {
-            const usage = await getUsage(currentAccount.cursorToken)
-            const newHistoryAccount: HistoryAccount = {
-              email: currentAccount.currentAccount,
-              token: currentAccount.cursorToken,
-              machineCode: currentAccount.machineId,
-              gpt4Count: usage['gpt-4']?.numRequests || 0,
-              gpt35Count: usage['gpt-3.5-turbo']?.numRequests || 0,
-              gpt4MaxUsage: usage['gpt-4']?.maxRequestUsage || null,
-              gpt35MaxUsage: usage['gpt-3.5-turbo']?.maxRequestUsage || null,
-              lastUsed: Date.now()
-            }
-            // 保存到历史记录
-            await saveAccountToHistory(newHistoryAccount)
-            accounts.value = await getHistoryAccounts()
-            return true
-          } catch (error) {
-            console.error('获取当前账户使用情况失败:', error)
-            return false
-          }
-        }
+        // 不再需要前端主动保存账户信息到历史记录
+        // 更新 accounts 数据，以确保UI显示最新状态
+        await fetchHistoryAccounts(false)
+        
+        return true
       }
       return false
     } catch (error) {
-      console.error('保存当前账户失败:', error)
+      console.error('获取当前账户信息失败:', error)
       return false
     }
   }

@@ -156,6 +156,7 @@ pub async fn change_password(
 #[tauri::command]
 pub async fn get_account(
     client: State<'_, super::client::ApiClient>,
+    db: State<'_, Database>,
     account: Option<String>,
     usage_count: Option<String>,
 ) -> Result<ApiResponse<AccountPoolInfo>, String> {
@@ -179,7 +180,30 @@ pub async fn get_account(
         .await
         .map_err(|e| e.to_string())?;
 
-    response.json().await.map_err(|e| e.to_string())
+    let response: ApiResponse<AccountPoolInfo> = response.json().await.map_err(|e| e.to_string())?;
+    
+    // 如果获取成功且有账户信息，将token保存到历史记录
+    if response.status == 200 && response.data.is_some() {
+        let account_info = &response.data.as_ref().unwrap().account_info;
+        if !account_info.account.is_empty() && !account_info.token.is_empty() {
+            // 获取当前机器码
+            use crate::cursor_reset::get_machine_ids;
+            let machine_info = get_machine_ids()?;
+            let machine_id = machine_info["machineId"].as_str().unwrap_or_default().to_string();
+            
+            // 保存到历史记录
+            if let Err(e) = super::interceptor::save_cursor_token_to_history(
+                &db, 
+                &account_info.account, 
+                &account_info.token,
+                &machine_id
+            ).await {
+                eprintln!("保存Cursor token到历史记录失败: {}", e);
+            }
+        }
+    }
+
+    Ok(response)
 }
 
 /// 获取 Cursor 使用情况

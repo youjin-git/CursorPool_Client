@@ -402,10 +402,8 @@ export const useCursorStore = defineStore('cursor', () => {
    * 切换到历史账户
    */
   async function switchToHistoryAccount(account: HistoryAccount) {
-    console.log('switchToHistoryAccount with cursor store', account)
     const historyStore = useHistoryStore()
     historyStore.switchingAccount[account.email] = true
-    needSaveCurrentAccount.value = true
     
     try {
       // 检查Cursor是否在运行
@@ -416,12 +414,6 @@ export const useCursorStore = defineStore('cursor', () => {
           status: 'running', 
           account 
         }
-      }
-      
-      // 确认切换，先保存当前账户
-      if (needSaveCurrentAccount.value) {
-        await historyStore.saveCurrentAccountToHistory()
-        needSaveCurrentAccount.value = false
       }
     
       // 检查钩子状态
@@ -435,7 +427,7 @@ export const useCursorStore = defineStore('cursor', () => {
         }
       }
       
-      // 切换账户
+      // 切换账户 - 后端会自动保存历史记录
       await resetMachineId({ machineId: account.machineCode })
       await switchAccount(account.email, account.token, false)
       
@@ -458,7 +450,6 @@ export const useCursorStore = defineStore('cursor', () => {
       console.error('切换到历史账户失败:', error)
       throw error
     } finally {
-      needSaveCurrentAccount.value = false
       historyStore.switchingAccount[account.email] = false
     }
   }
@@ -472,12 +463,6 @@ export const useCursorStore = defineStore('cursor', () => {
     isForceKilling.value = true
     
     try {
-      // 如果需要保存当前账户，则先保存
-      if (needSaveCurrentAccount.value) {
-        await historyStore.saveCurrentAccountToHistory()
-        needSaveCurrentAccount.value = false
-      }
-      
       // 关闭 Cursor
       await closeCursorApp()
       await new Promise(resolve => setTimeout(resolve, 1000))
@@ -490,7 +475,7 @@ export const useCursorStore = defineStore('cursor', () => {
         }
       }
       
-      // 账户切换
+      // 账户切换 - 后端会自动保存历史记录
       await resetMachineId({ machineId: account.machineCode })
       await switchAccount(account.email, account.token, true)
       

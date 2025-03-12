@@ -298,3 +298,18 @@ pub struct ActivationCode {
     #[serde(rename = "expired_at")]
     pub expired_at: String,
 }
+
+// 历史账户记录
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HistoryAccountRecord {
+    pub email: String,
+    pub token: String,
+    pub machine_code: String,
+    pub gpt4_count: i32,
+    pub gpt35_count: i32,
+    pub last_used: i64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gpt4_max_usage: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub gpt35_max_usage: Option<i32>,
+}

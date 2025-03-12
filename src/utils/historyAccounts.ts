@@ -1,24 +1,8 @@
 import type { HistoryAccount } from '@/types/history'
-import { saveHistoryAccount as apiSaveHistoryAccount, getHistoryAccounts as apiGetHistoryAccounts, removeHistoryAccount as apiRemoveHistoryAccount } from '@/api'
+import { getHistoryAccounts as apiGetHistoryAccounts, removeHistoryAccount as apiRemoveHistoryAccount } from '@/api'
 import type { HistoryAccountRecord } from '@/api/types'
 
 const STORAGE_KEY = 'history_accounts'
-
-/**
- * 将前端HistoryAccount转换为后端HistoryAccountRecord
- */
-function convertToBackendAccount(account: HistoryAccount): HistoryAccountRecord {
-  return {
-    email: account.email,
-    token: account.token,
-    machine_code: account.machineCode,
-    gpt4_count: account.gpt4Count,
-    gpt35_count: account.gpt35Count,
-    last_used: account.lastUsed,
-    gpt4_max_usage: account.gpt4MaxUsage,
-    gpt35_max_usage: account.gpt35MaxUsage
-  }
-}
 
 /**
  * 将后端HistoryAccountRecord转换为前端HistoryAccount
@@ -37,27 +21,22 @@ function convertToFrontendAccount(account: HistoryAccountRecord): HistoryAccount
 }
 
 /**
- * 保存账户到历史记录
+ * 保存账户到历史记录 - 仅作为兼容层保留
+ * 后端会自动管理token，前端不再负责存储
  */
 export async function saveAccountToHistory(account: HistoryAccount) {
-  try {
-    // 保存到后端
-    await apiSaveHistoryAccount(convertToBackendAccount(account))
-  } catch (error) {
-    console.error('保存账户到后端失败，回退到本地存储:', error)
-    
-    // 如果后端保存失败，回退到本地存储
-    const history = getHistoryAccountsFromLocal()
-    const index = history.findIndex(a => a.email === account.email)
-    
-    if (index >= 0) {
-      history[index] = account
-    } else {
-      history.push(account)
-    }
-    
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
+  
+  // 仅在本地存储中保存，作为临时备份
+  const history = getHistoryAccountsFromLocal()
+  const index = history.findIndex(a => a.email === account.email)
+  
+  if (index >= 0) {
+    history[index] = account
+  } else {
+    history.push(account)
   }
+  
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
 }
 
 /**
@@ -120,15 +99,13 @@ export async function syncLocalAccountsToBackend() {
       return
     }
     
-    // 逐个保存到后端
-    for (const account of accounts) {
-      await apiSaveHistoryAccount(convertToBackendAccount(account))
-    }
+    console.log(`本地发现${accounts.length}个历史账户，新版本由后端自动管理，不再需要前端同步`)
     
-    console.log(`成功同步 ${accounts.length} 个本地历史账户到后端`)
+    // 不再需要主动同步到后端，历史记录会在账户切换时由后端自动保存
+    // 清除本地存储，避免冗余
     localStorage.removeItem(STORAGE_KEY)
   } catch (error) {
-    console.error('同步本地历史账户到后端失败:', error)
+    console.error('处理本地历史账户失败:', error)
     localStorage.removeItem(STORAGE_KEY)
   }
 } 

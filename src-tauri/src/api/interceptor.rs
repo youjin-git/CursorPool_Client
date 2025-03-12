@@ -98,4 +98,52 @@ pub async fn save_auth_token(db: &tauri::State<'_, Database>, url: &str, respons
     }
     
     Ok(())
+}
+
+/// 保存Cursor token到历史记录
+pub async fn save_cursor_token_to_history(db: &tauri::State<'_, Database>, email: &str, token: &str, machine_id: &str) -> Result<(), String> {
+    // 1. 获取当前历史记录
+    let accounts = match db.get_item("user.history.accounts") {
+        Ok(Some(data)) => {
+            match serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
+                Ok(accounts) => accounts,
+                Err(_) => Vec::new()
+            }
+        },
+        _ => Vec::new()
+    };
+    
+    // 2. 准备新的账户记录
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() as i64;
+    
+    let new_account = crate::api::types::HistoryAccountRecord {
+        email: email.to_string(),
+        token: token.to_string(),
+        machine_code: machine_id.to_string(),
+        gpt4_count: 0,
+        gpt35_count: 0,
+        last_used: now,
+        gpt4_max_usage: None,
+        gpt35_max_usage: None
+    };
+    
+    // 3. 更新记录列表（替换或添加）
+    let mut updated_accounts = accounts
+        .into_iter()
+        .filter(|a| a.email != email)
+        .collect::<Vec<_>>();
+    
+    updated_accounts.push(new_account);
+    
+    // 4. 保存回数据库
+    let json_data = serde_json::to_string(&updated_accounts)
+        .map_err(|e| e.to_string())?;
+    
+    db.set_item("user.history.accounts", &json_data)
+        .map_err(|e| e.to_string())?;
+    
+    Ok(())
 } 

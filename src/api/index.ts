@@ -344,33 +344,7 @@ export async function clearHistoryRecords(): Promise<void> {
 }
 
 /**
- * 保存历史账户
- * @param account 历史账户记录
- */
-export async function saveHistoryAccount(account: HistoryAccountRecord): Promise<void> {
-    try {
-        // 先获取现有账户
-        let accounts = await getHistoryAccounts();
-        
-        // 检查是否存在相同email的账户，存在则更新，不存在则添加
-        const index = accounts.findIndex(a => a.email === account.email);
-        if (index !== -1) {
-            accounts[index] = account;
-        } else {
-            accounts.push(account);
-        }
-        
-        // 保存回数据库
-        await setUserData('user.history.accounts', JSON.stringify(accounts));
-    } catch (error) {
-        console.error('保存历史账户失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history account');
-    }
-}
-
-/**
- * 获取所有历史账户
- * @returns 历史账户数组
+ * 获取历史账户列表
  */
 export async function getHistoryAccounts(): Promise<HistoryAccountRecord[]> {
     try {
@@ -386,14 +360,13 @@ export async function getHistoryAccounts(): Promise<HistoryAccountRecord[]> {
             return [];
         }
     } catch (error) {
-        console.error('获取历史账户失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history accounts');
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history accounts')
     }
 }
 
 /**
  * 删除历史账户
- * @param email 账户邮箱
+ * @param email 要删除的账户邮箱
  */
 export async function removeHistoryAccount(email: string): Promise<void> {
     try {
@@ -406,8 +379,7 @@ export async function removeHistoryAccount(email: string): Promise<void> {
         // 保存回数据库
         await setUserData('user.history.accounts', JSON.stringify(accounts));
     } catch (error) {
-        console.error('删除历史账户失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to remove history account');
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to remove history account')
     }
 }
 

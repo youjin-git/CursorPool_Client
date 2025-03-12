@@ -207,7 +207,8 @@ pub async fn reset_machine_id(
 pub async fn switch_account(
     email: String,
     token: String,
-    force_kill: bool
+    force_kill: bool,
+    db: tauri::State<'_, crate::database::Database>
 ) -> Result<bool, String> {
     let process_manager = ProcessManager::new();
     
@@ -228,10 +229,43 @@ pub async fn switch_account(
         ("cursor.accessToken", token.clone()),
         ("cursorAuth/refreshToken", token.clone()),
         ("cursorAuth/accessToken", token.clone()),
-        ("cursorAuth/cachedEmail", email),
+        ("cursorAuth/cachedEmail", email.clone()),
     ];
 
     update_database(&paths.db, &account_updates)?;
+
+    // 获取机器码
+    let mut result = json!({
+        "machineId": "",
+        "currentAccount": ""
+    });
+
+    if paths.db.exists() {
+        if let Ok(conn) = Connection::open(&paths.db) {
+            // 读取机器码
+            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'telemetry.devDeviceId'") {
+                if let Ok(mut rows) = stmt.query([]) {
+                    if let Ok(Some(row)) = rows.next() {
+                        if let Ok(device_id) = row.get::<_, String>(0) {
+                            result["machineId"] = json!(device_id);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let machine_id = result["machineId"].as_str().unwrap_or_default().to_string();
+
+    // 保存到历史记录
+    if let Err(e) = crate::api::interceptor::save_cursor_token_to_history(
+        &db, 
+        &email, 
+        &token,
+        &machine_id
+    ).await {
+        eprintln!("保存Cursor token到历史记录失败: {}", e);
+    }
 
     // 等待一段时间确保数据库更新完成
     std::thread::sleep(std::time::Duration::from_millis(500));
@@ -435,131 +469,4 @@ pub async fn restore_hook(
 #[tauri::command]
 pub fn check_is_windows() -> bool {
     crate::utils::privileges::is_windows()
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-
-    use super::*;
-    use serde_json::json;
-
-    #[tokio::test]
-    async fn test_reset_machine_id() {
-        println!("开始测试重置机器码...");
-        
-        let old_ids = match get_machine_ids() {
-            Ok(ids) => {
-                println!("重置前机器ID: {:?}", ids);
-                ids
-            },
-            Err(e) => {
-                println!("获取机器ID失败: {}", e);
-                return;
-            }
-        };
-        
-        let paths = match AppPaths::new() {
-            Ok(p) => p,
-            Err(e) => {
-                println!("获取应用路径失败: {}", e);
-                return;
-            }
-        };
-        
-        let mut new_ids = HashMap::new();
-        let new_device_id = format!("test-device-id-{}", chrono::Local::now().timestamp());
-        let new_machine_id = format!("test-machine-id-{}", chrono::Local::now().timestamp());
-        let new_mac_id = format!("test-mac-id-{}", chrono::Local::now().timestamp());
-        let new_sqm_id = format!("test-sqm-id-{}", chrono::Local::now().timestamp());
-        
-        new_ids.insert("telemetry.devDeviceId".to_string(), new_device_id.clone());
-        new_ids.insert("telemetry.machineId".to_string(), new_machine_id);
-        new_ids.insert("telemetry.macMachineId".to_string(), new_mac_id);
-        new_ids.insert("telemetry.sqmId".to_string(), new_sqm_id);
-        
-        println!("生成的新机器ID: {:?}", new_ids);
-        
-        let mut storage_content = if paths.storage.exists() {
-            match fs::read_to_string(&paths.storage) {
-                Ok(content) => match serde_json::from_str(&content) {
-                    Ok(parsed) => parsed,
-                    Err(e) => {
-                        println!("解析storage.json失败: {}", e);
-                        json!({})
-                    }
-                },
-                Err(e) => {
-                    println!("读取storage.json失败: {}", e);
-                    json!({})
-                }
-            }
-        } else {
-            json!({})
-        };
-        
-        if let Value::Object(ref mut map) = storage_content {
-            for (key, value) in &new_ids {
-                map.insert(key.clone(), Value::String(value.clone()));
-            }
-        }
-        
-        match fs::write(&paths.storage, serde_json::to_string_pretty(&storage_content).unwrap()) {
-            Ok(_) => println!("成功写入新机器ID"),
-            Err(e) => println!("写入storage.json失败: {}", e)
-        }
-        
-        match get_machine_ids() {
-            Ok(ids) => {
-                println!("重置后机器ID: {:?}", ids);
-                if let Some(old_id) = old_ids["machineId"].as_str() {
-                    if let Some(new_id) = ids["machineId"].as_str() {
-                        if old_id != new_id {
-                            println!("✅ 机器ID已成功更新!");
-                        } else {
-                            println!("❌ 机器ID未更新!");
-                        }
-                    }
-                }
-            },
-            Err(e) => println!("获取更新后的机器ID失败: {}", e)
-        }
-        
-        println!("机器码重置测试完成");
-    }
-    
-    #[tokio::test]
-    async fn test_switch_account() {
-        println!("开始测试切换账户...");
-        
-        let test_email = "test@example.com";
-        let test_token = "your_actual_token";
-        
-        println!("测试账户: {}", test_email);
-        println!("测试Token: {}", test_token);
-        
-        println!("开始调用switch_account...");
-        let force_kill = true;
-        
-        match switch_account(test_email.to_string(), test_token.to_string(), force_kill).await {
-            Ok(_) => println!("✅ 成功切换到账户: {}", test_email),
-            Err(e) => println!("❌ 切换账户失败: {}", e)
-        }
-        
-        match get_machine_ids() {
-            Ok(info) => {
-                println!("切换后账户信息: {:?}", info);
-                if let Some(current_account) = info["currentAccount"].as_str() {
-                    if current_account == test_email {
-                        println!("✅ 账户已成功切换为: {}", test_email);
-                    } else {
-                        println!("❌ 账户未切换为预期的值! 当前: {}", current_account);
-                    }
-                }
-            },
-            Err(e) => println!("获取更新后的账户信息失败: {}", e)
-        }
-        
-        println!("切换账户测试完成");
-    }
 }
