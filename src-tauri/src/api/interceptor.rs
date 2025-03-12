@@ -36,6 +36,16 @@ impl Interceptor for AuthInterceptor {
             format!("Bearer {}", token).parse().unwrap(),
         );
         
+        let lang = match db.get_item("user.info.lang") {
+            Ok(Some(lang)) if lang != "zh-CN" => lang,
+            _ => "zh-CN".to_string()
+        };
+        
+        request.headers_mut().insert(
+            "cb-lang",
+            lang.parse().unwrap(),
+        );
+        
         Ok(())
     }
 }

@@ -5,6 +5,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::env;
 use crate::database::Database;
+use serde_json::json;
 
 // Bug报告请求结构
 #[derive(Serialize, Deserialize)]
@@ -320,20 +321,6 @@ pub async fn report_bug(
     response.json().await.map_err(|e| e.to_string())
 }
 
-/// 获取免责声明
-#[tauri::command]
-pub async fn get_disclaimer(
-    client: State<'_, super::client::ApiClient>,
-) -> Result<ApiResponse<DisclaimerResponse>, String> {
-    let response = client
-        .get(format!("{}/disclaimer", get_base_url()))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    response.json().await.map_err(|e| e.to_string())
-}
-
 /// 用户登出
 #[tauri::command]
 pub async fn logout(
@@ -348,4 +335,56 @@ pub async fn logout(
         data: None,
         code: Some("460001".to_string()),
     })
+}
+
+/// 设置用户数据
+#[tauri::command]
+pub async fn set_user_data(
+    db: State<'_, Database>,
+    key: String, 
+    value: String
+) -> Result<ApiResponse<()>, String> {
+    match db.set_item(&key, &value) {
+        Ok(_) => Ok(ApiResponse {
+            status: 200,
+            msg: "成功设置用户数据".to_string(),
+            data: None,
+            code: Some("SUCCESS".to_string()),
+        }),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// 获取用户数据
+#[tauri::command]
+pub async fn get_user_data(
+    db: State<'_, Database>,
+    key: String
+) -> Result<ApiResponse<serde_json::Value>, String> {
+    match db.get_item(&key) {
+        Ok(value) => Ok(ApiResponse {
+            status: 200,
+            msg: "成功获取用户数据".to_string(),
+            data: Some(json!({ "value": value })),
+            code: Some("SUCCESS".to_string()),
+        }),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+/// 删除用户数据
+#[tauri::command]
+pub async fn del_user_data(
+    db: State<'_, Database>,
+    key: String
+) -> Result<ApiResponse<()>, String> {
+    match db.delete_item(&key) {
+        Ok(_) => Ok(ApiResponse {
+            status: 200,
+            msg: "成功删除用户数据".to_string(),
+            data: None,
+            code: Some("SUCCESS".to_string()),
+        }),
+        Err(e) => Err(e.to_string()),
+    }
 }

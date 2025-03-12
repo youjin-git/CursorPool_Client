@@ -246,12 +246,6 @@ pub struct CursorUsageInfo {
     pub start_of_month: String,
 }
 
-// 免责声明响应
-#[derive(Serialize, Deserialize)]
-pub struct DisclaimerResponse {
-    pub content: String,
-}
-
 // Bug报告请求
 #[derive(Serialize, Deserialize)]
 pub struct BugReportRequest {

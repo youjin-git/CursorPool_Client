@@ -159,7 +159,6 @@ impl<'a> RequestBuilder<'a> {
         Self {
             inner: self.inner
                 .header("Accept", "*/*")
-                .header("User-Agent", "PostmanRuntime-ApipostRuntime/1.1.0")
                 .multipart(form_builder),
             client: self.client,
         }
