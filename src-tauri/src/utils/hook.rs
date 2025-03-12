@@ -71,18 +71,14 @@ impl Hook {
         if machine_id_matches == 0 || mac_machine_id_matches == 0 {
             return Err("无法找到匹配的 machineId 或 macMachineId 函数".to_string());
         }
-
-        // 生成新的随机 ID
-        let new_id = uuid::Uuid::new_v4().to_string();
-        
         // 替换 machineId
         let modified_content = MACHINE_ID_REGEX.replace_all(&content, |caps: &regex::Captures| {
-            format!("async {}() {{ return \"{}\" }}", &caps[1], new_id)
+            format!("async {}() {{ return this.{}.machineId }}", &caps[1], &caps[2])
         }).to_string();
         
         // 替换 macMachineId
         let modified_content = MAC_MACHINE_ID_REGEX.replace_all(&modified_content, |caps: &regex::Captures| {
-            format!("async {}() {{ return \"{}\" }}", &caps[1], new_id)
+            format!("async {}() {{ return this.{}.macMachineId }}", &caps[1], &caps[2])
         }).to_string();
         
         // 写入修改后的内容
