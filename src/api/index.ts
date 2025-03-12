@@ -8,7 +8,6 @@ import type {
     VersionInfo,
     PublicInfo,
     MachineInfo,
-    DisclaimerResponse,
     HistoryRecord,
     HistoryAccountRecord
 } from './types'
@@ -248,16 +247,6 @@ export async function checkIsWindows(): Promise<boolean> {
     }
 }
 
-// 获取免责声明
-export async function getDisclaimer(): Promise<DisclaimerResponse> {
-    try {
-        const response = await invoke<ApiResponse<DisclaimerResponse>>('get_disclaimer')
-        return handleApiResponse(response)
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get disclaimer')
-    }
-}
-
 // 添加关闭和启动Cursor的API
 export async function closeCursor(): Promise<boolean> {
   return await invoke('close_cursor')
@@ -277,72 +266,279 @@ export async function logout(): Promise<void> {
     }
 }
 
-// 历史记录相关 API
+// 使用键值存储实现历史记录功能
+
+/**
+ * 保存历史记录
+ * @param record 历史记录
+ */
 export async function saveHistoryRecord(record: HistoryRecord): Promise<void> {
     try {
-        await invoke<void>('save_history_record', { record })
+        // 先获取现有记录
+        let records = await getHistoryRecords();
+        
+        // 添加新记录
+        records.push(record);
+        
+        // 保存回数据库
+        await setUserData('user.history', JSON.stringify(records));
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history record')
-    }
-}
-
-export async function saveHistoryRecords(records: HistoryRecord[]): Promise<void> {
-    try {
-        await invoke<void>('save_history_records', { records })
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history records')
-    }
-}
-
-export async function getHistoryRecords(): Promise<HistoryRecord[]> {
-    try {
-        return await invoke<HistoryRecord[]>('get_history_records')
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history records')
+        console.error('保存历史记录失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history record');
     }
 }
 
 /**
- * 清除历史记录
- * 通过保存空数组实现
+ * 批量保存历史记录
+ * @param records 历史记录数组
+ */
+export async function saveHistoryRecords(records: HistoryRecord[]): Promise<void> {
+    try {
+        // 先获取现有记录
+        let existingRecords = await getHistoryRecords();
+        
+        // 合并记录
+        existingRecords = [...existingRecords, ...records];
+        
+        // 保存回数据库
+        await setUserData('user.history', JSON.stringify(existingRecords));
+    } catch (error) {
+        console.error('批量保存历史记录失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history records');
+    }
+}
+
+/**
+ * 获取所有历史记录
+ * @returns 历史记录数组
+ */
+export async function getHistoryRecords(): Promise<HistoryRecord[]> {
+    try {
+        const data = await getUserData('user.history');
+        if (!data) {
+            return [];
+        }
+        
+        try {
+            return JSON.parse(data) as HistoryRecord[];
+        } catch (e) {
+            console.error('历史记录解析失败:', e);
+            return [];
+        }
+    } catch (error) {
+        console.error('获取历史记录失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history records');
+    }
+}
+
+/**
+ * 清除所有历史记录
  */
 export async function clearHistoryRecords(): Promise<void> {
     try {
-        await saveHistoryRecords([])
+        await delUserData('user.history');
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history records')
+        console.error('清除历史记录失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history records');
     }
 }
 
-// 历史账户相关 API
+/**
+ * 保存历史账户
+ * @param account 历史账户记录
+ */
 export async function saveHistoryAccount(account: HistoryAccountRecord): Promise<void> {
     try {
-        await invoke<void>('save_history_account', { account })
+        // 先获取现有账户
+        let accounts = await getHistoryAccounts();
+        
+        // 检查是否存在相同email的账户，存在则更新，不存在则添加
+        const index = accounts.findIndex(a => a.email === account.email);
+        if (index !== -1) {
+            accounts[index] = account;
+        } else {
+            accounts.push(account);
+        }
+        
+        // 保存回数据库
+        await setUserData('user.history.accounts', JSON.stringify(accounts));
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history account')
+        console.error('保存历史账户失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history account');
     }
 }
 
+/**
+ * 获取所有历史账户
+ * @returns 历史账户数组
+ */
 export async function getHistoryAccounts(): Promise<HistoryAccountRecord[]> {
     try {
-        return await invoke<HistoryAccountRecord[]>('get_history_accounts')
+        const data = await getUserData('user.history.accounts');
+        if (!data) {
+            return [];
+        }
+        
+        try {
+            return JSON.parse(data) as HistoryAccountRecord[];
+        } catch (e) {
+            console.error('历史账户解析失败:', e);
+            return [];
+        }
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history accounts')
+        console.error('获取历史账户失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history accounts');
     }
 }
 
+/**
+ * 删除历史账户
+ * @param email 账户邮箱
+ */
 export async function removeHistoryAccount(email: string): Promise<void> {
     try {
-        await invoke<void>('remove_history_account', { email })
+        // 先获取现有账户
+        let accounts = await getHistoryAccounts();
+        
+        // 过滤掉要删除的账户
+        accounts = accounts.filter(a => a.email !== email);
+        
+        // 保存回数据库
+        await setUserData('user.history.accounts', JSON.stringify(accounts));
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to remove history account')
+        console.error('删除历史账户失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to remove history account');
     }
 }
 
+/**
+ * 清除所有历史账户
+ */
 export async function clearHistoryAccounts(): Promise<void> {
     try {
-        await invoke<void>('clear_history_accounts')
+        await delUserData('user.history.accounts');
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history accounts')
+        console.error('清除历史账户失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history accounts');
+    }
+}
+
+/**
+ * 保存用户API Token
+ * @param token API Token
+ */
+export async function saveUserApiToken(token: string): Promise<void> {
+    try {
+        await setUserData('user.info.token', token);
+    } catch (error) {
+        console.error('保存API Token失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to save API token');
+    }
+}
+
+/**
+ * 获取用户API Token
+ * @returns API Token，如果不存在则返回null
+ */
+export async function getUserApiToken(): Promise<string | null> {
+    try {
+        return await getUserData('user.info.token');
+    } catch (error) {
+        console.error('获取API Token失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get API token');
+    }
+}
+
+/**
+ * 清除用户API Token
+ */
+export async function clearUserApiToken(): Promise<void> {
+    try {
+        await delUserData('user.info.token');
+    } catch (error) {
+        console.error('清除API Token失败:', error);
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear API token');
+    }
+}
+
+// 添加通用的键值存储 API 方法
+
+/**
+ * 设置用户数据
+ * @param key 键名
+ * @param value 值
+ */
+export async function setUserData(key: string, value: string): Promise<void> {
+    try {
+        await invoke<ApiResponse<any>>('set_user_data', { key, value });
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to set user data');
+    }
+}
+
+/**
+ * 获取用户数据
+ * @param key 键名
+ * @returns 获取的值，如果不存在则返回 null
+ */
+export async function getUserData(key: string): Promise<string | null> {
+    try {
+        const response = await invoke<ApiResponse<{ value: string | null }>>('get_user_data', { key });
+        const result = handleApiResponse(response);
+        return result.value;
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to get user data');
+    }
+}
+
+/**
+ * 删除用户数据
+ * @param key 键名
+ */
+export async function delUserData(key: string): Promise<void> {
+    try {
+        await invoke<ApiResponse<any>>('del_user_data', { key });
+    } catch (error) {
+        throw new ApiError(error instanceof Error ? error.message : 'Failed to delete user data');
+    }
+}
+
+// 使用通用 API 实现的特定功能
+
+/**
+ * 检查用户是否已接受免责声明
+ * @returns 是否已接受
+ */
+export async function checkDisclaimerAccepted(): Promise<boolean> {
+    try {
+        const value = await getUserData('user.disclaimer.accepted');
+        return value === 'true';
+    } catch (error) {
+        console.error('检查免责声明失败:', error);
+        return false;
+    }
+}
+
+/**
+ * 设置用户已接受免责声明
+ */
+export async function setDisclaimerAccepted(): Promise<void> {
+    try {
+        await setUserData('user.disclaimer.accepted', 'true');
+    } catch (error) {
+        console.error('设置免责声明状态失败:', error);
+        throw error;
+    }
+}
+
+/**
+ * 清除用户的免责声明接受状态
+ */
+export async function clearDisclaimerAccepted(): Promise<void> {
+    try {
+        await delUserData('user.disclaimer.accepted');
+    } catch (error) {
+        console.error('清除免责声明状态失败:', error);
+        throw error;
     }
 }

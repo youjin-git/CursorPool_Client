@@ -3,26 +3,8 @@ import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, 
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from '../locales'
 import { useMessage } from 'naive-ui'
-import { 
-    getUserInfo, 
-    resetMachineId, 
-    switchAccount, 
-    getMachineIds, 
-    getUsage, 
-    getAccount, 
-    getVersion, 
-    checkCursorRunning,
-    checkAdminPrivileges,
-    checkHookStatus,
-    checkIsWindows,
-    getDisclaimer,
-    applyHook,
-    activate,
-    closeCursor,
-    launchCursor
-} from '@/api'
-import type { UserInfo, CursorUserInfo, CursorUsageInfo, VersionInfo } from '@/api/types'
-import { addHistoryRecord } from '../utils/history'
+import { checkCursorRunning } from '@/api'
+import type { UserInfo, CursorUserInfo, CursorUsageInfo } from '@/api/types'
 import { version } from '../../package.json'
 import { WarningOutlined } from '@vicons/antd'
 import { Window } from '@tauri-apps/api/window'
@@ -30,11 +12,11 @@ import { open } from '@tauri-apps/plugin-shell'
 import { saveAccountToHistory } from '@/utils/historyAccounts'
 import type { HistoryAccount } from '@/types/history'
 import DashboardTour from '../components/DashboardTour.vue'
+import CursorRunningModal from '../components/CursorRunningModal.vue'
+
+import { useUserStore, useCursorStore, useAppStore } from '@/stores'
 
 const LOCAL_VERSION = version
-
-// 版本检查的时间间隔（毫秒）
-const VERSION_CHECK_INTERVAL = 3 * 60 * 60 * 1000 // 3小时
 
 interface DeviceInfoState {
   machineCode: string
@@ -71,6 +53,26 @@ const loading = ref(true)
 const message = useMessage()
 const { i18n } = useI18n()
 
+// 在组件中初始化 Store
+const userStore = useUserStore()
+const cursorStore = useCursorStore()
+const appStore = useAppStore()
+
+// 更新本地视图状态
+const updateLocalViewState = () => {
+  deviceInfo.value = {
+    machineCode: cursorStore.machineCode,
+    currentAccount: cursorStore.currentAccount,
+    cursorToken: cursorStore.cursorToken,
+    userInfo: userStore.userInfo,
+    cursorInfo: {
+      userInfo: cursorStore.cursorInfo.userInfo,
+      usage: cursorStore.cursorInfo.usage
+    },
+    hookStatus: cursorStore.hookStatus
+  }
+}
+
 // 计算使用量百分比
 const getUsagePercentage = (used: number, total: number) => {
   if (!total) return 0
@@ -88,35 +90,33 @@ const levelMap: Record<number, { name: string; type: 'default' | 'info' | 'succe
 
 // 普通账户使用量百分比
 const accountUsagePercentage = computed(() => {
-  if (!deviceInfo.value.userInfo?.totalCount) return 0
+  if (!userStore.userInfo?.totalCount) return 0
+  // 总数量大于等于9999 无限制 进度条显示为0
+  if (userStore.userInfo.totalCount >= 9999) return 0
   return getUsagePercentage(
-    deviceInfo.value.userInfo.usedCount,
-    deviceInfo.value.userInfo.totalCount
+    userStore.userInfo.usedCount,
+    userStore.userInfo.totalCount
   )
 })
 
 // Cursor高级模型使用量百分比
 const cursorGpt4Percentage = computed(() => {
-  const usage = deviceInfo.value.cursorInfo.usage?.['gpt-4']
-  if (!usage) return 0
-  return getUsagePercentage(usage.numRequests, usage.maxRequestUsage || 0)
+  return cursorStore.gpt4Usage.percentage
 })
 
 // Cursor普通模型使用量百分比
 const cursorGpt35Percentage = computed(() => {
-  const usage = deviceInfo.value.cursorInfo.usage?.['gpt-3.5-turbo']
-  if (!usage) return 0
-  if (!usage.maxRequestUsage) return 100
-  return getUsagePercentage(usage.numRequests, usage.maxRequestUsage)
+  // 如果没有设置maxRequestUsage或者maxRequestUsage为0，视为无限制，进度条显示为100%
+  if (!deviceInfo.value.cursorInfo.usage?.['gpt-3.5-turbo']?.maxRequestUsage) return 100
+  return cursorStore.gpt35Usage.percentage
 })
 
 // 获取用户信息
 const fetchUserInfo = async () => {
   try {
-    const info = await getUserInfo()
-    deviceInfo.value.userInfo = info
+    await userStore.checkLoginStatus()
+    updateLocalViewState()
   } catch (error) {
-    // 直接使用error.message，它包含后端的msg
     console.error('获取用户信息失败:', error)
     message.error(error instanceof Error ? error.message : '获取用户信息失败')
   }
@@ -125,14 +125,8 @@ const fetchUserInfo = async () => {
 // 获取机器码
 const fetchMachineIds = async () => {
   try {
-    const result = await getMachineIds()
-
-    deviceInfo.value.machineCode = result.machineId
-    deviceInfo.value.currentAccount = result.currentAccount
-    deviceInfo.value.cursorToken = result.cursorToken
-    
-    // 获取 Hook 状态
-    deviceInfo.value.hookStatus = await checkHookStatus()
+    await cursorStore.fetchMachineIds()
+    updateLocalViewState()
   } catch (error) {
     console.error('获取机器码失败:', error)
   }
@@ -141,25 +135,8 @@ const fetchMachineIds = async () => {
 // 获取 Cursor 账户信息
 async function fetchCursorInfo() {
   try {
-    const token = deviceInfo.value.cursorToken
-    if (!token) {
-      console.error('未找到 Cursor Token')
-      return
-    }
-
-    const usageData = await getUsage(token)
-    
-    deviceInfo.value.cursorInfo = {
-      userInfo: {
-        email: deviceInfo.value.currentAccount,
-        email_verified: true,
-        name: deviceInfo.value.currentAccount.split('@')[0],
-        sub: '',
-        updated_at: new Date().toISOString(),
-        picture: null
-      },
-      usage: usageData
-    }
+    await cursorStore.fetchCursorUsage()
+    updateLocalViewState()
   } catch (error) {
     console.error('获取 Cursor 账户信息失败:', error)
   } finally {
@@ -177,13 +154,11 @@ const pendingForceKillAction = ref<{
 // 修改机器码更换处理函数
 const handleMachineCodeChange = async (force_kill: boolean = false) => {
   try {
-    await resetMachineId({ forceKill: force_kill })
+    await cursorStore.resetMachine({ forceKill: force_kill })
     message.success(i18n.value.dashboard.machineChangeSuccess)
-    addHistoryRecord(
-      '机器码修改',
-      `修改机器码: ${deviceInfo.value.machineCode}`
-    )
-    await fetchMachineIds()
+    
+    await fetchUserInfo()
+    updateLocalViewState()
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
@@ -204,13 +179,13 @@ const pendingAction = ref<'account' | 'quick' | null>(null)
 const autoApplyHook = async (): Promise<boolean> => {
   try {
     message.loading('正在自动注入...', { duration: 0 })
-    await applyHook(false)
+    await cursorStore.applyHookToClient(false)
     message.destroyAll()
     message.success(i18n.value.systemControl.messages.applyHookSuccess)
     
-    // 更新Hook状态
-    deviceInfo.value.hookStatus = await checkHookStatus()
-
+    // 更新视图状态
+    updateLocalViewState()
+    
     // 返回注入结果
     return deviceInfo.value.hookStatus === true
   } catch (error) {
@@ -240,9 +215,8 @@ const handleAccountSwitch = async () => {
     }
     
     // 检查积分是否足够
-    if (userCredits.value < 50) {
-      showInsufficientCreditsModal.value = true
-      pendingCreditAction.value = 'account'
+    if (!userStore.checkCredits(50)) {
+      userStore.showInsufficientCredits('account')
       return
     }
     
@@ -255,7 +229,7 @@ const handleAccountSwitch = async () => {
       return
     }
     
-    // 检查 CC 状态，如果未注入，直接调用注入
+    // 检查 Hook 状态，如果未注入，直接调用注入
     if (!deviceInfo.value.hookStatus) {
       const hookSuccess = await autoApplyHook()
       
@@ -293,9 +267,8 @@ const handleQuickChange = async () => {
     }
     
     // 检查积分是否足够
-    if (userCredits.value < 50) {
-      showInsufficientCreditsModal.value = true
-      pendingCreditAction.value = 'quick'
+    if (!userStore.checkCredits(50)) {
+      userStore.showInsufficientCredits('quick')
       return
     }
     
@@ -308,7 +281,7 @@ const handleQuickChange = async () => {
       return
     }
     
-    // 检查 CC 状态，如果未注入，直接调用注入
+    // 检查 Hook 状态，如果未注入，直接调用注入
     if (!deviceInfo.value.hookStatus) {
       const hookSuccess = await autoApplyHook()
       
@@ -360,40 +333,27 @@ const handleCancelSwitch = () => {
 // 修改账户切换执行函数
 const executeAccountSwitch = async (force_kill: boolean = false) => {
   try {
-    // 获取账号信息并执行实际的切换
-    const accountInfo = await getAccount(
-      undefined,
-      '1'
-    )
-    
-    // 从account_info中获取email和token
-    if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
-      message.error(i18n.value.dashboard.accountChangeFailed)
-      return
-    }
-    
-    await switchAccount(accountInfo.account_info.account, accountInfo.account_info.token, force_kill)
+    await cursorStore.switchCursorAccount(undefined, undefined, force_kill)
     message.success(i18n.value.dashboard.accountChangeSuccess)
-    addHistoryRecord(
-      '账户切换',
-      `切换到账户: ${accountInfo.account_info.account} 扣除50积分`
-    )
-    await Promise.all([
-      fetchUserInfo(),
-      fetchMachineIds(),
-      fetchCursorInfo()
-    ])
+    
+    await fetchUserInfo()
+    updateLocalViewState()
   } catch (error) {
     console.error('账户切换失败:', error)
-    message.error(i18n.value.dashboard.accountChangeFailed)
+    message.error(error instanceof Error ? error.message : i18n.value.dashboard.accountChangeFailed)
   }
 }
 
 // 修改一键切换执行函数
 const executeQuickChange = async (force_kill: boolean = false) => {
   try {
-    await executeAccountSwitch(force_kill)
-    await handleMachineCodeChange(force_kill)
+    await cursorStore.quickChange(undefined, undefined, force_kill)
+    message.success(i18n.value.dashboard.changeSuccess)
+    
+    await fetchUserInfo()
+    
+    // 更新视图状态
+    updateLocalViewState()
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
@@ -401,7 +361,7 @@ const executeQuickChange = async (force_kill: boolean = false) => {
       pendingForceKillAction.value = { type: 'quick' }
       return
     }
-    message.error(i18n.value.common.copyFailed)
+    message.error(error instanceof Error ? error.message : i18n.value.dashboard.changeFailed)
   }
 }
 
@@ -415,7 +375,7 @@ const handleForceKill = async () => {
     message.loading('正在关闭 Cursor...', { duration: 0 })
     
     // 关闭Cursor
-    await closeCursor()
+    await cursorStore.closeCursorApp()
     
     // 等待一段时间确保进程完全关闭
     await new Promise(resolve => setTimeout(resolve, 1000))
@@ -482,7 +442,7 @@ const handleForceKill = async () => {
       // 直接启动Cursor，不再询问
       message.loading('正在启动 Cursor...', { duration: 0 })
       try {
-        await launchCursor()
+        await cursorStore.launchCursorApp()
         message.destroyAll()
         message.success('Cursor 已启动')
       } catch (launchError) {
@@ -508,64 +468,14 @@ const copyText = (text: string) => {
   })
 }
 
-// 添加版本检查相关的状态
-const showUpdateModal = ref(false)
-const versionInfo = ref<VersionInfo | null>(null)
-
-// 版本比较函数
-const compareVersions = (v1: string, v2: string) => {
-  const parts1 = v1.split('.').map(Number)
-  const parts2 = v2.split('.').map(Number)
-  
-  for (let i = 0; i < 3; i++) {
-    if (parts1[i] > parts2[i]) return 1
-    if (parts1[i] < parts2[i]) return -1
-  }
-  return 0
-}
-
-// 检查版本更新
-const checkUpdate = async () => {
-  try {
-    // 检查上次更新提示的时间
-    const lastCheckTime = localStorage.getItem('last_version_check_time')
-    const now = Date.now()
-    
-    if (lastCheckTime) {
-      const timeDiff = now - parseInt(lastCheckTime)
-      if (timeDiff < VERSION_CHECK_INTERVAL) {
-        return // 如果间隔小于3小时, 不进行检查
-      }
-    }
-    
-    const remoteVersionInfo = await getVersion()
-    versionInfo.value = remoteVersionInfo
-    
-    if (compareVersions(LOCAL_VERSION, remoteVersionInfo.version) < 0) {
-      showUpdateModal.value = true
-      // 只有在非强制更新时才更新检查时间
-      if (!remoteVersionInfo.forceUpdate) {
-        localStorage.setItem('last_version_check_time', now.toString())
-      }
-    }
-  } catch (error) {
-    console.error('检查更新失败:', error)
-  }
-}
-
 // 处理下载更新
 const handleDownload = async () => {
-  if (versionInfo.value?.downloadUrl) {
-    const url = 'https://downloader-cursor.deno.dev/'
-    await open(url)
-  }
+  await appStore.handleDownload()
 }
 
 // 处理稍后更新
 const handleLater = () => {
-  showUpdateModal.value = false
-  // 记录关闭时间
-  localStorage.setItem('last_version_check_time', Date.now().toString())
+  appStore.handleLater()
 }
 
 // 添加新的 ref
@@ -574,17 +484,13 @@ const showAdminPrivilegeModal = ref(false)
 // 检查管理员权限
 const checkPrivileges = async () => {
   try {
-    const isAdmin = await checkAdminPrivileges();
-    if (!isAdmin) {
-      // 如果不是管理员，再检查是否是 Windows 平台
-      const isWindows = await checkIsWindows();
-      if (isWindows) {
-        showAdminPrivilegeModal.value = true;
-      }
+    await userStore.checkIsAdmin()
+    if (userStore.isAdmin === false) {
+      showAdminPrivilegeModal.value = true
     }
   } catch (error) {
-    console.error('检查管理员权限失败:', error);
-    message.error('检查管理员权限失败');
+    console.error('检查管理员权限失败:', error)
+    message.error('检查管理员权限失败')
   }
 }
 
@@ -594,44 +500,66 @@ const handleExit = async () => {
   await appWindow.close()
 }
 
-
 // 在组件挂载时获取所有信息
 onMounted(async () => {
   try {
+    loading.value = true
+    
     // 检查是否需要强制刷新数据
     const needRefresh = localStorage.getItem('need_refresh_dashboard')
-    if (!needRefresh && (deviceInfo.value.userInfo || deviceInfo.value.cursorInfo.userInfo)) {
-      return
-    }
-    // 清除刷新标记
-    localStorage.removeItem('need_refresh_dashboard')
-
-    loading.value = true
-    // 按顺序执行
-    await fetchUserInfo()
-    await fetchMachineIds()
-    await fetchCursorInfo()
-    
-    await checkPrivileges()
-    await checkUpdate()
-    
-    // 检查是否需要显示免责声明
-    const disclaimerAccepted = localStorage.getItem('disclaimer_accepted')
-    if (disclaimerAccepted !== 'true') {
-      await fetchDisclaimer()
-      showDisclaimerModal.value = true
-    } 
-    // 否则检查是否需要显示引导
-    else if (!localStorage.getItem('dashboard_tour_shown')) {
-      // 检查apiKey是否存在
-      const apiKey = localStorage.getItem('apiKey')
+    if (needRefresh === 'true' || !userStore.userInfo || !cursorStore.cursorInfo.userInfo) {
+      // 清除刷新标记
+      localStorage.removeItem('need_refresh_dashboard')
       
-      // 只有当apiKey存在时才显示引导
-      if (apiKey) {
-        setTimeout(() => {
-          startTour()
-        }, 500)
+      // 初始化应用设置
+      appStore.initAppSettings()
+      
+      // 获取用户信息
+      await fetchUserInfo()
+      
+      // 获取Cursor信息
+      await fetchMachineIds()
+      await fetchCursorInfo()
+      
+      // 更新视图状态
+      updateLocalViewState()
+      
+      // 检查管理员权限
+      await checkPrivileges()
+      
+      // 检查版本更新
+      await appStore.checkVersion()
+      
+      // 检查免责声明
+      await appStore.fetchDisclaimer()
+
+      try {
+        // 只在免责声明已接受的情况下显示引导
+        if (!appStore.showDisclaimerModal) {
+          // 使用appStore的方法获取引导状态
+          await appStore.fetchTourStatus()
+          
+          // 使用store中的计算属性
+          const isLoggedIn = userStore.userInfo !== null
+          
+          // 只有当用户已登录且引导状态不为true时才显示引导
+          if (isLoggedIn && appStore.shouldShowTour) {
+            console.log('开始显示引导', { 
+              tourAccepted: appStore.tourAccepted, 
+              isLoggedIn,
+              shouldShowTour: appStore.shouldShowTour
+            })
+            setTimeout(() => {
+              startTour()
+            }, 500)
+          }
+        }
+      } catch (error) {
+        console.error('获取引导状态失败:', error)
       }
+    } else {
+      // 更新视图状态
+      updateLocalViewState()
     }
   } catch (error) {
     console.error('获取信息失败:', error)
@@ -644,9 +572,9 @@ onMounted(async () => {
   window.addEventListener('refresh_dashboard_data', async () => {
     try {
       loading.value = true
-      await fetchUserInfo()
-      await fetchMachineIds()
-      await fetchCursorInfo()
+      await userStore.checkLoginStatus()
+      await cursorStore.refreshAllCursorData()
+      updateLocalViewState()
     } catch (error) {
       console.error('刷新数据失败:', error)
       message.error('刷新数据失败')
@@ -655,6 +583,97 @@ onMounted(async () => {
     }
   })
 })
+
+// 添加历史下载链接处理
+const handleHistoryDownload = async () => {
+  try {
+    const url = 'https://downloader-cursor.deno.dev/'
+    await open(url)
+  } catch (error) {
+    console.error('打开链接失败:', error)
+    message.error('打开链接失败')
+  }
+}
+
+// 添加引导相关状态
+const shouldShowTour = ref(false)
+
+// 添加积分不足模态框状态
+const activationCode = ref('')
+const activationError = ref('')
+
+// 添加加载状态
+const machineCodeLoading = ref(false)
+const accountSwitchLoading = ref(false)
+const quickChangeLoading = ref(false)
+
+// 修改免责声明确认处理函数
+const handleConfirmDisclaimer = async () => {
+  // 确认免责声明，会自动检查引导状态
+  const success = await appStore.confirmDisclaimer()
+  
+  if (success) {
+    // 检查是否需要显示引导
+    const isLoggedIn = userStore.userInfo !== null
+    
+    // 只有当用户已登录且引导状态不为true时才显示引导
+    if (isLoggedIn && appStore.shouldShowTour) {
+      setTimeout(() => {
+        startTour()
+      }, 500)
+    }
+  }
+}
+
+// 开始引导
+const startTour = () => {
+  shouldShowTour.value = true
+}
+
+// 处理引导完成
+const handleTourComplete = () => {
+  shouldShowTour.value = false
+}
+
+// 激活码处理
+const handleActivate = async () => {
+  if (!activationCode.value) {
+    activationError.value = '请输入激活码'
+    return
+  }
+  
+  try {
+    await userStore.activateCode(activationCode.value)
+    message.success('激活成功')
+    updateLocalViewState()
+  } catch (error) {
+    // 错误处理在 store 中已完成
+  }
+}
+
+// 同步 store 的状态到本地视图状态
+watch(
+  [() => cursorStore.machineCode, () => cursorStore.currentAccount, () => cursorStore.hookStatus, 
+   () => cursorStore.cursorInfo, () => userStore.userInfo],
+  () => {
+    updateLocalViewState()
+  }
+)
+
+// 监听模态框状态变化，如果有模态框显示，则隐藏引导
+watch([
+  () => appStore.showUpdateModal,
+  () => showAdminPrivilegeModal,
+  () => showCursorRunningModal,
+  () => appStore.showDisclaimerModal,
+  () => userStore.showInsufficientCreditsModal
+], 
+  ([updateModal, adminModal, cursorModal, disclaimerModal, creditsModal]) => {
+    if (updateModal || adminModal || cursorModal || disclaimerModal || creditsModal) {
+      shouldShowTour.value = false
+    }
+  }
+)
 
 // 修改机器码处理函数
 const handleMachineCodeClick = async () => {
@@ -669,7 +688,7 @@ const handleMachineCodeClick = async () => {
       return
     }
     
-    // 检查 CC 状态，如果未注入，直接调用注入
+    // 检查 Hook 状态，如果未注入，直接调用注入
     if (!deviceInfo.value.hookStatus) {
       const hookSuccess = await autoApplyHook()
       
@@ -687,129 +706,6 @@ const handleMachineCodeClick = async () => {
     machineCodeLoading.value = false
   }
 }
-
-// 添加系统检测和链接处理
-const handleHistoryDownload = async () => {
-  try {
-    const url = 'https://downloader-cursor.deno.dev/'
-    await open(url)
-  } catch (error) {
-    console.error('打开链接失败:', error)
-    message.error('打开链接失败')
-  }
-}
-
-// 添加免责声明相关状态
-const showDisclaimerModal = ref(false)
-const disclaimerContent = ref('')
-const disclaimerCountdown = ref(3)
-const canConfirmDisclaimer = ref(false)
-const disclaimerLoading = ref(true)
-
-// 添加引导相关状态
-const shouldShowTour = ref(false)
-
-// 添加积分不足模态框状态
-const showInsufficientCreditsModal = ref(false)
-const activationCode = ref('')
-const activationLoading = ref(false)
-const activationError = ref('')
-const pendingCreditAction = ref<'account' | 'quick' | null>(null)
-
-// 计算用户积分
-const userCredits = computed(() => {
-  if (!deviceInfo.value?.userInfo) {
-    return 0
-  }
-  return (deviceInfo.value.userInfo.totalCount - deviceInfo.value.userInfo.usedCount) * 50
-})
-
-// 添加加载状态
-const machineCodeLoading = ref(false)
-const accountSwitchLoading = ref(false)
-const quickChangeLoading = ref(false)
-
-// 获取免责声明
-const fetchDisclaimer = async () => {
-  try {
-    disclaimerLoading.value = true
-    const { content } = await getDisclaimer()
-    disclaimerContent.value = content
-    
-    // 启动倒计时
-    const timer = setInterval(() => {
-      disclaimerCountdown.value--
-      if (disclaimerCountdown.value <= 0) {
-        canConfirmDisclaimer.value = true
-        clearInterval(timer)
-      }
-    }, 0)
-  } catch (error) {
-    console.error('获取免责声明失败:', error)
-  } finally {
-    disclaimerLoading.value = false
-  }
-}
-
-// 修改免责声明确认处理函数
-const handleConfirmDisclaimer = () => {
-  localStorage.setItem('disclaimer_accepted', 'true')
-  showDisclaimerModal.value = false
-  
-  // 检查apiKey是否存在
-  const apiKey = localStorage.getItem('api_key') || localStorage.getItem('cursor_api_key')
-  
-  // 只有当apiKey存在时才显示引导
-  if (apiKey && !localStorage.getItem('dashboard_tour_shown')) {
-    setTimeout(() => {
-      startTour()
-    }, 500)
-  }
-}
-
-// 开始引导
-const startTour = () => {
-  shouldShowTour.value = true
-}
-
-// 处理引导完成
-const handleTourComplete = () => {
-  shouldShowTour.value = false
-  localStorage.setItem('dashboard_tour_shown', 'true')
-}
-
-// 激活码处理
-const handleActivate = async () => {
-  if (!activationCode.value) {
-    activationError.value = '请输入激活码'
-    return
-  }
-  
-  activationLoading.value = true
-  try {
-    await activate(activationCode.value)
-    // 成功消息也应该来自后端
-    message.success('激活成功')
-    showInsufficientCreditsModal.value = false
-    
-    // 刷新用户信息
-    await fetchUserInfo()
-  } catch (error) {
-    // 直接使用error.message，它包含后端的msg
-    activationError.value = error instanceof Error ? error.message : '激活失败'
-  } finally {
-    activationLoading.value = false
-  }
-}
-
-// 监听模态框状态变化，如果有模态框显示，则隐藏引导
-watch([showUpdateModal, showAdminPrivilegeModal, showCursorRunningModal, showDisclaimerModal], 
-  ([updateModal, adminModal, cursorModal, disclaimerModal]) => {
-    if (updateModal || adminModal || cursorModal || disclaimerModal) {
-      shouldShowTour.value = false
-    }
-  }
-)
 
 // 添加表单数据
 const formValue = ref({
@@ -854,7 +750,7 @@ const formValue = ref({
               </n-space>
               <n-space :size="8" style="line-height: 1.2;" class="user-info-cc-status">
                 <span style="width: 70px">{{ i18n.dashboard.ccStatus }}</span>
-                <n-tag :type="deviceInfo.hookStatus === true ? 'success' : 'error'" size="small">
+                <n-tag :type="deviceInfo.hookStatus === true ? 'success' : 'error'" size="tiny">
                   {{ deviceInfo.hookStatus === true ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
                 </n-tag>
               </n-space>
@@ -886,10 +782,11 @@ const formValue = ref({
                 <n-space :size="0">
                   <n-number-animation 
                     :from="0" 
-                    :to="(deviceInfo.userInfo?.usedCount || 0) * 50"0
+                    :to="(deviceInfo.userInfo?.usedCount || 0) * 50"
                     :duration="1000"
                   />
-                  <span>/{{ (deviceInfo.userInfo?.totalCount || 0) * 50 }}</span>
+                  <span v-if="deviceInfo.userInfo?.totalCount && deviceInfo.userInfo.totalCount >= 9999">/{{ i18n.dashboard.unlimited }}</span>
+                  <span v-else>/{{ (deviceInfo.userInfo?.totalCount || 0) * 50 }}</span>
                 </n-space>
               </n-space>
               <n-progress
@@ -980,21 +877,21 @@ const formValue = ref({
 
     <!-- 添加更新模态框 -->
     <n-modal
-      v-model:show="showUpdateModal"
-      :mask-closable="!versionInfo?.forceUpdate"
-      :closable="!versionInfo?.forceUpdate"
+      v-model:show="appStore.showUpdateModal"
+      :mask-closable="!appStore.latestVersion?.forceUpdate"
+      :closable="!appStore.latestVersion?.forceUpdate"
       preset="card"
       style="width: 500px"
       :title="i18n.dashboard.newVersionAvailable"
     >
       <n-space vertical>
         <div>{{ i18n.dashboard.currentVersion }}: {{ LOCAL_VERSION }}</div>
-        <div>{{ i18n.dashboard.newVersion }}: {{ versionInfo?.version }}</div>
+        <div>{{ i18n.dashboard.newVersion }}: {{ appStore.latestVersion?.version }}</div>
         <n-divider />
-        <div style="white-space: pre-line">{{ versionInfo?.changeLog }}</div>
+        <div style="white-space: pre-line">{{ appStore.latestVersion?.changeLog }}</div>
         <n-space justify="end">
           <n-button
-            v-if="!versionInfo?.forceUpdate"
+            v-if="!appStore.latestVersion?.forceUpdate"
             @click="handleLater"
           >
             {{ i18n.dashboard.later }}
@@ -1035,24 +932,13 @@ const formValue = ref({
     </n-modal>
 
     <!-- 添加 Cursor 运行提醒模态框 -->
-    <n-modal
+    <cursor-running-modal
       v-model:show="showCursorRunningModal"
-      preset="dialog"
-      title="Cursor 正在运行"
-      :closable="true"
-      :mask-closable="false"
-    >
-      <template #default>
-        检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!
-      </template>
-      <template #action>
-        <n-space justify="end">
-          <n-button type="warning" @click="handleForceKill">
-            我已保存, 强制关闭
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
+      :title="i18n.common.cursorRunning"
+      :content="i18n.common.cursorRunningMessage"
+      :confirm-button-text="i18n.common.forceClose"
+      @confirm="handleForceKill"
+    />
 
     <!-- 添加管理员权限提示模态框 -->
     <n-modal
@@ -1096,7 +982,7 @@ const formValue = ref({
 
     <!-- 添加免责声明模态框 -->
     <n-modal
-      v-model:show="showDisclaimerModal"
+      v-model:show="appStore.showDisclaimerModal"
       preset="card"
       style="width: 600px; max-width: 90vw;"
       title="免责声明"
@@ -1105,13 +991,13 @@ const formValue = ref({
     >
       <n-scrollbar style="max-height: 60vh">
         <div style="white-space: pre-line; padding: 16px 0;">
-          {{ disclaimerContent }}
+          {{ appStore.disclaimerContent }}
         </div>
       </n-scrollbar>
       <template #footer>
         <n-space justify="end">
-          <n-button type="primary" :disabled="!canConfirmDisclaimer" @click="handleConfirmDisclaimer">
-            {{ canConfirmDisclaimer ? '我已阅读并同意' : `请等待 ${disclaimerCountdown} 秒` }}
+          <n-button type="primary" :disabled="!appStore.canConfirmDisclaimer" @click="handleConfirmDisclaimer">
+            {{ appStore.canConfirmDisclaimer ? '我已阅读并同意' : `请等待 ${appStore.disclaimerCountdown} 秒` }}
           </n-button>
         </n-space>
       </template>
@@ -1119,7 +1005,7 @@ const formValue = ref({
 
     <!-- 修改积分不足模态框 -->
     <n-modal
-      v-model:show="showInsufficientCreditsModal"
+      v-model:show="userStore.showInsufficientCreditsModal"
       preset="dialog"
       title="额度不足"
       :closable="true"
@@ -1135,30 +1021,30 @@ const formValue = ref({
         <div style="margin-bottom: 16px">
           <p>您当前对话额度不足，账户切换需要消耗50额度。</p>
           <p style="margin-top: 12px; color: #ff4d4f;">
-            当前额度: {{ userCredits }}，还需要: {{ Math.max(0, 50 - userCredits) }} 额度
+            当前额度: {{ userStore.userCredits }}，还需要: {{ Math.max(0, 50 - userStore.userCredits) }} 额度
           </p>
         </div>
         
         <n-form-item label="激活码">
           <n-input
-            v-model:value="activationCode"
+            v-model:value="userStore.activationCode"
             type="text"
             placeholder="请输入卡密"
-            :disabled="activationLoading"
+            :disabled="userStore.activationLoading"
           />
         </n-form-item>
         
-        <p v-if="activationError" style="color: #ff4d4f; margin-top: 8px;">
-          {{ activationError }}
+        <p v-if="userStore.activationError" style="color: #ff4d4f; margin-top: 8px;">
+          {{ userStore.activationError }}
         </p>
       </n-form>
 
       <template #action>
         <n-space justify="end">
-          <n-button @click="showInsufficientCreditsModal = false" :disabled="activationLoading">
+          <n-button @click="userStore.closeInsufficientCredits()" :disabled="userStore.activationLoading">
             取消
           </n-button>
-          <n-button type="primary" @click="handleActivate" :loading="activationLoading">
+          <n-button type="primary" @click="handleActivate" :loading="userStore.activationLoading">
             激活卡密
           </n-button>
         </n-space>

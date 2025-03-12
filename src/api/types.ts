@@ -172,11 +172,6 @@ export interface MachineInfo {
   machineCode: string
 }
 
-// 免责声明响应
-export interface DisclaimerResponse {
-  content: string
-}
-
 // Bug报告请求
 export interface BugReportRequest {
   severity: string

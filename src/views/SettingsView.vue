@@ -8,12 +8,12 @@ import {
   NInput, 
   NButton,
   NInputGroup,
-  NModal,
   useMessage
 } from 'naive-ui'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
+import CursorRunningModal from '../components/CursorRunningModal.vue'
 import { 
   changePassword, 
   activate, 
@@ -337,24 +337,12 @@ onMounted(async () => {
       </n-space>
     </n-card>
 
-    <!-- 合并后的 Cursor 运行提醒模态框 -->
-    <n-modal
+    <cursor-running-modal
       v-model:show="showControlRunningModal"
-      preset="dialog"
-      title="提示"
-      :closable="false"
-      :mask-closable="false"
-    >
-      <template #default>
-        {{ i18n.systemControl.messages.cursorRunning }}
-      </template>
-      <template #action>
-        <n-space justify="end">
-          <n-button type="warning" @click="handleControlForceKill">
-            {{ i18n.systemControl.messages.forceKillConfirm }}
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
+      :title="i18n.common.cursorRunning"
+      :content="i18n.common.cursorRunningMessage"
+      :confirm-button-text="i18n.common.forceClose"
+      @confirm="handleControlForceKill"
+    />
   </n-space>
 </template>

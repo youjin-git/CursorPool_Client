@@ -126,11 +126,9 @@ export async function syncLocalAccountsToBackend() {
     }
     
     console.log(`成功同步 ${accounts.length} 个本地历史账户到后端`)
+    localStorage.removeItem(STORAGE_KEY)
   } catch (error) {
     console.error('同步本地历史账户到后端失败:', error)
-    // 即使同步失败，也清除本地存储，避免重复同步
-  } finally {
-    // 无论成功失败，都清除本地存储
     localStorage.removeItem(STORAGE_KEY)
   }
 } 

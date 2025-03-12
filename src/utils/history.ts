@@ -13,6 +13,7 @@ export async function addHistoryRecord(type: string, detail: string) {
   // 创建新记录
   const newRecord: OperationRecord = {
     id: Date.now(),
+    
     type,
     detail,
     timestamp: new Date().toLocaleString(),
@@ -32,6 +33,7 @@ export async function addHistoryRecord(type: string, detail: string) {
     // 触发更新事件
     window.dispatchEvent(new Event('history_updated'))
   } catch (error) {
+
     console.error('保存历史记录到后端失败，回退到本地存储:', error)
     
     // 如果后端保存失败，回退到本地存储

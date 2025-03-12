@@ -7,7 +7,9 @@ import {
   logout as apiLogout,
   activate as apiActivate,
   changePassword as apiChangePassword,
-  resetPassword as apiResetPassword
+  resetPassword as apiResetPassword,
+  checkAdminPrivileges,
+  checkIsWindows
 } from '@/api'
 import type { UserInfo } from '@/api/types'
 import { useRouter } from 'vue-router'
@@ -18,15 +20,59 @@ export const useUserStore = defineStore('user', () => {
   const isCheckingLogin = ref(true)
   const userInfo = ref<UserInfo | null>(null)
   const loginError = ref('')
-
-  // 路由
-  const router = useRouter()
+  
+  // 添加管理员权限状态
+  const isAdmin = ref<boolean | null>(null)
+  const isCheckingAdmin = ref(false)
+  
+  // 积分相关状态
+  const showInsufficientCreditsModal = ref(false)
+  const activationCode = ref('')
+  const activationLoading = ref(false)
+  const activationError = ref('')
+  const pendingCreditAction = ref<'account' | 'quick' | null>(null)
 
   // Getters
-  const isAdmin = computed(() => userInfo.value?.level === 5)
   const username = computed(() => userInfo.value?.username || '')
   const expiryDate = computed(() => userInfo.value?.expireTime || '')
   const memberLevel = computed(() => userInfo.value?.level || 1)
+  
+  // 计算用户积分
+  const userCredits = computed(() => {
+    if (!userInfo.value) {
+      return 0
+    }
+    return (userInfo.value.totalCount - userInfo.value.usedCount) * 50
+  })
+  
+  /**
+   * 检查是否以管理员权限运行
+   */
+  async function checkIsAdmin() {
+    try {
+      isCheckingAdmin.value = true
+      const adminStatus = await checkAdminPrivileges()
+      isAdmin.value = adminStatus
+      
+      // 如果不是管理员，检查是否是 Windows 平台
+      if (!adminStatus) {
+        const isWinPlatform = await checkIsWindows()
+        // 只有在 Windows 平台才需要管理员权限
+        // 如果不是 Windows 平台，则视为有权限
+        if (!isWinPlatform) {
+          isAdmin.value = true
+        }
+      }
+      
+      return isAdmin.value
+    } catch (error) {
+      console.error('检查管理员权限失败:', error)
+      isAdmin.value = null
+      throw error
+    } finally {
+      isCheckingAdmin.value = false
+    }
+  }
 
   // Actions
   /**
@@ -110,13 +156,25 @@ export const useUserStore = defineStore('user', () => {
    */
   async function activateCode(code: string) {
     try {
+      activationLoading.value = true
+      activationError.value = ''
+      
       await apiActivate(code)
+      
       // 激活成功后刷新用户信息
       await checkLoginStatus()
+      
+      // 重置激活码状态
+      activationCode.value = ''
+      showInsufficientCreditsModal.value = false
+      
       return true
     } catch (error) {
+      activationError.value = error instanceof Error ? error.message : '激活失败'
       console.error('Activation failed:', error)
       throw error
+    } finally {
+      activationLoading.value = false
     }
   }
 
@@ -147,6 +205,31 @@ export const useUserStore = defineStore('user', () => {
       throw error
     }
   }
+  
+  /**
+   * 检查积分是否足够
+   */
+  function checkCredits(requiredCredits: number = 50) {
+    return userCredits.value >= requiredCredits
+  }
+  
+  /**
+   * 显示积分不足模态框
+   */
+  function showInsufficientCredits(action: 'account' | 'quick') {
+    pendingCreditAction.value = action
+    showInsufficientCreditsModal.value = true
+  }
+  
+  /**
+   * 关闭积分不足模态框
+   */
+  function closeInsufficientCredits() {
+    showInsufficientCreditsModal.value = false
+    pendingCreditAction.value = null
+    activationCode.value = ''
+    activationError.value = ''
+  }
 
   return {
     // 状态
@@ -154,12 +237,19 @@ export const useUserStore = defineStore('user', () => {
     isCheckingLogin,
     userInfo,
     loginError,
+    isAdmin,
+    isCheckingAdmin,
+    showInsufficientCreditsModal,
+    activationCode,
+    activationLoading,
+    activationError,
+    pendingCreditAction,
     
     // Getters
-    isAdmin,
     username,
     expiryDate,
     memberLevel,
+    userCredits,
     
     // Actions
     checkLoginStatus,
@@ -168,6 +258,10 @@ export const useUserStore = defineStore('user', () => {
     logout,
     activateCode,
     changePassword,
-    resetPassword
+    resetPassword,
+    checkIsAdmin,
+    checkCredits,
+    showInsufficientCredits,
+    closeInsufficientCredits
   }
 }) 

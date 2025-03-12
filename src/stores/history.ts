@@ -1,17 +1,25 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { useCursorStore } from './cursor'
-import type { HistoryRecord, HistoryAccount } from './types'
+import type { HistoryAccount } from './types'
 import type { HistoryRecords } from '../types/history'
 import { getHistoryList, syncLocalHistoryToBackend } from '../utils/history'
+import { getHistoryAccounts, removeHistoryAccount, saveAccountToHistory, syncLocalAccountsToBackend } from '../utils/historyAccounts'
+import { getUsage, getMachineIds } from '@/api'
 
 export const useHistoryStore = defineStore('history', () => {
   // 状态
   const records = ref<HistoryRecords>([])
   const isLoading = ref(false)
   const error = ref('')
-  const operationHistory = ref<HistoryRecord[]>([])
-  const accountHistory = ref<HistoryAccount[]>([])
+  
+  // 历史账户界面相关状态
+  const accounts = ref<HistoryAccount[]>([])
+  const currentAccountEmail = ref('')
+  const loadingAccounts = ref(false)
+  const switchingAccount = ref<Record<string, boolean>>({})
+  const deletingAccount = ref<Record<string, boolean>>({})
+  const clearingHighUsage = ref(false)
+  const initialized = ref(false)
 
   // Getters
   const sortedRecords = computed(() => {
@@ -22,161 +30,63 @@ export const useHistoryStore = defineStore('history', () => {
   const filterByType = (type: string) => {
     return sortedRecords.value.filter(record => record.type === type)
   }
-
-  // 过滤账户历史记录
-  const filteredAccounts = computed(() => {
-    const cursorStore = useCursorStore()
-    const currentEmail = cursorStore.currentAccount
-    
-    return accountHistory.value.filter(account => account.email !== currentEmail)
+  
+  // 历史账户界面相关计算属性
+  // 过滤掉当前账户的列表，不在表格中显示当前账户
+  const filteredHistoryAccounts = computed(() => {
+    return accounts.value.filter(acc => acc.email !== currentAccountEmail.value)
+  })
+  
+  // 计算高使用量账户
+  const highUsageAccounts = computed(() => {
+    return accounts.value.filter(account => {
+      // 计算GPT-4使用率，如果超过90%则认为是高使用量账户
+      const gpt4MaxUsage = account.gpt4MaxUsage || 500; // 如果没有最大使用量，默认为500
+      const gpt4Usage = account.gpt4Count / gpt4MaxUsage * 100;
+      return gpt4Usage >= 90;
+    })
   })
 
-  // Actions
   /**
-   * 添加历史记录
+   * 初始化历史记录和历史账户
+   * 应用启动时调用一次
    */
-  function addHistoryRecord(type: string, detail: string, operator = 'System') {
-    const newRecord: HistoryRecord = {
-      id: Date.now().toString(),
-      type,
-      detail,
-      time: Date.now(),
-      operator
-    }
-    
-    operationHistory.value.unshift(newRecord)
-    saveHistoryToStorage()
-  }
-
-  /**
-   * 清除历史记录
-   */
-  function clearHistory() {
-    operationHistory.value = []
-    saveHistoryToStorage()
-  }
-
-  /**
-   * 保存账户到历史
-   */
-  function saveAccountToHistory(account: HistoryAccount) {
-    // 检查是否已存在相同邮箱的账户
-    const existingIndex = accountHistory.value.findIndex(a => a.email === account.email)
-    
-    if (existingIndex !== -1) {
-      // 更新现有账户
-      accountHistory.value[existingIndex] = {
-        ...account,
-        lastUsed: Date.now()
-      }
-    } else {
-      // 添加新账户
-      accountHistory.value.push({
-        ...account,
-        lastUsed: Date.now()
-      })
-    }
-    
-    // 限制历史账户数量为20个
-    if (accountHistory.value.length > 20) {
-      accountHistory.value = accountHistory.value
-        .sort((a, b) => b.lastUsed - a.lastUsed)
-        .slice(0, 20)
-    }
-    
-    saveAccountsToStorage()
-  }
-
-  /**
-   * 删除历史账户
-   */
-  function deleteAccount(email: string) {
-    accountHistory.value = accountHistory.value.filter(a => a.email !== email)
-    saveAccountsToStorage()
-  }
-
-  /**
-   * 切换到历史账户
-   */
-  async function switchToHistoryAccount(account: HistoryAccount, forceKill: boolean = false) {
-    const cursorStore = useCursorStore()
+  async function init() {
+    if (initialized.value) return;
     
     try {
-      isLoading.value = true
+      isLoading.value = true;
       
-      // 更新账户的最后使用时间
-      saveAccountToHistory({
-        ...account,
-        lastUsed: Date.now()
-      })
+      // 1. 同步本地历史记录到后端
+      await syncLocalHistoryToBackend();
       
-      // 调用 CursorStore 的切换账户方法
-      await cursorStore.switchCursorAccount(account.email, account.token, forceKill)
+      // 2. 同步本地历史账户到后端
+      await syncLocalAccountsToBackend();
       
-      // 添加历史记录
-      addHistoryRecord('账户切换', `切换到账户: ${account.email}`)
+      // 3. 加载历史记录
+      await loadHistoryRecords(false); // 传入 false 避免重复同步
       
-      return true
+      // 4. 设置历史记录更新监听器
+      setupHistoryListener();
+      
+      initialized.value = true;
     } catch (error) {
-      console.error('切换到历史账户失败:', error)
-      throw error
+      console.error('初始化历史记录失败:', error);
     } finally {
-      isLoading.value = false
+      isLoading.value = false;
     }
-  }
-
-  /**
-   * 保存历史记录到本地存储
-   */
-  function saveHistoryToStorage() {
-    localStorage.setItem('operation_history', JSON.stringify(operationHistory.value))
-  }
-
-  /**
-   * 保存账户历史到本地存储
-   */
-  function saveAccountsToStorage() {
-    try {
-      localStorage.setItem('history_accounts', JSON.stringify(accountHistory.value))
-    } catch (error) {
-      console.error('保存账户历史失败:', error)
-    }
-  }
-
-  /**
-   * 从本地存储加载历史记录
-   */
-  function loadHistoryFromStorage() {
-    try {
-      const savedHistory = localStorage.getItem('operation_history')
-      if (savedHistory) {
-        operationHistory.value = JSON.parse(savedHistory)
-      }
-      
-      const savedAccounts = localStorage.getItem('history_accounts')
-      if (savedAccounts) {
-        accountHistory.value = JSON.parse(savedAccounts)
-      }
-    } catch (error) {
-      console.error('加载历史记录失败:', error)
-    }
-  }
-
-  /**
-   * 初始化历史记录
-   */
-  function init() {
-    loadHistoryFromStorage()
   }
 
   // 加载历史记录
-  async function loadHistoryRecords() {
+  async function loadHistoryRecords(shouldSync: boolean = true) {
     isLoading.value = true
     error.value = ''
     
     try {
-      // 先尝试同步本地历史记录到后端
-      await syncLocalHistoryToBackend()
+      // 只有在需要时才同步本地历史记录到后端
+      if (shouldSync) {
+        await syncLocalHistoryToBackend()
+      }
       
       // 然后从后端获取所有历史记录
       records.value = await getHistoryList()
@@ -190,14 +100,183 @@ export const useHistoryStore = defineStore('history', () => {
   
   // 监听历史记录更新事件
   function setupHistoryListener() {
-    window.addEventListener('history_updated', async () => {
+    const handler = async () => {
       await loadHistoryRecords()
-    })
+    };
+    
+    window.addEventListener('history_updated', handler);
     
     return () => {
-      window.removeEventListener('history_updated', async () => {
-        await loadHistoryRecords()
+      window.removeEventListener('history_updated', handler);
+    }
+  }
+  
+  // 历史账户界面相关方法
+  /**
+   * 获取历史账户列表
+   */
+  async function fetchHistoryAccounts(shouldSync: boolean = true) {
+    loadingAccounts.value = true
+    try {
+      // 只有在需要时才同步本地账户到后端
+      if (shouldSync) {
+        await syncLocalAccountsToBackend()
+      }
+      
+      accounts.value = await getHistoryAccounts()
+      
+      // 获取当前账户信息，用于过滤
+      const currentAccount = await getMachineIds()
+      if (currentAccount.currentAccount) {
+        currentAccountEmail.value = currentAccount.currentAccount
+      }
+      
+      return accounts.value
+    } catch (error) {
+      console.error('获取历史账户失败:', error)
+      throw error
+    } finally {
+      loadingAccounts.value = false
+    }
+  }
+  
+  /**
+   * 刷新账户使用情况
+   */
+  async function refreshAccountsUsage() {
+    loadingAccounts.value = true
+    try {
+      const historyAccounts = await getHistoryAccounts()
+      
+      // 并发更新使用情况
+      const updatePromises = historyAccounts.map(async (account) => {
+        try {
+          const usage = await getUsage(account.token)
+          
+          // 更新使用量和最大使用量
+          account.gpt4Count = usage['gpt-4']?.numRequests || 0
+          account.gpt35Count = usage['gpt-3.5-turbo']?.numRequests || 0
+          account.gpt4MaxUsage = usage['gpt-4']?.maxRequestUsage || null
+          account.gpt35MaxUsage = usage['gpt-3.5-turbo']?.maxRequestUsage || null
+          account.lastUsed = Date.now()
+          
+          // 保存更新后的账户信息
+          await saveAccountToHistory(account)
+          return true
+        } catch (error) {
+          console.error(`获取账户 ${account.email} 使用情况失败:`, error)
+          return false
+        }
       })
+      
+      // 等待所有请求完成
+      const results = await Promise.all(updatePromises)
+      
+      // 重新获取更新后的账户列表
+      accounts.value = await getHistoryAccounts()
+      
+      return {
+        total: historyAccounts.length,
+        success: results.filter(Boolean).length
+      }
+    } catch (error) {
+      console.error('刷新账户使用情况失败:', error)
+      throw error
+    } finally {
+      loadingAccounts.value = false
+    }
+  }
+  
+  /**
+   * 删除历史账户
+   */
+  async function removeHistoryAccountItem(email: string) {
+    deletingAccount.value[email] = true
+    try {
+      await removeHistoryAccount(email)
+      accounts.value = accounts.value.filter(a => a.email !== email)
+      return true
+    } catch (error) {
+      console.error('删除历史账户失败:', error)
+      throw error
+    } finally {
+      deletingAccount.value[email] = false
+    }
+  }
+  
+  /**
+   * 清理高使用量账户
+   */
+  async function clearHighUsageAccounts() {
+    if (highUsageAccounts.value.length === 0) {
+      return { success: 0 }
+    }
+    
+    clearingHighUsage.value = true
+    try {
+      // 并发删除高使用量账户
+      const deletePromises = highUsageAccounts.value.map(account => 
+        removeHistoryAccount(account.email)
+      )
+      
+      await Promise.all(deletePromises)
+      
+      // 更新账户列表
+      accounts.value = accounts.value.filter(account => {
+        const gpt4MaxUsage = account.gpt4MaxUsage || 500
+        const gpt4Usage = account.gpt4Count / gpt4MaxUsage * 100
+        return gpt4Usage < 90
+      })
+      
+      return { success: highUsageAccounts.value.length }
+    } catch (error) {
+      console.error('清理高使用量账户失败:', error)
+      throw error
+    } finally {
+      clearingHighUsage.value = false
+    }
+  }
+  
+  /**
+   * 保存当前账户到历史记录
+   */
+  async function saveCurrentAccountToHistory() {
+    try {
+      const currentAccount = await getMachineIds()
+      if (currentAccount.currentAccount && currentAccount.cursorToken) {
+        // 记录当前账户的邮箱，用于过滤表格
+        currentAccountEmail.value = currentAccount.currentAccount
+        
+        // 检查当前账户是否已在历史记录中
+        const existingAccount = accounts.value.find(a => a.email === currentAccount.currentAccount)
+        if (!existingAccount) {
+          // 获取当前账户的使用情况
+          try {
+            const usage = await getUsage(currentAccount.cursorToken)
+            const newHistoryAccount: HistoryAccount = {
+              email: currentAccount.currentAccount,
+              token: currentAccount.cursorToken,
+              machineCode: currentAccount.machineId,
+              gpt4Count: usage['gpt-4']?.numRequests || 0,
+              gpt35Count: usage['gpt-3.5-turbo']?.numRequests || 0,
+              gpt4MaxUsage: usage['gpt-4']?.maxRequestUsage || null,
+              gpt35MaxUsage: usage['gpt-3.5-turbo']?.maxRequestUsage || null,
+              lastUsed: Date.now()
+            }
+            // 保存到历史记录
+            await saveAccountToHistory(newHistoryAccount)
+            accounts.value = await getHistoryAccounts()
+            return true
+          } catch (error) {
+            console.error('获取当前账户使用情况失败:', error)
+            return false
+          }
+        }
+      }
+      return false
+    } catch (error) {
+      console.error('保存当前账户失败:', error)
+      return false
     }
   }
 
@@ -209,14 +288,21 @@ export const useHistoryStore = defineStore('history', () => {
     filterByType,
     loadHistoryRecords,
     setupHistoryListener,
-    operationHistory,
-    accountHistory,
-    filteredAccounts,
-    addHistoryRecord,
-    clearHistory,
-    saveAccountToHistory,
-    deleteAccount,
-    switchToHistoryAccount,
-    init
+    init,
+    
+    // 历史账户界面相关
+    accounts,
+    currentAccountEmail,
+    loadingAccounts,
+    switchingAccount,
+    deletingAccount,
+    clearingHighUsage,
+    filteredHistoryAccounts,
+    highUsageAccounts,
+    fetchHistoryAccounts,
+    refreshAccountsUsage,
+    removeHistoryAccountItem,
+    clearHighUsageAccounts,
+    saveCurrentAccountToHistory
   }
 }) 
