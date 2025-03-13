@@ -12,11 +12,13 @@ import {
   launchCursor,
   checkCursorRunning,
   getAccount,
-  saveHistoryRecord
+  saveHistoryRecord,
+  findCursorPath
 } from '@/api'
 import type { UsageInfo, MachineInfo } from '@/api/types'
 import type { HistoryAccount } from '@/types/history'
 import { useHistoryStore } from './history'
+import { open } from '@tauri-apps/plugin-dialog'
 
 export const useCursorStore = defineStore('cursor', () => {
   // 状态
@@ -40,6 +42,12 @@ export const useCursorStore = defineStore('cursor', () => {
   const quickChangeLoading = ref(false)
   const isForceKilling = ref(false)
   const needSaveCurrentAccount = ref(false)
+  
+  // 添加文件选择模态框状态
+  const showSelectFileModal = ref(false)
+  const fileSelectError = ref('')
+  const fileSelectLoading = ref(false)
+  const pendingAction = ref<{ type: string, params?: any } | null>(null)
 
   // Getters
   const gpt4Usage = computed(() => {
@@ -283,16 +291,31 @@ export const useCursorStore = defineStore('cursor', () => {
   }
 
   /**
-   * 检查 Hook 状态
+   * 检查Hook状态
    */
   async function checkHook() {
     try {
-      hookStatus.value = await checkHookStatus()
-      return hookStatus.value
+      // 清除先前的状态
+      isLoading.value = true
+      
+      const status = await checkHookStatus()
+      
+      // 更新状态
+      hookStatus.value = status
+      return status
     } catch (error) {
-      console.error('检查 Hook 状态失败:', error)
+      console.error('检查Hook状态失败:', error)
+      // 如果是找不到main.js文件，不更新状态
+      if (error instanceof Error && error.message.includes('MAIN_JS_NOT_FOUND')) {
+        console.log('检测到main.js文件路径问题')
+        // 保持现有状态
+        return hookStatus.value
+      }
+      // 其他错误情况下重置状态
       hookStatus.value = null
       throw error
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -303,8 +326,16 @@ export const useCursorStore = defineStore('cursor', () => {
     try {
       operationLoading.value = true
       isLoading.value = true
+      
+      // 执行操作
       await applyHook(forceKill)
+      
+      // 明确设置状态为 true
       hookStatus.value = true
+      
+      // 触发检查以确保状态已更新
+      await checkHook()
+      
       return true
     } catch (error) {
       console.error('应用 Hook 失败:', error)
@@ -312,7 +343,6 @@ export const useCursorStore = defineStore('cursor', () => {
     } finally {
       isLoading.value = false
       operationLoading.value = false
-      await checkHook()
     }
   }
 
@@ -323,8 +353,16 @@ export const useCursorStore = defineStore('cursor', () => {
     try {
       operationLoading.value = true
       isLoading.value = true
+      
+      // 执行操作
       await restoreHook(forceKill)
+      
+      // 明确设置状态为 false
       hookStatus.value = false
+      
+      // 触发检查以确保状态已更新
+      await checkHook()
+      
       return true
     } catch (error) {
       console.error('恢复 Hook 失败:', error)
@@ -332,7 +370,6 @@ export const useCursorStore = defineStore('cursor', () => {
     } finally {
       isLoading.value = false
       operationLoading.value = false
-      await checkHook()
     }
   }
 
@@ -505,6 +542,89 @@ export const useCursorStore = defineStore('cursor', () => {
     }
   }
 
+  /**
+   * 处理文件选择
+   */
+  async function handleSelectCursorPath() {
+    // 不在这里调用useMessage，而是通过外部传入或通过事件处理
+    if (fileSelectLoading.value) return
+
+    fileSelectLoading.value = true
+    fileSelectError.value = ''
+    
+    try {
+      // 调用文件选择对话框
+      const selected = await open({
+        multiple: false,
+        filters: [
+          { name: 'Cursor程序', extensions: ['exe'] },
+          { name: 'JavaScript文件', extensions: ['js'] },
+          { name: '所有文件', extensions: ['*'] }
+        ]
+      })
+      
+      // 检查用户是否取消了选择
+      if (!selected) {
+        fileSelectLoading.value = false
+        return
+      }
+      
+      console.log('用户选择的文件路径:', selected)
+      
+      // 调用API处理选择的文件路径
+      const result = await findCursorPath(selected as string)
+      
+      console.log('findCursorPath结果:', result)
+      
+      if (result) {
+        showSelectFileModal.value = false
+        
+        // 如果有待处理的操作，执行它
+        if (pendingAction.value) {
+          // 保存然后清空待处理操作
+          const currentAction = { ...pendingAction.value }
+          pendingAction.value = null
+          
+          try {
+            // 根据待处理操作类型执行相应的方法
+            switch (currentAction.type) {
+              case 'applyHook':
+                await applyHookToClient(currentAction.params?.forceKill || false)
+                break
+              case 'restoreHook':
+                await restoreHookFromClient(currentAction.params?.forceKill || false)
+                break
+              // 可以添加其他操作类型的处理...
+            }
+            
+            // 强制重新获取Hook状态以刷新UI
+            await checkHook()
+          } catch (actionError) {
+            console.error('执行操作失败:', actionError)
+            fileSelectError.value = '执行操作失败: ' + (actionError instanceof Error ? actionError.message : String(actionError))
+          }
+        }
+        
+        // 操作完成后，设置加载状态为false
+        fileSelectLoading.value = false
+      } else {
+        throw new Error('无法验证所选择的文件路径')
+      }
+    } catch (error) {
+      console.error('文件选择处理错误:', error)
+      fileSelectError.value = error instanceof Error ? error.message : String(error)
+      fileSelectLoading.value = false
+    }
+  }
+
+  /**
+   * 设置待执行的操作
+   */
+  function setPendingAction(type: string, params?: any) {
+    pendingAction.value = { type, params }
+    showSelectFileModal.value = true
+  }
+
   return {
     // 状态
     machineCode,
@@ -519,6 +639,12 @@ export const useCursorStore = defineStore('cursor', () => {
     quickChangeLoading,
     isForceKilling,
     needSaveCurrentAccount,
+    
+    // 添加文件选择模态框状态
+    showSelectFileModal,
+    fileSelectError,
+    fileSelectLoading,
+    pendingAction,
     
     // Getters
     gpt4Usage,
@@ -540,6 +666,10 @@ export const useCursorStore = defineStore('cursor', () => {
     ensureHookApplied,
     refreshAllCursorData,
     switchToHistoryAccount,
-    forceCloseAndSwitch
+    forceCloseAndSwitch,
+    
+    // 添加文件选择相关方法
+    handleSelectCursorPath,
+    setPendingAction
   }
 })

@@ -40,6 +40,7 @@ fn main() {
     Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_positioner::init())
         .setup(|app| {
             let db = Database::new(&app.handle()).expect("数据库初始化失败");
@@ -79,6 +80,7 @@ fn main() {
             cursor_reset::commands::check_is_windows,
             cursor_reset::commands::close_cursor,
             cursor_reset::commands::launch_cursor,
+            cursor_reset::commands::find_cursor_path,
         ])
         .run(generate_context!())
         .expect("error while running tauri application");

@@ -195,9 +195,10 @@ export async function checkAdminPrivileges(): Promise<boolean> {
 // Hook 相关 API
 export async function checkHookStatus(): Promise<boolean> {
     try {
-        return await invoke<boolean>('is_hook')
+        return await invoke<boolean>('is_hook', {})
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to check hook status')
+        console.error('检查hook状态错误:', error)
+        throw error
     }
 }
 
@@ -205,10 +206,22 @@ export async function applyHook(forceKill: boolean = false): Promise<void> {
     try {
         await invoke<void>('hook_main_js', { forceKill })
     } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to apply hook'
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        console.error('应用hook错误:', errorMsg)
+        
         if (errorMsg.includes('Cursor进程正在运行')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')
         }
+        
+        throw error
+    }
+}
+
+export async function findCursorPath(selectedPath: string): Promise<boolean> {
+    try {
+        return await invoke<boolean>('find_cursor_path', { selectedPath })
+    } catch (error) {
+        console.error('查找Cursor路径错误:', error)
         throw error
     }
 }
@@ -217,10 +230,13 @@ export async function restoreHook(forceKill: boolean = false): Promise<void> {
     try {
         await invoke<void>('restore_hook', { forceKill })
     } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to restore hook'
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        console.error('恢复hook错误:', errorMsg)
+        
         if (errorMsg.includes('Cursor进程正在运行')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')
         }
+        
         throw error
     }
 }

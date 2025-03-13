@@ -12,7 +12,6 @@ import {
   checkIsWindows
 } from '@/api'
 import type { UserInfo } from '@/api/types'
-import { useRouter } from 'vue-router'
 
 export const useUserStore = defineStore('user', () => {
   // 状态
@@ -231,6 +230,7 @@ export const useUserStore = defineStore('user', () => {
     activationError.value = ''
   }
 
+  // 返回 store 对象
   return {
     // 状态
     isLoggedIn,
@@ -259,9 +259,9 @@ export const useUserStore = defineStore('user', () => {
     activateCode,
     changePassword,
     resetPassword,
-    checkIsAdmin,
     checkCredits,
     showInsufficientCredits,
-    closeInsufficientCredits
+    closeInsufficientCredits,
+    checkIsAdmin,
   }
 }) 

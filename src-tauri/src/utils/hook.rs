@@ -1,10 +1,12 @@
 use std::fs;
+use std::path::PathBuf;
 use lazy_static::lazy_static;
 use regex::Regex;
 use crate::utils::paths::AppPaths;
 use crate::api::client::ApiClient;
 use crate::utils::ErrorReporter;
 use tauri::State;
+use crate::database::Database;
 
 lazy_static! {
     /// machineId 函数匹配模式
@@ -20,6 +22,23 @@ lazy_static! {
 
 pub struct Hook;
 
+#[derive(Debug)]
+pub enum HookError {
+    // 找不到main.js路径
+    MainJsNotFound(String),
+    // 其他错误
+    Other(String),
+}
+
+impl ToString for HookError {
+    fn to_string(&self) -> String {
+        match self {
+            HookError::MainJsNotFound(msg) => format!("MAIN_JS_NOT_FOUND:{}", msg),
+            HookError::Other(msg) => msg.clone(),
+        }
+    }
+}
+
 impl Hook {
     /// 获取 machineId 正则表达式
     pub fn machine_id_regex() -> &'static Regex {
@@ -32,19 +51,54 @@ impl Hook {
     }
 
     /// 读取 main.js 文件内容
-    fn get_main_js_content() -> Result<String, String> {
-        let paths = AppPaths::new()?;
-        fs::read_to_string(&paths.main_js)
-            .map_err(|e| format!("读取 main.js 失败: {}", e))
+    fn get_main_js_content(db: Option<&Database>) -> Result<(String, PathBuf), HookError> {
+        // 使用带数据库参数的AppPaths创建方法
+        let paths = AppPaths::new_with_db(db)
+            .map_err(|e| {
+                if e.contains("找不到Cursor的main.js文件") {
+                    HookError::MainJsNotFound(e)
+                } else {
+                    HookError::Other(format!("创建应用路径失败: {}", e))
+                }
+            })?;
+        
+        let file_path = &paths.main_js;
+        
+        // 检查文件是否存在
+        if !file_path.exists() {
+            return Err(HookError::MainJsNotFound(format!("文件不存在: {}", file_path.display())));
+        }
+        
+        fs::read_to_string(file_path)
+            .map(|content| (content, file_path.clone()))
+            .map_err(|e| HookError::Other(format!("读取 main.js 失败: {}", e)))
     }
 
     /// 更新 main.js 文件内容
-    pub async fn update_main_js_content(client: Option<State<'_, ApiClient>>) -> Result<(), String> {
-        let paths = AppPaths::new()?;
-        let file_path = &paths.main_js;
-        
-        // 读取文件内容
-        let content = Self::get_main_js_content()?;
+    pub async fn update_main_js_content(client: Option<State<'_, ApiClient>>, db: Option<State<'_, Database>>) -> Result<(), String> {
+        // 获取文件内容和路径
+        let (content, file_path) = match Self::get_main_js_content(db.as_ref().map(|d| d.inner())) {
+            Ok(result) => result,
+            Err(e) => {
+                match e {
+                    HookError::MainJsNotFound(msg) => {
+                        return Err(format!("MAIN_JS_NOT_FOUND:{}", msg));
+                    },
+                    HookError::Other(msg) => {
+                        if let Some(ref client) = client {
+                            ErrorReporter::report_error(
+                                client.clone(),
+                                "read_main_js",
+                                &msg,
+                                None,
+                                Some("high".to_string())
+                            ).await;
+                        }
+                        return Err(msg);
+                    }
+                }
+            }
+        };
         
         // 创建备份
         let backup_path = file_path.with_extension("js.backup");
@@ -71,6 +125,7 @@ impl Hook {
         if machine_id_matches == 0 || mac_machine_id_matches == 0 {
             return Err("无法找到匹配的 machineId 或 macMachineId 函数".to_string());
         }
+
         // 替换 machineId
         let modified_content = MACHINE_ID_REGEX.replace_all(&content, |caps: &regex::Captures| {
             format!("async {}() {{ return this.{}.machineId }}", &caps[1], &caps[2])
@@ -82,7 +137,7 @@ impl Hook {
         }).to_string();
         
         // 写入修改后的内容
-        if let Err(e) = fs::write(file_path, &modified_content) {
+        if let Err(e) = fs::write(&file_path, &modified_content) {
             let err_msg = format!("写入修改后的内容失败: {}", e);
             if let Some(ref client) = client {
                 ErrorReporter::report_error(
@@ -96,13 +151,43 @@ impl Hook {
             return Err(err_msg);
         }
         
+        // 保存成功找到的路径到数据库
+        if let Some(ref db) = db {
+            if let Err(e) = AppPaths::save_path_to_db(db, &file_path) {
+                eprintln!("保存main.js路径到数据库失败: {}", e);
+                // 这里不返回错误，因为hook已经成功了
+            }
+        }
+        
         Ok(())
     }
 
     /// 从备份恢复 main.js
-    pub async fn restore_from_backup(client: Option<State<'_, ApiClient>>) -> Result<(), String> {
-        let paths = AppPaths::new()?;
-        let file_path = &paths.main_js;
+    pub async fn restore_from_backup(client: Option<State<'_, ApiClient>>, db: Option<State<'_, Database>>) -> Result<(), String> {
+        // 获取文件路径
+        let (_, file_path) = match Self::get_main_js_content(db.as_ref().map(|d| d.inner())) {
+            Ok(result) => result,
+            Err(e) => {
+                match e {
+                    HookError::MainJsNotFound(msg) => {
+                        return Err(format!("MAIN_JS_NOT_FOUND:{}", msg));
+                    },
+                    HookError::Other(msg) => {
+                        if let Some(ref client) = client {
+                            ErrorReporter::report_error(
+                                client.clone(),
+                                "read_main_js",
+                                &msg,
+                                None,
+                                Some("high".to_string())
+                            ).await;
+                        }
+                        return Err(msg);
+                    }
+                }
+            }
+        };
+        
         let backup_path = file_path.with_extension("js.backup");
 
         if !backup_path.exists() {
@@ -136,7 +221,7 @@ impl Hook {
             }
         };
 
-        if let Err(e) = fs::write(file_path, &backup_content) {
+        if let Err(e) = fs::write(&file_path, &backup_content) {
             let err_msg = format!("恢复文件失败: {}", e);
             if let Some(ref client) = client {
                 ErrorReporter::report_error(

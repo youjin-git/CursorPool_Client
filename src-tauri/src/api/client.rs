@@ -167,7 +167,7 @@ impl<'a> RequestBuilder<'a> {
 
 /// 获取 API 基础 URL
 pub fn get_base_url() -> String {
-    "http://103.108.66.226:555/api".to_string()
+    "http://cursor-orgin.52ai.org/api".to_string()
 }
 
 /// 清除认证令牌

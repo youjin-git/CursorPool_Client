@@ -2,7 +2,7 @@
 import { ref, onMounted, h } from 'vue'
 import { useMessage } from 'naive-ui'
 import type { DataTableColumns } from 'naive-ui'
-import { NDataTable, NSpace, NButton, NCard, NModal, NProgress } from 'naive-ui'
+import { NDataTable, NSpace, NButton, NCard, NProgress } from 'naive-ui'
 import type { HistoryAccount } from '@/types/history'
 import type { PendingForceKillAction } from '@/types/dashboard'
 import { useHistoryStore } from '@/stores/history'

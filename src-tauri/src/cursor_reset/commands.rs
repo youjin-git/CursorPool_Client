@@ -9,6 +9,7 @@ use crate::utils::file_utils::safe_write;
 use crate::utils::ErrorReporter;
 use crate::api::client::ApiClient;
 use tauri::State;
+use crate::database::Database;
 
 /// 终止 Cursor 进程
 #[tauri::command]
@@ -378,8 +379,8 @@ fn update_database(db_path: &std::path::Path, updates: &[(impl AsRef<str>, impl 
 
 /// 检查 main.js 注入状态
 #[tauri::command]
-pub async fn is_hook() -> Result<bool, String> {
-    let paths = AppPaths::new()?;
+pub async fn is_hook(db: State<'_, Database>) -> Result<bool, String> {
+    let paths = AppPaths::new_with_db(Some(&db))?;
     let content = fs::read_to_string(&paths.main_js)
         .map_err(|e| format!("读取 main.js 失败: {}", e))?;
 
@@ -399,6 +400,7 @@ pub async fn is_hook() -> Result<bool, String> {
 #[tauri::command]
 pub async fn hook_main_js(
     client: State<'_, ApiClient>,
+    db: State<'_, Database>,
     force_kill: bool
 ) -> Result<(), String> {
     let process_manager = ProcessManager::new();
@@ -426,14 +428,15 @@ pub async fn hook_main_js(
         }
     }
 
-    // 执行 hook 操作，传递 client 用于错误上报
-    Hook::update_main_js_content(Some(client)).await
+    // 执行 hook 操作，传递 client 和 db 用于错误上报和路径保存
+    Hook::update_main_js_content(Some(client), Some(db)).await
 }
 
 /// 恢复 main.js 原始内容
 #[tauri::command]
 pub async fn restore_hook(
     client: State<'_, ApiClient>,
+    db: State<'_, Database>,
     force_kill: bool
 ) -> Result<(), String> {
     let process_manager = ProcessManager::new();
@@ -461,12 +464,54 @@ pub async fn restore_hook(
         }
     }
 
-    // 执行恢复操作，传递 client 用于错误上报
-    Hook::restore_from_backup(Some(client)).await
+    // 执行恢复操作，传递 client 和 db 用于错误上报和路径获取
+    Hook::restore_from_backup(Some(client), Some(db)).await
 }
 
 /// 检查操作系统是否为 Windows
 #[tauri::command]
 pub fn check_is_windows() -> bool {
     crate::utils::privileges::is_windows()
+}
+
+/// 查找并验证用户选择的 Cursor 路径
+#[tauri::command]
+pub async fn find_cursor_path(
+    client: State<'_, ApiClient>,
+    db: State<'_, Database>,
+    selected_path: String
+) -> Result<bool, String> {
+    // 尝试从选择的路径找到main.js
+    let main_js_path = match AppPaths::find_main_js_from_selected_path(&selected_path) {
+        Ok(path) => path,
+        Err(e) => {
+            ErrorReporter::report_error(
+                client.clone(),
+                "find_cursor_path",
+                &e,
+                None,
+                Some("low".to_string())
+            ).await;
+            return Err(e);
+        }
+    };
+
+    // 验证找到的文件确实是main.js
+    if !main_js_path.exists() || main_js_path.file_name().map_or(false, |name| name != "main.js") {
+        return Err("选择的路径不包含有效的main.js文件".to_string());
+    }
+
+    // 保存路径到数据库
+    if let Err(e) = AppPaths::save_path_to_db(&db, &main_js_path) {
+        ErrorReporter::report_error(
+            client.clone(),
+            "find_cursor_path",
+            &e,
+            None,
+            Some("low".to_string())
+        ).await;
+        return Err(e);
+    }
+
+    Ok(true)
 }

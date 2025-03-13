@@ -8,11 +8,11 @@ import type { UserInfo, CursorUserInfo, CursorUsageInfo } from '@/api/types'
 import { version } from '../../package.json'
 import { WarningOutlined } from '@vicons/antd'
 import { Window } from '@tauri-apps/api/window'
-import { open } from '@tauri-apps/plugin-shell'
 import { saveAccountToHistory } from '@/utils/historyAccounts'
 import type { HistoryAccount } from '@/types/history'
 import DashboardTour from '../components/DashboardTour.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
+import { useRouter } from 'vue-router'
 
 import { useUserStore, useCursorStore, useAppStore } from '@/stores'
 
@@ -57,6 +57,9 @@ const { i18n } = useI18n()
 const userStore = useUserStore()
 const cursorStore = useCursorStore()
 const appStore = useAppStore()
+
+// 添加路由对象
+const router = useRouter()
 
 // 更新本地视图状态
 const updateLocalViewState = () => {
@@ -124,12 +127,8 @@ const fetchUserInfo = async () => {
 
 // 获取机器码
 const fetchMachineIds = async () => {
-  try {
-    await cursorStore.fetchMachineIds()
-    updateLocalViewState()
-  } catch (error) {
-    console.error('获取机器码失败:', error)
-  }
+  await cursorStore.fetchMachineIds()
+  updateLocalViewState()
 }
 
 // 获取 Cursor 账户信息
@@ -191,7 +190,10 @@ const autoApplyHook = async (): Promise<boolean> => {
   } catch (error) {
     console.error('自动注入失败:', error)
     message.destroyAll()
-    message.error(error instanceof Error ? error.message : '注入失败，请手动注入后再试')
+
+    router.push('/settings')
+    // 其他错误显示通用错误消息
+    message.error(error instanceof Error ? error.message : '注入失败，请前往设置页面手动操作')
     return false
   }
 }
@@ -386,49 +388,50 @@ const handleForceKill = async () => {
     let operationSuccess = false
     let operationMessage = ''
     
-    switch (pendingForceKillAction.value.type) {
-      case 'machine':
-      case 'account':
-      case 'quick':
-        // 先检查是否需要注入
-        if (!deviceInfo.value.hookStatus) {
-          message.loading('正在注入...', { duration: 0 })
-          const hookSuccess = await autoApplyHook()
-          
-          if (!hookSuccess) {
-            message.destroyAll()
-            message.error('注入失败，请手动注入后再试')
-            return
-          }
-          message.destroyAll()
-        }
-        
-        // 根据类型执行具体操作
-        if (pendingForceKillAction.value.type === 'machine') {
-          message.loading('正在更换机器码...', { duration: 0 })
-          await handleMachineCodeChange(true)
-          operationSuccess = true
-          operationMessage = i18n.value.dashboard.machineChangeSuccess
-        } else if (pendingForceKillAction.value.type === 'account') {
-          message.loading('正在切换账户...', { duration: 0 })
-          await executeAccountSwitch(true)
-          operationSuccess = true
-          operationMessage = i18n.value.dashboard.accountChangeSuccess
-        } else {
-          message.loading('正在一键切换...', { duration: 0 })
-          await executeQuickChange(true)
-          operationSuccess = true
-          operationMessage = i18n.value.dashboard.changeSuccess
-        }
-        break
-        
-      case 'hook':
+    // 先检查是否需要注入
+    if (!deviceInfo.value.hookStatus) {
+      message.loading('正在注入...', { duration: 0 })
+      try {
         const hookSuccess = await autoApplyHook()
-        operationSuccess = hookSuccess
-        if (hookSuccess) {
-          operationMessage = i18n.value.systemControl.messages.applyHookSuccess
+        
+        if (!hookSuccess) {
+          message.destroyAll()
+          return
         }
-        break
+        message.destroyAll()
+      } catch (error) {
+        message.destroyAll()
+        message.error('注入失败，请前往设置页面手动操作')
+        return
+      }
+    }
+    
+    // 根据类型执行具体操作
+    if (pendingForceKillAction.value.type === 'machine') {
+      message.loading('正在更换机器码...', { duration: 0 })
+      await handleMachineCodeChange(true)
+      operationSuccess = true
+      operationMessage = i18n.value.dashboard.machineChangeSuccess
+    } else if (pendingForceKillAction.value.type === 'account') {
+      message.loading('正在切换账户...', { duration: 0 })
+      await executeAccountSwitch(true)
+      operationSuccess = true
+      operationMessage = i18n.value.dashboard.accountChangeSuccess
+    } else if (pendingForceKillAction.value.type === 'quick') {
+      message.loading('正在一键切换...', { duration: 0 })
+      await executeQuickChange(true)
+      operationSuccess = true
+      operationMessage = i18n.value.dashboard.changeSuccess
+    } else if (pendingForceKillAction.value.type === 'hook') {
+      message.loading('正在注入...', { duration: 0 })
+      const hookSuccess = await autoApplyHook()
+      operationSuccess = hookSuccess
+      if (hookSuccess) {
+        operationMessage = i18n.value.systemControl.messages.applyHookSuccess
+      } else {
+        message.destroyAll()
+        return
+      }
     }
     
     message.destroyAll() // 清除操作中的loading消息
@@ -561,9 +564,6 @@ onMounted(async () => {
       // 更新视图状态
       updateLocalViewState()
     }
-  } catch (error) {
-    console.error('获取信息失败:', error)
-    message.error('获取信息失败')
   } finally {
     loading.value = false
   }
@@ -583,17 +583,6 @@ onMounted(async () => {
     }
   })
 })
-
-// 添加历史下载链接处理
-const handleHistoryDownload = async () => {
-  try {
-    const url = 'https://downloader-cursor.deno.dev/'
-    await open(url)
-  } catch (error) {
-    console.error('打开链接失败:', error)
-    message.error('打开链接失败')
-  }
-}
 
 // 添加引导相关状态
 const shouldShowTour = ref(false)
@@ -969,16 +958,6 @@ const formValue = ref({
         </n-button>
       </template>
     </n-modal>
-
-    <n-space justify="center" style="margin-top: 24px;">
-      <n-button
-        text
-        @click="handleHistoryDownload"
-        style="font-size: 12px;"
-      >
-        {{ i18n.dashboard.cursorHistoryDownload }}
-      </n-button>
-    </n-space>
 
     <!-- 添加免责声明模态框 -->
     <n-modal

@@ -47,6 +47,8 @@
         }
       ]
     },
-    "positioner:default"
+    "positioner:default",
+    "dialog:default",
+    "log:default"
   ]
 }
