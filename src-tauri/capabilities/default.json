@@ -48,7 +48,6 @@
       ]
     },
     "positioner:default",
-    "dialog:default",
-    "log:default"
+    "dialog:default"
   ]
 }
