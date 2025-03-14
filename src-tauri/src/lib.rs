@@ -1,37 +1,44 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use database::Database;
-use tauri::generate_handler;
-use tauri::generate_context;
-use tauri::AppHandle;
-use tauri::Manager;
-use std::env;
 use api::ApiClient;
+use database::Database;
+use std::env;
+use tauri::{ generate_context, generate_handler, Manager };
 
 pub mod api;
-pub mod utils;
 pub mod auth;
 pub mod cursor_reset;
-pub mod tray;
 pub mod database;
+pub mod tray;
+pub mod utils;
 
 pub fn run() {
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _, _| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_positioner::init())
-        .plugin(tauri_plugin_single_instance::init(|app, _, _| {
-            let _ = show_window(app);
-        }))
         .setup(|app| {
             let db = Database::new(&app.handle()).expect("数据库初始化失败");
             app.manage(db);
-            
+
             let api_client = ApiClient::new(Some(app.handle().clone()));
             app.manage(api_client);
-            
+
             tray::setup_system_tray(app)?;
             Ok(())
         })
@@ -45,7 +52,6 @@ pub fn run() {
             api::get_usage,
             api::check_user,
             api::send_code,
-            api::get_version,
             api::get_public_info,
             api::reset_password,
             api::register,
@@ -68,15 +74,4 @@ pub fn run() {
         ])
         .run(generate_context!())
         .expect("error while running tauri application")
-}
-
-fn show_window(app: &AppHandle) {
-    let windows = app.webview_windows();
-
-    windows
-        .values()
-        .next()
-        .expect("Sorry, no window found")
-        .set_focus()
-        .expect("Can't Bring Window to Focus");
 }

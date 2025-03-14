@@ -1,7 +1,7 @@
-use std::path::PathBuf;
+use crate::database::Database;
 use std::fs;
 use std::path::Path;
-use crate::database::Database;
+use std::path::PathBuf;
 
 // 用于存储Cursor路径的数据库键
 const CURSOR_MAIN_JS_PATH_KEY: &str = "system.cursor.path.mainJs";
@@ -24,31 +24,25 @@ impl AppPaths {
     pub fn new_with_db(db: Option<&Database>) -> Result<Self, String> {
         let base_dir = if cfg!(target_os = "windows") {
             // Windows: %APPDATA%\Cursor\User\globalStorage
-            let app_data = std::env::var("APPDATA")
-                .map_err(|e| format!("获取 APPDATA 路径失败: {}", e))?;
+            let app_data =
+                std::env::var("APPDATA").map_err(|e| format!("获取 APPDATA 路径失败: {}", e))?;
             PathBuf::from(app_data).join("Cursor")
         } else if cfg!(target_os = "macos") {
             // macOS: ~/Library/Application Support/Cursor/User/globalStorage
-            let home = std::env::var("HOME")
-                .map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
+            let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
             PathBuf::from(home)
                 .join("Library")
                 .join("Application Support")
                 .join("Cursor")
         } else if cfg!(target_os = "linux") {
             // Linux: ~/.config/Cursor/User/globalStorage
-            let home = std::env::var("HOME")
-                .map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
-            PathBuf::from(home)
-                .join(".config")
-                .join("Cursor")
+            let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
+            PathBuf::from(home).join(".config").join("Cursor")
         } else {
             return Err(format!("不支持的操作系统: {}", std::env::consts::OS));
         };
 
-        let global_storage = base_dir
-            .join("User")
-            .join("globalStorage");
+        let global_storage = base_dir.join("User").join("globalStorage");
 
         // 获取 Cursor 可执行文件路径
         let cursor_exe = if cfg!(target_os = "windows") {
@@ -65,7 +59,7 @@ impl AppPaths {
                 .join("MacOS")
                 .join("Cursor")
         } else {
-            PathBuf::from("/usr/bin/cursor")  // Linux 默认路径
+            PathBuf::from("/usr/bin/cursor") // Linux 默认路径
         };
 
         // 获取 cursor-updater 路径
@@ -74,18 +68,14 @@ impl AppPaths {
                 .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
             PathBuf::from(local_app_data).join("cursor-updater")
         } else if cfg!(target_os = "macos") {
-            let home = std::env::var("HOME")
-                .map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
+            let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
             PathBuf::from(home)
                 .join("Library")
                 .join("Application Support")
                 .join("cursor-updater")
         } else {
-            let home = std::env::var("HOME")
-                .map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
-            PathBuf::from(home)
-                .join(".config")
-                .join("cursor-updater")
+            let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
+            PathBuf::from(home).join(".config").join("cursor-updater")
         };
 
         // 获取 main.js 路径 - 现在优先从数据库查找
@@ -115,8 +105,7 @@ impl AppPaths {
 
         // 确保目录存在
         if let Some(parent) = paths.storage.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("创建目录失败: {}", e))?;
+            fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
         }
 
         Ok(paths)
@@ -171,24 +160,26 @@ impl AppPaths {
 
     // 新增：从环境变量PATH查找Cursor路径
     fn find_cursor_from_env_path() -> Result<PathBuf, String> {
-        let path = std::env::var("PATH")
-            .map_err(|e| format!("获取PATH环境变量失败: {}", e))?;
-        
+        let path = std::env::var("PATH").map_err(|e| format!("获取PATH环境变量失败: {}", e))?;
+
         // 分割PATH变量并查找包含"cursor"的目录
         for dir in path.split(';') {
             let path_buf = PathBuf::from(dir);
-            
+
             // 处理已经包含"resources/app/bin"这样路径的情况
             if dir.to_lowercase().contains("cursor") {
                 // 如果路径包含bin目录，尝试查找同级的out目录
                 if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") {
-                    if dir.to_lowercase().ends_with("bin") || dir.to_lowercase().contains("\\bin") || dir.to_lowercase().contains("/bin") {
+                    if dir.to_lowercase().ends_with("bin")
+                        || dir.to_lowercase().contains("\\bin")
+                        || dir.to_lowercase().contains("/bin")
+                    {
                         let potential_base = if let Some(parent) = path_buf.parent() {
                             parent
                         } else {
                             continue;
                         };
-                        
+
                         // 尝试构建main.js路径（同级out目录）
                         let main_js_path = potential_base.join("out").join("main.js");
                         if main_js_path.exists() {
@@ -196,19 +187,19 @@ impl AppPaths {
                         }
                     }
                 }
-                
+
                 // 原有检查：构建完整路径
                 let main_js_path = PathBuf::from(dir)
                     .join("resources")
                     .join("app")
                     .join("out")
                     .join("main.js");
-                
+
                 if main_js_path.exists() {
                     return Ok(main_js_path);
                 }
             }
-            
+
             // 向上一级查找cursor安装目录（原有逻辑）
             if let Some(parent) = path_buf.parent() {
                 if dir.to_lowercase().contains("cursor") {
@@ -218,142 +209,167 @@ impl AppPaths {
                         .join("app")
                         .join("out")
                         .join("main.js");
-                    
+
                     if main_js_path.exists() {
                         return Ok(main_js_path);
                     }
                 }
             }
         }
-        
+
         // 还可以尝试常见的安装位置
         let local_app_data = std::env::var("LOCALAPPDATA")
             .map_err(|e| format!("获取LOCALAPPDATA路径失败: {}", e))?;
-        
+
         let possible_paths = [
             // 标准安装路径
-            PathBuf::from(&local_app_data).join("Programs").join("cursor"),
+            PathBuf::from(&local_app_data)
+                .join("Programs")
+                .join("cursor"),
             // 其他可能的安装路径
             PathBuf::from(&local_app_data).join("cursor"),
             PathBuf::from("C:\\Program Files").join("cursor"),
             PathBuf::from("C:\\Program Files (x86)").join("cursor"),
         ];
-        
+
         for base_path in possible_paths.iter() {
             let main_js_path = base_path
                 .join("resources")
                 .join("app")
                 .join("out")
                 .join("main.js");
-            
+
             if main_js_path.exists() {
                 return Ok(main_js_path);
             }
         }
-        
+
         Err("在环境变量PATH中未找到Cursor路径".to_string())
     }
 
     // 从用户选择的路径中查找main.js
     pub fn find_main_js_from_selected_path(selected_path: &str) -> Result<PathBuf, String> {
         let selected_path_buf = PathBuf::from(selected_path);
-        
+
         // 检查是否选择的是cursor.exe或Cursor.exe
         if selected_path_buf.file_name().map_or(false, |name| {
             let name_str = name.to_string_lossy().to_lowercase();
             name_str == "cursor.exe" || name_str == "cursor"
         }) {
             println!("检测到用户选择了cursor.exe文件");
-            
+
             // 尝试从cursor.exe所在目录推断main.js位置
             if let Some(parent_dir) = selected_path_buf.parent() {
                 // 常见情况: cursor.exe与resources在同一级目录
-                let main_js_path = parent_dir.join("resources").join("app").join("out").join("main.js");
+                let main_js_path = parent_dir
+                    .join("resources")
+                    .join("app")
+                    .join("out")
+                    .join("main.js");
                 if main_js_path.exists() {
                     return Ok(main_js_path);
                 }
-                
+
                 // 作为兜底，使用递归搜索
                 if let Ok(found_path) = Self::find_main_js_in_directory(parent_dir) {
                     return Ok(found_path);
                 }
             }
         }
-        
+
         // 检查直接选择的是否为main.js
-        if selected_path_buf.file_name().map_or(false, |name| name == "main.js") {
+        if selected_path_buf
+            .file_name()
+            .map_or(false, |name| name == "main.js")
+        {
             if selected_path_buf.exists() {
                 return Ok(selected_path_buf);
             }
         }
-        
+
         // 检查是否为目录路径
         if selected_path_buf.is_dir() {
             // 尝试常见路径
-            let main_js_path = selected_path_buf.join("resources").join("app").join("out").join("main.js");
+            let main_js_path = selected_path_buf
+                .join("resources")
+                .join("app")
+                .join("out")
+                .join("main.js");
             if main_js_path.exists() {
                 return Ok(main_js_path);
             }
-            
+
             // 兜底机制：递归搜索
             if let Ok(found_path) = Self::find_main_js_in_directory(&selected_path_buf) {
                 return Ok(found_path);
             }
         }
-        
-        Err(format!("在选择的路径 '{}' 中未找到main.js文件", selected_path))
+
+        Err(format!(
+            "在选择的路径 '{}' 中未找到main.js文件",
+            selected_path
+        ))
     }
-    
+
     // 新增：在目录中递归查找main.js文件
     fn find_main_js_in_directory(dir: &Path) -> Result<PathBuf, String> {
         if !dir.is_dir() {
             return Err("提供的路径不是目录".to_string());
         }
-        
+
         // 最大递归深度，防止无限递归
         const MAX_DEPTH: usize = 5;
-        
-        fn search_recursively(dir: &Path, current_depth: usize, max_depth: usize) -> Option<PathBuf> {
+
+        fn search_recursively(
+            dir: &Path,
+            current_depth: usize,
+            max_depth: usize,
+        ) -> Option<PathBuf> {
             if current_depth > max_depth {
                 return None;
             }
-            
+
             if let Ok(entries) = fs::read_dir(dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
-                    
+
                     // 检查是否为main.js文件
-                    if path.is_file() && 
-                       path.file_name().map_or(false, |name| name == "main.js") &&
-                       path.parent().map_or(false, |parent| 
-                           parent.file_name().map_or(false, |name| name == "out") &&
-                           parent.parent().map_or(false, |p| 
-                               p.file_name().map_or(false, |name| name == "app") &&
-                               p.parent().map_or(false, |pp| 
-                                   pp.file_name().map_or(false, |name| name == "resources")
-                               )
-                           )
-                       )
+                    if path.is_file()
+                        && path.file_name().map_or(false, |name| name == "main.js")
+                        && path.parent().map_or(false, |parent| {
+                            parent.file_name().map_or(false, |name| name == "out")
+                                && parent.parent().map_or(false, |p| {
+                                    p.file_name().map_or(false, |name| name == "app")
+                                        && p.parent().map_or(false, |pp| {
+                                            pp.file_name().map_or(false, |name| name == "resources")
+                                        })
+                                })
+                        })
                     {
                         return Some(path);
                     }
-                    
+
                     // 如果是目录，递归搜索
                     if path.is_dir() {
-                        if let Some(found_path) = search_recursively(&path, current_depth + 1, max_depth) {
+                        if let Some(found_path) =
+                            search_recursively(&path, current_depth + 1, max_depth)
+                        {
                             return Some(found_path);
                         }
                     }
                 }
             }
-            
+
             None
         }
-        
+
         if let Some(path) = search_recursively(dir, 0, MAX_DEPTH) {
             Ok(path)
         } else {
-            Err(format!("在目录 '{}' 及其子目录中未找到 main.js 文件", dir.display()))
+            Err(format!(
+                "在目录 '{}' 及其子目录中未找到 main.js 文件",
+                dir.display()
+            ))
         }
     }
 
@@ -362,7 +378,7 @@ impl AppPaths {
         match db.get_item(CURSOR_MAIN_JS_PATH_KEY) {
             Ok(Some(path_str)) => Ok(Some(PathBuf::from(path_str))),
             Ok(None) => Ok(None),
-            Err(e) => Err(format!("从数据库获取路径失败: {}", e))
+            Err(e) => Err(format!("从数据库获取路径失败: {}", e)),
         }
     }
 
@@ -376,8 +392,7 @@ impl AppPaths {
     // 确保父目录存在
     pub fn ensure_parent_exists(&self, path: &Path) -> Result<(), String> {
         if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)
-                .map_err(|e| format!("创建目录失败: {}", e))?;
+            fs::create_dir_all(parent).map_err(|e| format!("创建目录失败: {}", e))?;
         }
         Ok(())
     }

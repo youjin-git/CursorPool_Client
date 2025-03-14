@@ -11,30 +11,6 @@ pub struct ApiResponse<T> {
     pub code: Option<String>,
 }
 
-// 旧版本信息
-#[derive(Debug, Serialize, Deserialize)]
-pub struct VersionInfo {
-    pub version: String,
-    #[serde(rename = "forceUpdate")]
-    pub force_update: bool,
-    #[serde(rename = "downloadUrl")]
-    pub download_url: String,
-    #[serde(rename = "changeLog")]
-    pub change_log: String,
-}
-
-// 新版本信息
-#[derive(Debug, Serialize, Deserialize)]
-pub struct VersionInfoRest {
-    pub version: String,
-    #[serde(rename = "forceUpdate")]
-    pub force_update: bool,
-    #[serde(rename = "downloadUrl")]
-    pub download_url: String,
-    #[serde(rename = "changeLog")]
-    pub change_log: String,
-}
-
 // 登录响应
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginResponse {

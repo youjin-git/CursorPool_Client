@@ -1,7 +1,7 @@
-use std::collections::HashMap;
-use std::fs;
 use serde_json::json;
 use crate::utils::{AppPaths, update_sqlite_db};
+use std::collections::HashMap;
+use std::fs;
 
 #[derive(Debug)]
 pub struct AuthInfo {

@@ -1,11 +1,11 @@
 use super::client::get_base_url;
 use super::types::*;
-use tauri::State;
+use crate::database::Database;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
-use std::env;
-use crate::database::Database;
 use serde_json::json;
+use std::env;
+use tauri::State;
 
 // Bug报告请求结构
 #[derive(Serialize, Deserialize)]
@@ -161,7 +161,7 @@ pub async fn get_account(
     usage_count: Option<String>,
 ) -> Result<ApiResponse<AccountPoolInfo>, String> {
     let mut url = format!("{}/accountpool/get", get_base_url());
-    
+
     let mut query_params = Vec::new();
     if let Some(acc) = account {
         query_params.push(format!("account={}", acc));
@@ -169,19 +169,16 @@ pub async fn get_account(
     if let Some(count) = usage_count {
         query_params.push(format!("usage_count={}", count));
     }
-    
+
     if !query_params.is_empty() {
         url = format!("{}?{}", url, query_params.join("&"));
     }
-    
-    let response = client
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
 
-    let response: ApiResponse<AccountPoolInfo> = response.json().await.map_err(|e| e.to_string())?;
-    
+    let response = client.get(&url).send().await.map_err(|e| e.to_string())?;
+
+    let response: ApiResponse<AccountPoolInfo> =
+        response.json().await.map_err(|e| e.to_string())?;
+
     // 如果获取成功且有账户信息，将token保存到历史记录
     if response.status == 200 && response.data.is_some() {
         let account_info = &response.data.as_ref().unwrap().account_info;
@@ -189,15 +186,20 @@ pub async fn get_account(
             // 获取当前机器码
             use crate::cursor_reset::get_machine_ids;
             let machine_info = get_machine_ids()?;
-            let machine_id = machine_info["machineId"].as_str().unwrap_or_default().to_string();
-            
+            let machine_id = machine_info["machineId"]
+                .as_str()
+                .unwrap_or_default()
+                .to_string();
+
             // 保存到历史记录
             if let Err(e) = super::interceptor::save_cursor_token_to_history(
-                &db, 
-                &account_info.account, 
+                &db,
+                &account_info.account,
                 &account_info.token,
-                &machine_id
-            ).await {
+                &machine_id,
+            )
+            .await
+            {
                 eprintln!("保存Cursor token到历史记录失败: {}", e);
             }
         }
@@ -215,61 +217,25 @@ pub async fn get_usage(
     let user_id = "user_01000000000000000000000000";
     let response = client
         .get("https://www.cursor.com/api/usage")
-        .header("Cookie", format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token).as_str())
+        .header(
+            "Cookie",
+            format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token).as_str(),
+        )
         .send()
         .await
         .map_err(|e| e.to_string())?;
 
     let response_text = response.text().await.map_err(|e| e.to_string())?;
-    
+
     match serde_json::from_str::<CursorUsageInfo>(&response_text) {
-        Ok(usage_info) => {
-            Ok(ApiResponse {
-                status: 200,
-                msg: "获取使用情况成功".to_string(),
-                data: Some(usage_info),
-                code: Some("460001".to_string()),
-            })
-        },
-        Err(e) => Err(format!("Failed to parse Cursor usage info: {}", e))
+        Ok(usage_info) => Ok(ApiResponse {
+            status: 200,
+            msg: "获取使用情况成功".to_string(),
+            data: Some(usage_info),
+            code: Some("460001".to_string()),
+        }),
+        Err(e) => Err(format!("Failed to parse Cursor usage info: {}", e)),
     }
-}
-
-/// 获取版本信息
-#[tauri::command]
-pub async fn get_version(
-    client: State<'_, super::client::ApiClient>,
-) -> Result<serde_json::Value, String> {
-    let response = client
-        .get(format!("{}/version", get_base_url()))
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    let response_text = response.text().await.map_err(|e| e.to_string())?;
-    
-    let json_value: serde_json::Value = serde_json::from_str(&response_text)
-        .map_err(|e| format!("Failed to parse response as JSON: {}", e))?;
-    
-    if let Some(status) = json_value.get("status") {
-        if status.is_string() && status.as_str().unwrap() == "success" {
-            if let Some(data) = json_value.get("data") {
-                return Ok(serde_json::json!({
-                    "status": 200,
-                    "msg": "获取版本信息成功",
-                    "data": data,
-                    "code": "460001"
-                }));
-            }
-        }
-    }
-    
-    Ok(serde_json::json!({
-        "status": 200,
-        "msg": "获取版本信息成功",
-        "data": json_value,
-        "code": "460001"
-    }))
 }
 
 /// 获取公告信息
@@ -296,11 +262,7 @@ pub async fn reset_password(
 ) -> Result<ApiResponse<()>, String> {
     let response = client
         .post(format!("{}/emailResetPassword", get_base_url()))
-        .form(&[
-            ("email", email),
-            ("code", code),
-            ("password", password),
-        ])
+        .form(&[("email", email), ("code", code), ("password", password)])
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -347,12 +309,10 @@ pub async fn report_bug(
 
 /// 用户登出
 #[tauri::command]
-pub async fn logout(
-    db: State<'_, Database>,
-) -> Result<ApiResponse<()>, String> {
+pub async fn logout(db: State<'_, Database>) -> Result<ApiResponse<()>, String> {
     db.delete_item("user.info.token")
         .map_err(|e| e.to_string())?;
-    
+
     Ok(ApiResponse {
         status: 200,
         msg: "登出成功".to_string(),
@@ -365,8 +325,8 @@ pub async fn logout(
 #[tauri::command]
 pub async fn set_user_data(
     db: State<'_, Database>,
-    key: String, 
-    value: String
+    key: String,
+    value: String,
 ) -> Result<ApiResponse<()>, String> {
     match db.set_item(&key, &value) {
         Ok(_) => Ok(ApiResponse {
@@ -383,7 +343,7 @@ pub async fn set_user_data(
 #[tauri::command]
 pub async fn get_user_data(
     db: State<'_, Database>,
-    key: String
+    key: String,
 ) -> Result<ApiResponse<serde_json::Value>, String> {
     match db.get_item(&key) {
         Ok(value) => Ok(ApiResponse {
@@ -400,7 +360,7 @@ pub async fn get_user_data(
 #[tauri::command]
 pub async fn del_user_data(
     db: State<'_, Database>,
-    key: String
+    key: String,
 ) -> Result<ApiResponse<()>, String> {
     match db.delete_item(&key) {
         Ok(_) => Ok(ApiResponse {

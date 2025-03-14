@@ -1,11 +1,13 @@
-use reqwest::{Client, Request, Response};
+use crate::api::interceptor::{
+    is_auth_required_url, save_auth_token, AuthInterceptor, Interceptor,
+};
+use crate::database::Database;
 use reqwest::header::HeaderValue;
+use reqwest::{Client, Request, Response};
 use std::sync::Arc;
 use std::time::Duration;
 use tauri::AppHandle;
 use tauri::Manager;
-use crate::api::interceptor::{Interceptor, AuthInterceptor, is_auth_required_url, save_auth_token};
-use crate::database::Database;
 
 /// HTTP 请求客户端，支持拦截器机制
 pub struct ApiClient {
@@ -23,23 +25,25 @@ impl ApiClient {
                 .build()
                 .expect("Failed to create HTTP client"),
         );
-        
+
         let mut interceptors = Vec::new();
         if let Some(handle) = &app_handle {
-            interceptors.push(Box::new(AuthInterceptor::new(Arc::new(handle.clone()))) as Box<dyn Interceptor>);
+            interceptors
+                .push(Box::new(AuthInterceptor::new(Arc::new(handle.clone())))
+                    as Box<dyn Interceptor>);
         }
-        
+
         Self {
             client,
             interceptors,
             app_handle: app_handle.map(Arc::new),
         }
     }
-    
+
     /// 发送 HTTP 请求
     pub async fn send(&self, mut request: Request) -> Result<Response, reqwest::Error> {
         let url: String = request.url().to_string();
-        
+
         if is_auth_required_url(&url) {
             for interceptor in &self.interceptors {
                 if let Err(_) = interceptor.intercept(&mut request) {
@@ -47,20 +51,20 @@ impl ApiClient {
                 }
             }
         }
-        
+
         let response = self.client.execute(request).await?;
-        
+
         if self.app_handle.is_none() {
             return Ok(response);
         }
-        
+
         let handle = self.app_handle.as_ref().unwrap();
         let db = handle.state::<Database>();
         let status = response.status();
         let url_str = url.clone();
-        
+
         let response_text = response.text().await?;
-        
+
         if url_str.contains("/user/updatePassword") {
             if let Ok(response_json) = serde_json::from_str::<serde_json::Value>(&response_text) {
                 if response_json["status"] == 200 {
@@ -70,15 +74,15 @@ impl ApiClient {
         } else {
             let _ = save_auth_token(&db, &url_str, &response_text).await;
         }
-        
+
         Ok(Response::from(
             http::Response::builder()
                 .status(status)
                 .body(response_text)
-                .unwrap()
+                .unwrap(),
         ))
     }
-    
+
     /// 创建 GET 请求
     pub fn get(&self, url: impl AsRef<str>) -> RequestBuilder {
         RequestBuilder {
@@ -86,7 +90,7 @@ impl ApiClient {
             client: self,
         }
     }
-    
+
     /// 创建 POST 请求
     pub fn post(&self, url: impl AsRef<str>) -> RequestBuilder {
         RequestBuilder {
@@ -94,7 +98,7 @@ impl ApiClient {
             client: self,
         }
     }
-    
+
     /// 创建 PUT 请求
     pub fn put(&self, url: impl AsRef<str>) -> RequestBuilder {
         RequestBuilder {
@@ -102,7 +106,7 @@ impl ApiClient {
             client: self,
         }
     }
-    
+
     /// 创建 DELETE 请求
     pub fn delete(&self, url: impl AsRef<str>) -> RequestBuilder {
         RequestBuilder {
@@ -144,7 +148,9 @@ impl<'a> RequestBuilder<'a> {
     /// 添加请求头
     pub fn header(self, key: &str, value: &str) -> Self {
         Self {
-            inner: self.inner.header(key, HeaderValue::from_str(value).unwrap()),
+            inner: self
+                .inner
+                .header(key, HeaderValue::from_str(value).unwrap()),
             client: self.client,
         }
     }
@@ -155,11 +161,9 @@ impl<'a> RequestBuilder<'a> {
         for (key, value) in form {
             form_builder = form_builder.text(key, value);
         }
-        
+
         Self {
-            inner: self.inner
-                .header("Accept", "*/*")
-                .multipart(form_builder),
+            inner: self.inner.header("Accept", "*/*").multipart(form_builder),
             client: self.client,
         }
     }
@@ -167,7 +171,7 @@ impl<'a> RequestBuilder<'a> {
 
 /// 获取 API 基础 URL
 pub fn get_base_url() -> String {
-    "http://cursor-orgin.52ai.org/api".to_string()
+    "https://pool.52ai.org/api".to_string()
 }
 
 /// 清除认证令牌

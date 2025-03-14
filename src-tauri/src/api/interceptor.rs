@@ -1,8 +1,8 @@
+use crate::database::Database;
 use reqwest::Request;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
-use crate::database::Database;
 
 /// HTTP 请求拦截器特征
 pub trait Interceptor: Send + Sync {
@@ -25,27 +25,26 @@ impl AuthInterceptor {
 impl Interceptor for AuthInterceptor {
     fn intercept(&self, request: &mut Request) -> Result<(), String> {
         let db = self.app_handle.state::<Database>();
-        
+
         let token = match db.get_item("user.info.token") {
             Ok(Some(token)) => token,
-            _ => return Ok(())
+            _ => return Ok(()),
         };
-        
+
         request.headers_mut().insert(
             "Authorization",
             format!("Bearer {}", token).parse().unwrap(),
         );
-        
+
         let lang = match db.get_item("user.info.lang") {
             Ok(Some(lang)) if lang != "zh-CN" => lang,
-            _ => "zh-CN".to_string()
+            _ => "zh-CN".to_string(),
         };
-        
-        request.headers_mut().insert(
-            "cb-lang",
-            lang.parse().unwrap(),
-        );
-        
+
+        request
+            .headers_mut()
+            .insert("cb-lang", lang.parse().unwrap());
+
         Ok(())
     }
 }
@@ -55,7 +54,7 @@ pub fn is_auth_required_url(url: &str) -> bool {
     if url.contains("cursor.com") {
         return false;
     }
-    
+
     let public_endpoints = [
         "/login",
         "/register",
@@ -68,27 +67,32 @@ pub fn is_auth_required_url(url: &str) -> bool {
         "/disclaimer",
         "/api/usage",
     ];
-    
+
     for endpoint in public_endpoints {
         if url.contains(endpoint) {
             return false;
         }
     }
-    
+
     true
 }
 
 /// 保存认证令牌
-pub async fn save_auth_token(db: &tauri::State<'_, Database>, url: &str, response_text: &str) -> Result<(), String> {
+pub async fn save_auth_token(
+    db: &tauri::State<'_, Database>,
+    url: &str,
+    response_text: &str,
+) -> Result<(), String> {
     if !url.contains("/login") && !url.contains("/emailRegister") {
         return Ok(());
     }
-    
-    let api_response: crate::api::types::ApiResponse<crate::api::types::LoginResponse> = match serde_json::from_str(response_text) {
-        Ok(response) => response,
-        Err(_) => return Ok(())
-    };
-    
+
+    let api_response: crate::api::types::ApiResponse<crate::api::types::LoginResponse> =
+        match serde_json::from_str(response_text) {
+            Ok(response) => response,
+            Err(_) => return Ok(()),
+        };
+
     if api_response.status == 200 && api_response.data.is_some() {
         let data = api_response.data.unwrap();
         if let Some(token) = data.token {
@@ -96,29 +100,34 @@ pub async fn save_auth_token(db: &tauri::State<'_, Database>, url: &str, respons
                 .map_err(|e| e.to_string())?;
         }
     }
-    
+
     Ok(())
 }
 
 /// 保存Cursor token到历史记录
-pub async fn save_cursor_token_to_history(db: &tauri::State<'_, Database>, email: &str, token: &str, machine_id: &str) -> Result<(), String> {
+pub async fn save_cursor_token_to_history(
+    db: &tauri::State<'_, Database>,
+    email: &str,
+    token: &str,
+    machine_id: &str,
+) -> Result<(), String> {
     // 1. 获取当前历史记录
     let accounts = match db.get_item("user.history.accounts") {
         Ok(Some(data)) => {
             match serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
                 Ok(accounts) => accounts,
-                Err(_) => Vec::new()
+                Err(_) => Vec::new(),
             }
-        },
-        _ => Vec::new()
+        }
+        _ => Vec::new(),
     };
-    
+
     // 2. 准备新的账户记录
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap_or_default()
         .as_millis() as i64;
-    
+
     let new_account = crate::api::types::HistoryAccountRecord {
         email: email.to_string(),
         token: token.to_string(),
@@ -127,23 +136,22 @@ pub async fn save_cursor_token_to_history(db: &tauri::State<'_, Database>, email
         gpt35_count: 0,
         last_used: now,
         gpt4_max_usage: None,
-        gpt35_max_usage: None
+        gpt35_max_usage: None,
     };
-    
+
     // 3. 更新记录列表（替换或添加）
     let mut updated_accounts = accounts
         .into_iter()
         .filter(|a| a.email != email)
         .collect::<Vec<_>>();
-    
+
     updated_accounts.push(new_account);
-    
+
     // 4. 保存回数据库
-    let json_data = serde_json::to_string(&updated_accounts)
-        .map_err(|e| e.to_string())?;
-    
+    let json_data = serde_json::to_string(&updated_accounts).map_err(|e| e.to_string())?;
+
     db.set_item("user.history.accounts", &json_data)
         .map_err(|e| e.to_string())?;
-    
+
     Ok(())
-} 
+}
