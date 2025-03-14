@@ -9,13 +9,14 @@ on:
     branches:
       - main
       - master
+      - dev
 
 permissions:
   contents: write
 
 jobs:
   publish-tauri:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/dev'
     strategy:
       fail-fast: false
       matrix:
@@ -58,7 +59,7 @@ jobs:
       - name: install Rust stable
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || matrix.platform == 'macos-14' && 'aarch64-apple-darwin' || '' }}
+          targets: ${{ matrix.platform == 'macos-latest' && 'x86_64-apple-darwin' || matrix.platform == 'macos-14' && 'aarch64-apple-darwin' || matrix.args == '--target aarch64-pc-windows-msvc' && 'aarch64-pc-windows-msvc' || '' }}
 
       - name: Install dependencies (macOS)
         if: matrix.platform == 'macos-latest' || matrix.platform == 'macos-14'
@@ -74,7 +75,7 @@ jobs:
         run: npm install
 
       - name: Create Release
-        if: matrix.platform == 'macos-14'
+        if: startsWith(github.ref, 'refs/tags/v') && matrix.platform == 'macos-14'
         id: create_release
         uses: softprops/action-gh-release@v1
         env:
@@ -88,8 +89,8 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
-          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with: 
           tagName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
           releaseName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
