@@ -1,4 +1,4 @@
-<script setup lang="ts">
+ <script setup lang="ts">
 import { NButton, NDropdown } from 'naive-ui'
 import { useI18n } from '../locales'
 import { locales, type Language } from '../locales'

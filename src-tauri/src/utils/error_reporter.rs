@@ -14,12 +14,8 @@ impl ErrorReporter {
         severity: Option<String>,
     ) {
         // 构建错误描述
-        let bug_description = format!(
-            "函数: {}\n错误: {}", 
-            function_name, 
-            error
-        );
-        
+        let bug_description = format!("函数: {}\n错误: {}", function_name, error);
+
         // 使用 report_bug 函数上报错误
         let _ = report_bug(
             client,
@@ -28,6 +24,7 @@ impl ErrorReporter {
             api_key,
             None,
             None,
-        ).await;
+        )
+        .await;
     }
-} 
+}

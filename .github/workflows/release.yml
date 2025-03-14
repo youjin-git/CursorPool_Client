@@ -25,7 +25,9 @@ jobs:
           - platform: 'macos-latest'
             args: '--target x86_64-apple-darwin'
           - platform: 'windows-latest'
-            args: ''
+            args: '--target x86_64-pc-windows-msvc'
+          - platform: 'windows-latest'
+            args: '--target aarch64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
     steps:
@@ -86,9 +88,12 @@ jobs:
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        with: 
           tagName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
           releaseName: ${{ matrix.platform == 'windows-latest' && steps.get_version_windows.outputs.version || steps.get_version_unix.outputs.version }}
           releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+          includeUpdaterJson: true

@@ -51,12 +51,12 @@ export const messages = {
       confirmSwitch: '确认切换',
       cancelSwitch: '取消',
       ccStatus: '本地Curso状态',
-      registerTime: '本地 Cursor账户注册时间',
+      registerTime: '本地Cursor账户注册时间',
       email: '本地Cursor邮箱',
       cpUsage: 'Cursor Pool额度使用量',
       advancedModelUsage: '高级模型使用量',
       basicModelUsage: '普通模型使用量',
-      cannotGetUsage: '无法获取',
+      cannotGetUsage: '无法链接cursor服务器',
       cursorHistoryDownload: 'Cursor 历史版本下载'
     },
     login: {
@@ -125,25 +125,16 @@ export const messages = {
       hookNotApplied: '未注入或客户端不支持',
       applyHook: '注入客户端',
       restoreHook: '还原客户端',
-      updateStatus: '自动更新状态',
-      updateDisabled: '已禁用自动更新',
-      updateEnabled: '已启用自动更新',
-      disableUpdate: '禁用更新',
-      restoreUpdate: '恢复更新',
       clientStatus: '客户端状态',
       clientVerified: '已验证',
       clientUnverified: '未验证',
       messages: {
-        disableUpdateSuccess: '成功禁用自动更新',
-        restoreUpdateSuccess: '成功恢复自动更新',
         applyHookSuccess: '注入客户端成功',
         restoreHookSuccess: '恢复客户端成功',
         cursorRunning: 'Cursor进程正在运行, 请先关闭Cursor',
         forceKillConfirm: '我已保存, 强制关闭'
       },
       history: {
-        disableUpdate: '禁用自动更新',
-        restoreUpdate: '恢复自动更新',
         applyHook: '注入客户端',
         restoreHook: '恢复客户端'
       }
@@ -833,8 +824,8 @@ export const messages = {
       updateStatus: 'Automatischer Update-Status',
       updateDisabled: 'Deaktiviert',
       updateEnabled: 'Aktiviert',
-      disableUpdate: 'Update deaktivieren',
-      restoreUpdate: 'Update wiederherstellen',
+      disableUpdate: 'Disable Update',
+      restoreUpdate: 'Restore Update',
       clientStatus: 'Client-Status',
       clientVerified: 'Verifiziert',
       clientUnverified: 'Nicht verifiziert',
@@ -1180,7 +1171,7 @@ export const messages = {
         applyHookSuccess: 'Hook успешно применен',
         restoreHookSuccess: 'Hook успешно восстановлен',
         cursorRunning: 'Cursor запущен, пожалуйста, сохраните работу перед продолжением!',
-        forceKillConfirm: 'Я сохранил, принудительно закрыть'
+        forceKillConfirm: 'Я сохранил, forzar cierre'
       },
       history: {
         disableUpdate: 'Отключить автообновление',
