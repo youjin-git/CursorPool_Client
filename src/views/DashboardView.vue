@@ -148,8 +148,7 @@ const fetchUserInfo = async () => {
     await userStore.checkLoginStatus()
     updateLocalViewState()
   } catch (error) {
-    console.error('获取用户信息失败:', error)
-    message.error(error instanceof Error ? error.message : '获取用户信息失败')
+    message.error(error instanceof Error ? error.message : '链接服务器失败，请检查网络连接')
   }
 }
 
@@ -166,6 +165,12 @@ async function fetchCursorInfo() {
     updateLocalViewState()
   } catch (error) {
     console.error('获取 Cursor 账户信息失败:', error)
+    
+    // 由于这是非核心功能，使用轻量级提示
+    message.warning(error instanceof Error 
+      ? error.message 
+      : 'Cursor 账户信息获取失败，部分功能可能受限'
+    )
   } finally {
     loading.value = false
   }
@@ -220,7 +225,7 @@ const autoApplyHook = async (): Promise<boolean> => {
     message.destroyAll()
 
     router.push('/settings')
-    // 其他错误显示通用错误消息
+    // 显示错误消息
     message.error(error instanceof Error ? error.message : '注入失败，请前往设置页面手动操作')
     return false
   }

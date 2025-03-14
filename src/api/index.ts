@@ -22,14 +22,19 @@ function handleApiResponse<T>(response: ApiResponse<T>): T {
         // 如果没有data，返回空对象
         return {} as T
     }
-    throw new Error(response.msg || 'API request failed')
+    
+    // 状态码不为200时抛出错误，优先使用服务器返回的消息
+    throw new ApiError(response.msg || '链接服务器失败，请稍后再试')
 }
 
 // API 错误类
 export class ApiError extends Error {
-    constructor(message: string) {
+    public statusCode?: number
+    
+    constructor(message: string, statusCode?: number) {
         super(message)
         this.name = 'ApiError'
+        this.statusCode = statusCode
     }
 }
 
@@ -77,9 +82,19 @@ export async function login(account: string, password: string, spread: string): 
 export async function getUserInfo(): Promise<UserInfo> {
     try {
         const response = await invoke<ApiResponse<UserInfo>>('get_user_info')
+        
+        if (response.status !== 200) {
+            throw new ApiError(response.msg || '链接服务器失败')
+        }
+        
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get user info')
+        // 如果已经是ApiError类型，直接抛出
+        if (error instanceof ApiError) {
+            throw error
+        }
+        // 否则包装成ApiError
+        throw new ApiError(error instanceof Error ? error.message : '链接服务器失败')
     }
 }
 

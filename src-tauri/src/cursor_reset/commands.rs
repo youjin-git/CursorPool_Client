@@ -243,7 +243,74 @@ pub async fn switch_account(
     }
 
     let paths = AppPaths::new()?;
+    
+    // 获取当前账户信息
+    let mut current_email = String::new();
+    let mut current_token = String::new();
+    let mut machine_id = String::new();
+    
+    if paths.db.exists() {
+        if let Ok(conn) = Connection::open(&paths.db) {
+            // 读取当前机器码
+            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'telemetry.devDeviceId'") {
+                if let Ok(mut rows) = stmt.query([]) {
+                    if let Ok(Some(row)) = rows.next() {
+                        if let Ok(device_id) = row.get::<_, String>(0) {
+                            machine_id = device_id;
+                        }
+                    }
+                }
+            }
+            
+            // 读取当前邮箱
+            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/cachedEmail'") {
+                if let Ok(mut rows) = stmt.query([]) {
+                    if let Ok(Some(row)) = rows.next() {
+                        if let Ok(email) = row.get::<_, String>(0) {
+                            current_email = email;
+                        }
+                    }
+                }
+            }
+            
+            // 读取当前token
+            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/refreshToken'") {
+                if let Ok(mut rows) = stmt.query([]) {
+                    if let Ok(Some(row)) = rows.next() {
+                        if let Ok(token) = row.get::<_, String>(0) {
+                            current_token = token;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // 检查当前账户是否已在历史记录中
+    let account_exists_in_history = if !current_email.is_empty() {
+        match db.get_item("user.history.accounts") {
+            Ok(Some(data)) => {
+                match serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
+                    Ok(accounts) => accounts.iter().any(|a| a.email == current_email),
+                    Err(_) => false
+                }
+            },
+            _ => false
+        }
+    } else {
+        false
+    };
+    
+    // 如果当前有账户信息且不在历史记录中，才保存
+    if !current_email.is_empty() && !current_token.is_empty() && !machine_id.is_empty() && !account_exists_in_history {
+        if let Err(e) = crate::api::interceptor::save_cursor_token_to_history(
+            &db, &current_email, &current_token, &machine_id
+        ).await {
+            eprintln!("保存当前Cursor账户到历史记录失败: {}", e);
+        }
+    }
 
+    // 更新数据库为-新账户
     let account_updates = vec![
         ("cursor.email", email.clone()),
         ("cursor.accessToken", token.clone()),
@@ -254,37 +321,53 @@ pub async fn switch_account(
 
     update_database(&paths.db, &account_updates)?;
 
-    // 获取机器码
-    let mut result = json!({
-        "machineId": "",
-        "currentAccount": ""
-    });
+    // 获取机器码（为了新账户使用）
+    let result = get_machine_ids()?;
+    let machine_id = result["machineId"].as_str().unwrap_or_default().to_string();
 
-    if paths.db.exists() {
-        if let Ok(conn) = Connection::open(&paths.db) {
-            // 读取机器码
-            if let Ok(mut stmt) =
-                conn.prepare("SELECT value FROM ItemTable WHERE key = 'telemetry.devDeviceId'")
-            {
-                if let Ok(mut rows) = stmt.query([]) {
-                    if let Ok(Some(row)) = rows.next() {
-                        if let Ok(device_id) = row.get::<_, String>(0) {
-                            result["machineId"] = json!(device_id);
-                        }
+    // ### 检查新账户是否需要保存 ###
+    let new_account_exists_in_history = match db.get_item("user.history.accounts") {
+        Ok(Some(data)) => {
+            match serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
+                Ok(accounts) => accounts.iter().any(|a| a.email == email),
+                Err(_) => false
+            }
+        },
+        _ => false
+    };
+    
+    // 如果新账户不在历史记录中，才添加
+    if !new_account_exists_in_history {
+        if let Err(e) = crate::api::interceptor::save_cursor_token_to_history(
+            &db, &email, &token, &machine_id
+        ).await {
+            eprintln!("保存新Cursor账户到历史记录失败: {}", e);
+        }
+    } else {
+        // 如果账户已存在但token可能更新了，更新历史记录
+        if let Ok(Some(data)) = db.get_item("user.history.accounts") {
+            if let Ok(mut accounts) = serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_millis() as i64;
+                
+                // 查找并更新已有账户
+                for account in &mut accounts {
+                    if account.email == email {
+                        // 更新token和最后使用时间
+                        account.token = token.clone();
+                        account.last_used = now;
+                        break;
                     }
+                }
+                
+                // 保存更新后的记录
+                if let Ok(json_data) = serde_json::to_string(&accounts) {
+                    let _ = db.set_item("user.history.accounts", &json_data);
                 }
             }
         }
-    }
-
-    let machine_id = result["machineId"].as_str().unwrap_or_default().to_string();
-
-    // 保存到历史记录
-    if let Err(e) =
-        crate::api::interceptor::save_cursor_token_to_history(&db, &email, &token, &machine_id)
-            .await
-    {
-        eprintln!("保存Cursor token到历史记录失败: {}", e);
     }
 
     // 等待一段时间确保数据库更新完成
