@@ -5,7 +5,6 @@ import { useI18n } from '../locales'
 import { useMessage } from 'naive-ui'
 import { checkCursorRunning } from '@/api'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo } from '@/api/types'
-import { version } from '../../package.json'
 import { WarningOutlined } from '@vicons/antd'
 import { Window } from '@tauri-apps/api/window'
 import { saveAccountToHistory } from '@/utils/historyAccounts'
@@ -15,8 +14,6 @@ import CursorRunningModal from '../components/CursorRunningModal.vue'
 import { useRouter } from 'vue-router'
 
 import { useUserStore, useCursorStore, useAppStore } from '@/stores'
-
-const LOCAL_VERSION = version
 
 interface DeviceInfoState {
   machineCode: string
@@ -471,16 +468,6 @@ const copyText = (text: string) => {
   })
 }
 
-// 处理下载更新
-const handleDownload = async () => {
-  await appStore.handleDownload()
-}
-
-// 处理稍后更新
-const handleLater = () => {
-  appStore.handleLater()
-}
-
 // 添加新的 ref
 const showAdminPrivilegeModal = ref(false)
 
@@ -529,9 +516,6 @@ onMounted(async () => {
       
       // 检查管理员权限
       await checkPrivileges()
-      
-      // 检查版本更新
-      await appStore.checkVersion()
       
       // 检查免责声明
       await appStore.fetchDisclaimer()
@@ -651,14 +635,13 @@ watch(
 
 // 监听模态框状态变化，如果有模态框显示，则隐藏引导
 watch([
-  () => appStore.showUpdateModal,
   () => showAdminPrivilegeModal,
   () => showCursorRunningModal,
   () => appStore.showDisclaimerModal,
   () => userStore.showInsufficientCreditsModal
 ], 
-  ([updateModal, adminModal, cursorModal, disclaimerModal, creditsModal]) => {
-    if (updateModal || adminModal || cursorModal || disclaimerModal || creditsModal) {
+  ([adminModal, cursorModal, disclaimerModal, creditsModal]) => {
+    if (adminModal || cursorModal || disclaimerModal || creditsModal) {
       shouldShowTour.value = false
     }
   }
@@ -863,37 +846,6 @@ const formValue = ref({
         </n-space>
       </n-space>
     </n-card>
-
-    <!-- 添加更新模态框 -->
-    <n-modal
-      v-model:show="appStore.showUpdateModal"
-      :mask-closable="!appStore.latestVersion?.forceUpdate"
-      :closable="!appStore.latestVersion?.forceUpdate"
-      preset="card"
-      style="width: 500px"
-      :title="i18n.dashboard.newVersionAvailable"
-    >
-      <n-space vertical>
-        <div>{{ i18n.dashboard.currentVersion }}: {{ LOCAL_VERSION }}</div>
-        <div>{{ i18n.dashboard.newVersion }}: {{ appStore.latestVersion?.version }}</div>
-        <n-divider />
-        <div style="white-space: pre-line">{{ appStore.latestVersion?.changeLog }}</div>
-        <n-space justify="end">
-          <n-button
-            v-if="!appStore.latestVersion?.forceUpdate"
-            @click="handleLater"
-          >
-            {{ i18n.dashboard.later }}
-          </n-button>
-          <n-button
-            type="primary"
-            @click="handleDownload"
-          >
-            {{ i18n.dashboard.downloadNow }}
-          </n-button>
-        </n-space>
-      </n-space>
-    </n-modal>
 
     <n-modal
       v-model:show="showUnusedCreditsModal"

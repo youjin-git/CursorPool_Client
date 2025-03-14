@@ -5,7 +5,6 @@ import type {
     UserInfo,
     AccountPoolInfo,
     UsageInfo,
-    VersionInfo,
     PublicInfo,
     MachineInfo,
     HistoryRecord,
@@ -109,15 +108,6 @@ export async function getPublicInfo(): Promise<PublicInfo> {
         return handleApiResponse(response)
     } catch (error) {
         throw new ApiError(error instanceof Error ? error.message : 'Failed to get public info')
-    }
-}
-
-export async function getVersion(): Promise<VersionInfo> {
-    try {
-        const response = await invoke<ApiResponse<VersionInfo>>('get_version')
-        return handleApiResponse(response)
-    } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get version info')
     }
 }
 

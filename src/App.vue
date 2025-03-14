@@ -6,10 +6,13 @@ import { useI18n, initLanguage } from './locales'
 import { locales } from './locales'
 import { computed, onMounted } from 'vue'
 import { useHistoryStore } from './stores/history'
+import { useUpdaterStore } from './stores/updater'
+import UpdateOverlay from './components/UpdateOverlay.vue'
 
 const { currentTheme } = useTheme()
 const { currentLang } = useI18n()
 const historyStore = useHistoryStore()
+const updaterStore = useUpdaterStore()
 
 const locale = computed(() => locales[currentLang.value].locale)
 const dateLocale = computed(() => locales[currentLang.value].dateLocale)
@@ -21,6 +24,9 @@ onMounted(async () => {
   
   // 使用统一的初始化方法
   await historyStore.init()
+  
+  // 自动检查更新
+  await updaterStore.checkForUpdates()
 })
 </script>
 
@@ -34,6 +40,7 @@ onMounted(async () => {
     <n-message-provider>
       <router-view />
       <n-global-style />
+      <update-overlay v-if="updaterStore.isUpdating || updaterStore.hasUpdate" />
     </n-message-provider>
   </n-config-provider>
 </template>

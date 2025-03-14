@@ -1,16 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
-import { getVersion, getPublicInfo, checkDisclaimerAccepted, setDisclaimerAccepted, getUserData, setUserData } from '@/api'
-import type { VersionInfo, PublicInfo } from '@/api/types'
+import { getPublicInfo, checkDisclaimerAccepted, setDisclaimerAccepted, getUserData, setUserData } from '@/api'
+import type { PublicInfo } from '@/api/types'
 import { darkTheme } from 'naive-ui'
 import { version as packageVersion } from '../../package.json'
-import { open } from '@tauri-apps/plugin-shell'
 
 // 支持的语言
 type SupportedLanguage = 'zh-CN' | 'en-US'
-
-// 版本检查的时间间隔（毫秒）
-const VERSION_CHECK_INTERVAL = 3 * 60 * 60 * 1000 // 3小时
 
 // 免责声明内容
 const DISCLAIMER_CONTENT = `Cursor Pool 使用须知
@@ -32,11 +28,9 @@ export const useAppStore = defineStore('app', () => {
   const language = ref<SupportedLanguage>('zh-CN')
   const isLoading = ref(false)
   const appVersion = ref('')
-  const latestVersion = ref<VersionInfo | null>(null)
   const publicInfo = ref<PublicInfo | null>(null)
   
-  // 新增状态
-  const showUpdateModal = ref(false)
+  // 声明状态
   const showDisclaimerModal = ref(false)
   const disclaimerContent = ref(DISCLAIMER_CONTENT)
   const disclaimerCountdown = ref(3)
@@ -51,10 +45,6 @@ export const useAppStore = defineStore('app', () => {
   const isDarkMode = computed(() => theme.value === 'dark')
   const currentTheme = computed(() => isDarkMode.value ? darkTheme : null)
   const currentLocale = computed(() => language.value)
-  const hasNewVersion = computed(() => {
-    if (!latestVersion.value || !appVersion.value) return false
-    return compareVersions(appVersion.value, latestVersion.value.version) < 0
-  })
   
   // 引导状态的计算属性
   const shouldShowTour = computed(() => {
@@ -84,47 +74,6 @@ export const useAppStore = defineStore('app', () => {
   function setLanguage(newLanguage: SupportedLanguage) {
     language.value = newLanguage
     localStorage.setItem('language', language.value)
-  }
-
-  /**
-   * 检查版本
-   */
-  async function checkVersion() {
-    try {
-      isLoading.value = true
-      
-      // 检查上次更新提示的时间
-      const lastCheckTime = localStorage.getItem('last_version_check_time')
-      const now = Date.now()
-      
-      // 如果上次检查时间存在且距离现在小于设定的间隔，则跳过检查
-      if (lastCheckTime) {
-        const timeDiff = now - parseInt(lastCheckTime)
-        if (timeDiff < VERSION_CHECK_INTERVAL) {
-          return null
-        }
-      }
-      
-      const versionInfo = await getVersion()
-      latestVersion.value = versionInfo
-      
-      // 如果有新版本，显示更新提示
-      if (hasNewVersion.value) {
-        showUpdateModal.value = true
-        
-        // 只有在非强制更新时才更新检查时间
-        if (!versionInfo.forceUpdate) {
-          localStorage.setItem('last_version_check_time', now.toString())
-        }
-      }
-      
-      return versionInfo
-    } catch (error) {
-      console.error('检查版本失败:', error)
-      throw error
-    } finally {
-      isLoading.value = false
-    }
   }
 
   /**
@@ -165,8 +114,6 @@ export const useAppStore = defineStore('app', () => {
     try {
       tourLoading.value = true
       const response = await getUserData('user.tour.accepted')
-      
-      console.log('获取引导状态返回:', response)
       
       // 处理不同类型的响应
       if (response === null) {
@@ -267,48 +214,6 @@ export const useAppStore = defineStore('app', () => {
   }
   
   /**
-   * 版本比较函数
-   */
-  function compareVersions(v1: string, v2: string) {
-    const parts1 = v1.split('.').map(Number)
-    const parts2 = v2.split('.').map(Number)
-    
-    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-      const a = parts1[i] || 0
-      const b = parts2[i] || 0
-      if (a > b) return 1
-      if (a < b) return -1
-    }
-    return 0
-  }
-  
-  /**
-   * 处理下载更新
-   */
-  async function handleDownload() {
-    if (latestVersion.value?.downloadUrl) {
-      try {
-        const url = 'https://downloader-cursor.deno.dev/'
-        await open(url)
-        return true
-      } catch (error) {
-        console.error('打开下载链接失败:', error)
-        throw error
-      }
-    }
-    return false
-  }
-  
-  /**
-   * 处理稍后更新
-   */
-  function handleLater() {
-    showUpdateModal.value = false
-    // 记录关闭时间
-    localStorage.setItem('last_version_check_time', Date.now().toString())
-  }
-  
-  /**
    * 获取免责声明（检查数据库中是否已接受）
    */
   async function fetchDisclaimer() {
@@ -370,9 +275,7 @@ export const useAppStore = defineStore('app', () => {
     language,
     isLoading,
     appVersion,
-    latestVersion,
     publicInfo,
-    showUpdateModal,
     showDisclaimerModal,
     disclaimerContent,
     disclaimerCountdown,
@@ -385,21 +288,16 @@ export const useAppStore = defineStore('app', () => {
     isDarkMode,
     currentTheme,
     currentLocale,
-    hasNewVersion,
     shouldShowTour,
     
     // Actions
     toggleTheme,
     setTheme,
     setLanguage,
-    checkVersion,
     fetchPublicInfo,
     setLoading,
     setAppVersion,
     initAppSettings,
-    compareVersions,
-    handleDownload,
-    handleLater,
     fetchDisclaimer,
     confirmDisclaimer,
     fetchTourStatus,

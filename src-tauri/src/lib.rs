@@ -4,7 +4,7 @@
 use api::ApiClient;
 use database::Database;
 use std::env;
-use tauri::{ generate_context, generate_handler, Manager };
+use tauri::{generate_context, generate_handler, Manager};
 
 pub mod api;
 pub mod auth;
@@ -14,7 +14,7 @@ pub mod tray;
 pub mod utils;
 
 pub fn run() {
-    let mut builder = tauri::Builder::default();
+    let mut builder = tauri::Builder::default().plugin(tauri_plugin_process::init());
 
     #[cfg(desktop)]
     {
@@ -25,6 +25,11 @@ pub fn run() {
                 let _ = window.set_focus();
             }
         }));
+    }
+
+    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
     }
 
     builder
@@ -58,7 +63,6 @@ pub fn run() {
             api::set_user_data,
             api::get_user_data,
             api::del_user_data,
-
             cursor_reset::commands::reset_machine_id,
             cursor_reset::commands::switch_account,
             cursor_reset::commands::get_machine_ids,

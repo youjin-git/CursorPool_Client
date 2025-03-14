@@ -98,14 +98,6 @@ export interface UpdatePasswordRequest {
   confirm_password: string
 }
 
-// 版本信息响应
-export interface VersionInfo {
-  version: string
-  forceUpdate: boolean
-  downloadUrl: string
-  changeLog: string
-}
-
 // 公告信息响应
 export interface PublicInfo {
   type: string
