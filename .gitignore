@@ -27,3 +27,6 @@ docs
 .git copy
 .cursorignore
 .tauri/
+icon.png
+todo.txt
+scripts/
