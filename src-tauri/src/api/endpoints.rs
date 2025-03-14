@@ -28,7 +28,7 @@ pub struct BugReportRequest {
 pub async fn check_user(
     client: State<'_, super::client::ApiClient>,
     email: String,
-) -> Result<ApiResponse<()>, String> {
+) -> Result<ApiResponse<serde_json::Value>, String> {
     let response = client
         .post(format!("{}/checkUser", get_base_url()))
         .form(&[("email", email)])

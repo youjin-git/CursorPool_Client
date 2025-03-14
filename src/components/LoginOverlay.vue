@@ -35,6 +35,7 @@ const userStore = useUserStore()
 // 忘记密码相关状态
 const showForgotPassword = ref(false)
 const forgotPasswordLoading = ref(false)
+const forgotPasswordCodeSending = ref(false)
 const forgotPasswordForm = ref({
   email: '',
   smsCode: '',
@@ -107,9 +108,9 @@ const formState = reactive({
 watch(() => userStore.loginError, (newError) => {
   if (newError) {
     if (activeTab.value === 'login') {
-      formState.login.error = newError
+      message.error(newError)
     } else {
-      formState.register.error = newError
+      message.error(newError)
     }
   }
 })
@@ -261,17 +262,17 @@ async function handleLogin() {
   
   // 表单验证
   if (!username || !password) {
-    formState.login.error = '请填写完整的登录信息'
+    message.error('请填写完整的登录信息')
     return
   }
   
   if (!validators.validateEmail(username)) {
-    formState.login.error = '邮箱格式不正确'
+    message.error('邮箱格式不正确')
     return
   }
   
   if (!validators.validatePassword(password)) {
-    formState.login.error = '密码格式不正确，请使用6-20位字母、数字或特殊字符'
+    message.error('密码格式不正确，请使用6-20位字母、数字或特殊字符')
     return
   }
   
@@ -285,7 +286,7 @@ async function handleLogin() {
     addHistoryRecord('登录', `用户 ${username} 登录成功`)
     emit('login-success')
   } catch (error) {
-    formState.login.error = error instanceof Error ? error.message : '登录失败'
+    message.error(error instanceof Error ? error.message : '登录失败')
   } finally {
     formState.login.loading = false
   }
@@ -298,7 +299,7 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
   // 邮箱验证
   if (!email) {
     if (type === 'register') {
-      formState.register.error = '请输入邮箱地址'
+      message.error('请输入邮箱地址')
     } else {
       message.error('请输入邮箱地址')
     }
@@ -307,7 +308,7 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
   
   if (!validators.validateEmail(email)) {
     if (type === 'register') {
-      formState.register.error = '邮箱格式不正确'
+      message.error('邮箱格式不正确')
     } else {
       message.error('邮箱格式不正确')
     }
@@ -322,11 +323,11 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
       // 检查用户是否已存在
       const result = await checkUser(email)
       if (result.msg === '已存在') {
-        formState.register.error = '该邮箱已被注册'
+        message.error('该邮箱已被注册')
         return
       }
     } else {
-      forgotPasswordLoading.value = true
+      forgotPasswordCodeSending.value = true
     }
     
     // 发送验证码 - 这个API调用保留，因为Pinia store中没有对应的方法
@@ -347,16 +348,12 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
     }
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : '发送验证码失败'
-    if (type === 'register') {
-      formState.register.error = errorMsg
-    } else {
-      message.error(errorMsg)
-    }
+    message.error(errorMsg)
   } finally {
     if (type === 'register') {
       formState.register.codeSending = false
     } else {
-      forgotPasswordLoading.value = false
+      forgotPasswordCodeSending.value = false
     }
   }
 }
@@ -369,27 +366,27 @@ async function handleRegister() {
   
   // 表单验证
   if (!password || !confirmPassword || !email || !code) {
-    formState.register.error = '请填写完整的注册信息'
+    message.error('请填写完整的注册信息')
     return
   }
   
   if (!validators.validatePassword(password)) {
-    formState.register.error = '密码格式不正确，请使用6-20位字母、数字或特殊字符'
+    message.error('密码格式不正确，请使用6-20位字母、数字或特殊字符')
     return
   }
   
   if (password !== confirmPassword) {
-    formState.register.error = '两次输入的密码不一致'
+    message.error('两次输入的密码不一致')
     return
   }
   
   if (!validators.validateEmail(email)) {
-    formState.register.error = '邮箱格式不正确'
+    message.error('邮箱格式不正确')
     return
   }
   
   if (!validators.validateCode(code)) {
-    formState.register.error = '验证码格式不正确'
+    message.error('验证码格式不正确')
     return
   }
   
@@ -406,7 +403,7 @@ async function handleRegister() {
     activeTab.value = 'login'
     formState.login.username = email
   } catch (error) {
-    formState.register.error = error instanceof Error ? error.message : '注册失败'
+    message.error(error instanceof Error ? error.message : '注册失败')
   } finally {
     formState.register.loading = false
   }
@@ -491,10 +488,6 @@ async function handleForgotPassword() {
               />
             </n-form-item>
             
-            <div v-if="formState.login.error" class="error-message">
-              {{ formState.login.error }}
-            </div>
-            
             <n-space justify="space-between">
               <n-button
                 type="primary"
@@ -566,10 +559,6 @@ async function handleForgotPassword() {
               />
             </n-form-item>
             
-            <div v-if="formState.register.error" class="error-message">
-              {{ formState.register.error }}
-            </div>
-            
             <n-button
               type="primary"
               block
@@ -614,6 +603,7 @@ async function handleForgotPassword() {
               class="send-code-btn"
               type="primary"
               ghost
+              :loading="forgotPasswordCodeSending"
             >
               {{ messages[currentLang].login.sendCode }}
             </n-button>
@@ -783,13 +773,6 @@ async function handleForgotPassword() {
     -webkit-text-fill-color: var(--n-text-color) !important;
     transition: background-color 5000s ease-in-out 0s;
   }
-}
-
-.error-message {
-  color: #ff4d4f;
-  font-size: 12px;
-  margin-top: 2px;
-  margin-bottom: 4px;
 }
 
 /* 自定义错误状态样式 */

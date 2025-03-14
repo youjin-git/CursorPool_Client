@@ -145,8 +145,6 @@ const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_ki
       }
     }
 
-    console.log(`尝试执行${action}操作...`)
-    
     try {
       let successMessage = ''
       let historyAction = ''
@@ -175,11 +173,9 @@ const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_ki
     } catch (error) {
       // 获取完整的错误信息
       const errorMsg = error instanceof Error ? error.message : String(error)
-      console.log('捕获到操作错误:', errorMsg)
       
       // 检查是否包含MAIN_JS_NOT_FOUND
       if (errorMsg.includes('MAIN_JS_NOT_FOUND')) {
-        console.log('检测到main.js文件找不到错误，显示文件选择对话框')
         cursorStore.setPendingAction(action, { forceKill: force_kill })
         return
       }
@@ -197,7 +193,6 @@ const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_ki
 // 检查控制状态
 const checkControlStatus = async () => {
   try {
-    console.log('开始检查hook状态...')
     // 添加loading状态
     controlStatus.value.isChecking = true
     
@@ -205,19 +200,12 @@ const checkControlStatus = async () => {
     const hookResult = await cursorStore.checkHook()
     // 处理可能为null的情况
     controlStatus.value.isHooked = hookResult === true
-    console.log('hook状态检查完成:', controlStatus.value.isHooked)
     
     // 确保UI反映最新状态
     await nextTick()
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     console.error('检查控制状态失败:', errorMsg)
-    
-    // 如果是找不到main.js文件的错误，交由cursorStore处理
-    if (errorMsg.includes('MAIN_JS_NOT_FOUND')) {
-      console.log('检测到main.js文件找不到错误，交由cursorStore处理')
-      // 不做额外处理，因为cursorStore.checkHook内部已经处理了
-    }
   } finally {
     // 完成检查，移除loading状态
     controlStatus.value.isChecking = false
@@ -233,7 +221,6 @@ const handleControlForceKill = async () => {
 
 // 监听cursorStore的hookStatus变化
 watch(() => cursorStore.hookStatus, (newStatus) => {
-  console.log('监测到Hook状态变化:', newStatus)
   if (newStatus !== null) {
     controlStatus.value.isHooked = newStatus
   }
@@ -242,8 +229,6 @@ watch(() => cursorStore.hookStatus, (newStatus) => {
 // 监听文件选择模态框的显示状态
 watch(() => cursorStore.showSelectFileModal, (newValue, oldValue) => {
   if (oldValue && !newValue) {
-    // 当模态框关闭时，重新检查Hook状态
-    console.log('文件选择模态框关闭，重新检查Hook状态')
     checkControlStatus()
   }
 })
