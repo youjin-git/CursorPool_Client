@@ -34,6 +34,35 @@ const formatDate = (dateStr: string) => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
+// 计算并格式化剩余时间
+const formatTimeRemaining = (expireTimeStr: string) => {
+  if (!expireTimeStr) return '未知'
+  
+  // 解析过期时间
+  const expireTime = new Date(expireTimeStr.replace(/-/g, '/'))
+  const now = new Date()
+  
+  // 如果已过期，返回已过期提示
+  if (expireTime <= now) return '已过期'
+  
+  // 计算剩余毫秒数
+  const remainingMs = expireTime.getTime() - now.getTime()
+  
+  // 转换为天、小时、分钟
+  const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60))
+  
+  // 只显示最大的时间单位，精简信息量
+  if (days > 0) {
+    return `${days}天`
+  } else if (hours > 0) {
+    return `${hours}小时`
+  } else {
+    return `${minutes}分钟`
+  }
+}
+
 const deviceInfo = ref<DeviceInfoState>({
   machineCode: '',
   currentAccount: '',
@@ -703,6 +732,9 @@ const formValue = ref({
                   >{{ deviceInfo.userInfo?.username }}</span>
                   <n-tag :type="levelMap[deviceInfo.userInfo?.level || 1].type" size="tiny" style="transform: scale(0.9)">
                     {{ levelMap[deviceInfo.userInfo?.level || 1].name }}
+                  </n-tag>
+                  <n-tag type="success" size="tiny" style="transform: scale(0.9)" v-if="deviceInfo.userInfo?.expireTime">
+                    {{ formatTimeRemaining(deviceInfo.userInfo.expireTime) }}
                   </n-tag>
                 </n-space>
               </n-space>
