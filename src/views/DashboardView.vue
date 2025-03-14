@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon, NForm, NFormItem, NInput } from 'naive-ui'
+import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon, NForm, NFormItem, NInput, NScrollbar } from 'naive-ui'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from '../locales'
 import { useMessage } from 'naive-ui'
@@ -11,6 +11,7 @@ import { saveAccountToHistory } from '@/utils/historyAccounts'
 import type { HistoryAccount } from '@/types/history'
 import DashboardTour from '../components/DashboardTour.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
+import MarkdownRender from '../components/MarkdownRender.vue'
 import { useRouter } from 'vue-router'
 
 import { useUserStore, useCursorStore, useAppStore } from '@/stores'
@@ -920,10 +921,8 @@ const formValue = ref({
       :closable="false"
       :mask-closable="false"
     >
-      <n-scrollbar style="max-height: 60vh">
-        <div style="white-space: pre-line; padding: 16px 0;">
-          {{ appStore.disclaimerContent }}
-        </div>
+      <n-scrollbar style="height: 60vh; overflow: auto;">
+        <MarkdownRender :content="appStore.disclaimerContent" />
       </n-scrollbar>
       <template #footer>
         <n-space justify="end">

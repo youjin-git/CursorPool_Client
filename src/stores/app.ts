@@ -5,22 +5,10 @@ import type { PublicInfo } from '@/api/types'
 import { darkTheme } from 'naive-ui'
 import { version as packageVersion } from '../../package.json'
 
+import disclaimerMd from '../disclaimer.md?raw'
+
 // 支持的语言
 type SupportedLanguage = 'zh-CN' | 'en-US'
-
-// 免责声明内容
-const DISCLAIMER_CONTENT = `Cursor Pool 使用须知
-
-欢迎使用Cursor Pool! 我们的产品可以让您的本地Cursor AI编辑器实现无缝刷新账号。
-本软件执行过程中会对Cursor客户端的主要执行文件进行hook,以达到修改Cursor账号的目的。
-本软件会修改Cursor客户端在本地生成的文件进行修改或修改权限,以达到修改Cursor机器码的目的。
-
-同意使用Cursor Pool即表示您授权我们hook Cursor客户端和修改机器码的权限
-Cursor Pool 客户端免费开源, 如果你使用第三方客户端禁止使用Cursor Pool的:
-1. 名称
-2. 图标
-同时 设置页面必须保留源项目开源作者声明
-如果您同意上述操作和授权，请点击"同意并继续"。`
 
 export const useAppStore = defineStore('app', () => {
   // 状态
@@ -32,7 +20,7 @@ export const useAppStore = defineStore('app', () => {
   
   // 声明状态
   const showDisclaimerModal = ref(false)
-  const disclaimerContent = ref(DISCLAIMER_CONTENT)
+  const disclaimerContent = ref(disclaimerMd)
   const disclaimerCountdown = ref(3)
   const canConfirmDisclaimer = ref(false)
   const disclaimerLoading = ref(false)

@@ -13,7 +13,6 @@ import {
   NModal,
   NTabs,
   NTabPane,
-  NCheckbox,
   NInputGroup
 } from 'naive-ui'
 import { checkUser, sendCode } from '../api'
@@ -96,7 +95,6 @@ const formState = reactive({
     confirmPassword: '',
     email: '',
     code: '',
-    agreement: false,
     loading: false,
     error: '',
     codeSent: false,
@@ -127,8 +125,7 @@ const canRegister = computed(() => {
   return formState.register.password && 
          formState.register.confirmPassword && 
          formState.register.email && 
-         formState.register.code && 
-         formState.register.agreement
+         formState.register.code
 })
 
 // 计算标题
@@ -368,7 +365,7 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
  * 处理注册
  */
 async function handleRegister() {
-  const { password, confirmPassword, email, code, agreement } = formState.register
+  const { password, confirmPassword, email, code } = formState.register
   
   // 表单验证
   if (!password || !confirmPassword || !email || !code) {
@@ -393,11 +390,6 @@ async function handleRegister() {
   
   if (!validators.validateCode(code)) {
     formState.register.error = '验证码格式不正确'
-    return
-  }
-  
-  if (!agreement) {
-    formState.register.error = '请阅读并同意用户协议'
     return
   }
   
@@ -574,12 +566,6 @@ async function handleForgotPassword() {
               />
             </n-form-item>
             
-            <n-form-item class="agreement-item">
-              <n-checkbox v-model:checked="formState.register.agreement">
-                <span class="agreement-text">我已阅读并同意用户协议</span>
-              </n-checkbox>
-            </n-form-item>
-            
             <div v-if="formState.register.error" class="error-message">
               {{ formState.register.error }}
             </div>
@@ -743,15 +729,6 @@ async function handleForgotPassword() {
 
 .compact-form :deep(.n-form-item:last-child) {
   margin-bottom: 0;
-}
-
-/* 协议选项样式 */
-.agreement-item {
-  margin-bottom: 2px !important;
-}
-
-.agreement-text {
-  font-size: 12px;
 }
 
 /* 发送验证码按钮样式 */
