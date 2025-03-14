@@ -289,3 +289,17 @@ pub struct HistoryAccountRecord {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gpt35_max_usage: Option<i32>,
 }
+
+// 公告数据结构
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Article {
+    pub id: i32,
+    pub title: String,
+    pub content: String,
+}
+
+// 公告列表响应
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ArticleListResponse {
+    pub articles: Vec<Article>,
+}

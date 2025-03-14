@@ -8,7 +8,8 @@ import type {
     PublicInfo,
     MachineInfo,
     HistoryRecord,
-    HistoryAccountRecord
+    HistoryAccountRecord,
+    Article
 } from './types'
 
 // 错误处理
@@ -519,4 +520,54 @@ export async function clearDisclaimerAccepted(): Promise<void> {
         console.error('清除免责声明状态失败:', error);
         throw error;
     }
+}
+
+// 获取公告列表
+export async function getArticleList(): Promise<Article[]> {
+  try {
+    const response = await invoke<ApiResponse<Article[]>>('get_article_list');
+    return handleApiResponse(response);
+  } catch (error) {
+    // 静默处理错误，返回空数组
+    console.error('Failed to get article list:', error);
+    return [];
+  }
+}
+
+// 检查文章是否已读
+export async function isArticleRead(articleId: number): Promise<boolean> {
+  try {
+    const valueStr = await getUserData('system.articles');
+    if (!valueStr) return false;
+    
+    try {
+      // 尝试正确解析JSON
+      const readIds = JSON.parse(valueStr) as number[];
+      
+      // 确保它是一个数组
+      if (Array.isArray(readIds)) {
+        const result = readIds.includes(articleId);
+        return result;
+      } else {
+        console.error('已读文章ID不是一个数组:', readIds);
+        return false;
+      }
+    } catch (parseError) {
+      console.error('解析已读文章ID失败:', parseError, '原始数据:', valueStr);
+      return false;
+    }
+  } catch (error) {
+    console.error('获取已读文章状态失败:', error);
+    return false;
+  }
+}
+
+// 标记文章为已读
+export async function markArticleRead(articleId: number): Promise<void> {
+  try {
+    await invoke<ApiResponse<void>>('mark_article_read', { articleId });
+  } catch (error) {
+    // 静默处理错误
+    console.error('Failed to mark article as read:', error);
+  }
 }

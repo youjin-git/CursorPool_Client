@@ -63,6 +63,9 @@ pub fn run() {
             api::set_user_data,
             api::get_user_data,
             api::del_user_data,
+            api::get_article_list,
+            api::mark_article_read,
+            
             cursor_reset::commands::reset_machine_id,
             cursor_reset::commands::switch_account,
             cursor_reset::commands::get_machine_ids,

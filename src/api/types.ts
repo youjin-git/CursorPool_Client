@@ -202,3 +202,13 @@ export interface HistoryAccountRecord {
   gpt4_max_usage?: number | null
   gpt35_max_usage?: number | null
 }
+
+// 公告数据结构
+export interface Article {
+  id: number;
+  title: string;
+  content: string;
+}
+
+// 添加公告相关接口到现有ApiResponse类型
+export interface ApiArticleResponse extends ApiResponse<Article[]> {}

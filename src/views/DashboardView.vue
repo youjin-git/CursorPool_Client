@@ -12,6 +12,7 @@ import type { HistoryAccount } from '@/types/history'
 import DashboardTour from '../components/DashboardTour.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
 import MarkdownRender from '../components/MarkdownRender.vue'
+import ArticleList from '../components/ArticleList.vue'
 import { useRouter } from 'vue-router'
 
 import { useUserStore, useCursorStore, useAppStore } from '@/stores'
@@ -717,6 +718,8 @@ const formValue = ref({
 
 <template>
   <n-space vertical size="large">
+    <article-list v-if="userStore.userInfo && !appStore.showDisclaimerModal && !userStore.showInsufficientCreditsModal" />
+    
     <n-grid :cols="2" :x-gap="24" style="display: grid; grid-template-columns: repeat(2, 1fr);">
       <!-- 用户信息卡片 -->
       <n-grid-item style="display: grid;">

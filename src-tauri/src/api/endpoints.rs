@@ -372,3 +372,100 @@ pub async fn del_user_data(
         Err(e) => Err(e.to_string()),
     }
 }
+
+/// 获取公告列表
+#[tauri::command]
+pub async fn get_article_list(
+    client: State<'_, super::client::ApiClient>,
+) -> Result<ApiResponse<Vec<Article>>, String> {
+    // 获取公告数据
+    let result = fetch_article_list(&client).await;
+    
+    match result {
+        Ok(articles) => {
+            Ok(ApiResponse {
+                status: 200,
+                msg: "获取公告成功".to_string(),
+                data: Some(articles),
+                code: Some("SUCCESS".to_string()),
+            })
+        },
+        Err(_) => {
+            // 接口错误时，返回空列表而不是错误
+            Ok(ApiResponse {
+                status: 200,
+                msg: "获取公告成功".to_string(),
+                data: Some(Vec::new()),
+                code: Some("SUCCESS".to_string()),
+            })
+        }
+    }
+}
+
+/// 内部函数：获取公告列表数据
+async fn fetch_article_list(client: &super::client::ApiClient) -> Result<Vec<Article>, String> {
+    let response = client
+        .get(format!("{}/article/list/1", get_base_url()))
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    let response_json: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+    
+    // 检查状态码
+    let status = response_json["status"].as_i64().unwrap_or(0);
+    if status != 200 {
+        return Err("获取公告失败".to_string());
+    }
+    
+    // 提取所需字段
+    let empty_vec = Vec::new();
+    let data = response_json["data"].as_array().unwrap_or(&empty_vec);
+    let mut articles = Vec::new();
+    
+    for item in data {
+        let id = item["id"].as_i64().unwrap_or(0) as i32;
+        let title = item["title"].as_str().unwrap_or("").to_string();
+        let content = item["content"].as_str().unwrap_or("").to_string();
+        
+        articles.push(Article {
+            id,
+            title,
+            content,
+        });
+    }
+    
+    Ok(articles)
+}
+
+/// 标记文章为已读
+#[tauri::command]
+pub async fn mark_article_read(
+    db: State<'_, Database>,
+    article_id: i32,
+) -> Result<ApiResponse<()>, String> {
+    // 获取已读ID集合
+    let read_ids = match db.get_item("system.articles") {
+        Ok(Some(data)) => {
+            serde_json::from_str::<Vec<i32>>(&data).unwrap_or_default()
+        },
+        _ => Vec::new(),
+    };
+    
+    // 检查文章ID是否已在已读列表中
+    let mut updated_ids = read_ids.clone();
+    if !updated_ids.contains(&article_id) {
+        updated_ids.push(article_id);
+        
+        // 保存更新后的已读ID列表
+        let json_data = serde_json::to_string(&updated_ids).map_err(|e| e.to_string())?;
+        db.set_item("system.articles", &json_data).map_err(|e| e.to_string())?;
+    }
+    
+    Ok(ApiResponse {
+        status: 200,
+        msg: "文章已标记为已读".to_string(),
+        data: None,
+        code: Some("SUCCESS".to_string()),
+    })
+}
