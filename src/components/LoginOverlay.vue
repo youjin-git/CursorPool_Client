@@ -22,13 +22,14 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { addHistoryRecord } from '../utils/history'
 import { useUserStore } from '../stores/user'
+import InboundSelector from './InboundSelector.vue'
 
 // 定义组件事件
 const emit = defineEmits(['login-success'])
 
 // 基础状态
 const message = useMessage()
-const { currentLang } = useI18n()
+const { currentLang, t } = useI18n()
 const activeTab = ref('login')
 const userStore = useUserStore()
 
@@ -489,16 +490,19 @@ async function handleForgotPassword() {
             </n-form-item>
             
             <n-space justify="space-between">
-              <n-button
-                type="primary"
-                :loading="formState.login.loading"
-                @click="handleLogin"
-              >
-                {{ messages[currentLang].login.loginButton }}
-              </n-button>
+              <n-space align="center">
+                <n-button
+                  type="primary"
+                  :loading="formState.login.loading"
+                  @click="handleLogin"
+                >
+                  {{ messages[currentLang].login.loginButton }}
+                </n-button>
+                <inbound-selector compact :show-label="false" />
+              </n-space>
               
               <n-button text @click="showForgotPassword = true">
-                忘记密码
+                {{ t('common.forgotPassword') }}
               </n-button>
             </n-space>
           </n-form>
@@ -577,7 +581,7 @@ async function handleForgotPassword() {
 
   <!-- 忘记密码模态框 -->
   <n-modal v-model:show="showForgotPassword">
-    <n-card style="width: 400px" title="重置密码">
+    <n-card style="width: 400px" :title="messages[currentLang].login.loginButton === '登录' ? '重置密码' : 'Reset Password'">
       <n-form class="compact-form">
         <n-form-item :label="messages[currentLang].login.emailPlaceholder">
           <n-auto-complete
@@ -630,14 +634,14 @@ async function handleForgotPassword() {
 
         <n-space justify="end">
           <n-button @click="showForgotPassword = false">
-            取消
+            {{ messages[currentLang].login.loginButton === '登录' ? '取消' : 'Cancel' }}
           </n-button>
           <n-button
             type="primary"
             @click="handleForgotPassword"
             :loading="forgotPasswordLoading"
           >
-            重置密码
+            {{ messages[currentLang].login.loginButton === '登录' ? '重置密码' : 'Reset Password' }}
           </n-button>
         </n-space>
       </n-form>
@@ -787,5 +791,12 @@ async function handleForgotPassword() {
 :deep(.n-auto-complete.n-auto-complete--status-error:focus .n-input) {
   border-color: #ff7875;
   box-shadow: 0 0 0 2px rgba(255, 77, 79, 0.2);
+}
+
+/* 登录操作按钮区域 */
+.login-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>

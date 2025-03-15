@@ -41,10 +41,22 @@ pub fn run() {
             let db = Database::new(&app.handle()).expect("数据库初始化失败");
             app.manage(db);
 
+            // 异步初始化线路配置
+            let app_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = api::inbound::init_inbound_config(&app_handle).await {
+                    eprintln!("初始化线路配置失败: {}", e);
+                }
+            });
+            
+            // 延迟一小段时间，以便线路配置初始化完成
+            std::thread::sleep(std::time::Duration::from_millis(100));
+            
             let api_client = ApiClient::new(Some(app.handle().clone()));
             app.manage(api_client);
 
             tray::setup_system_tray(app)?;
+            
             Ok(())
         })
         .invoke_handler(generate_handler![

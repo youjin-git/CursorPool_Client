@@ -40,6 +40,21 @@ impl ApiClient {
         }
     }
 
+    /// 获取基础URL，优先使用inbound配置
+    pub fn get_base_url(&self) -> String {
+        use crate::api::inbound::get_current_inbound_url;
+        
+        // 如果有AppHandle，尝试获取当前线路URL
+        if let Some(handle) = &self.app_handle {
+            if let Some(db) = handle.try_state::<crate::database::Database>() {
+                return get_current_inbound_url(&db);
+            }
+        }
+        
+        // 回退到默认URL
+        "https://pool.52ai.org/api".to_string()
+    }
+
     /// 发送 HTTP 请求
     pub async fn send(&self, mut request: Request) -> Result<Response, reqwest::Error> {
         let url: String = request.url().to_string();
@@ -167,11 +182,6 @@ impl<'a> RequestBuilder<'a> {
             client: self.client,
         }
     }
-}
-
-/// 获取 API 基础 URL
-pub fn get_base_url() -> String {
-    "https://pool.52ai.org/api".to_string()
 }
 
 /// 清除认证令牌

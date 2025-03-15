@@ -14,6 +14,7 @@ import {
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
+import InboundSelector from '../components/InboundSelector.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
 import { 
   changePassword, 
@@ -248,146 +249,172 @@ onMounted(async () => {
 
 <template>
   <n-space vertical :size="24">
-    <n-card :title="i18n.systemControl.title">
-      <n-space vertical>
+    <!-- 系统设置卡片 -->
+    <n-card :title="i18n.systemControl ? i18n.systemControl.title : '系统设置'">
+      <n-space vertical :size="16">
         <!-- Hook 控制部分 -->
-        <n-space justify="space-between" align="center">
-          <span>
-            {{ i18n.systemControl.hookStatus }}: 
-            <template v-if="controlStatus.isChecking">
-              <n-spin size="small" />
-            </template>
-            <template v-else>
-              {{ controlStatus.isHooked ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
-            </template>
-          </span>
-          <n-space>
-            <n-button 
-              type="warning" 
-              :loading="applyHookLoading || controlStatus.isChecking"
-              :disabled="controlStatus.isHooked"
-              @click="handleControlAction('applyHook')"
-              style="width: 120px"
-            >
-              {{ i18n.systemControl.applyHook }}
-            </n-button>
-            <n-button 
-              type="primary"
-              :loading="restoreHookLoading || controlStatus.isChecking"
-              :disabled="!controlStatus.isHooked"
-              @click="handleControlAction('restoreHook')"
-              style="width: 120px"
-            >
-              {{ i18n.systemControl.restoreHook }}
-            </n-button>
+        <div>
+          <div class="section-header">{{ i18n.systemControl.hookStatus }}</div>
+          <n-space justify="space-between" align="center">
+            <span>
+              <template v-if="controlStatus.isChecking">
+                <n-spin size="small" />
+              </template>
+              <template v-else>
+                {{ controlStatus.isHooked ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
+              </template>
+            </span>
+            <n-space>
+              <n-button 
+                type="warning" 
+                :loading="applyHookLoading || controlStatus.isChecking"
+                :disabled="controlStatus.isHooked"
+                @click="handleControlAction('applyHook')"
+                style="width: 120px"
+              >
+                {{ i18n.systemControl.applyHook }}
+              </n-button>
+              <n-button 
+                type="primary"
+                :loading="restoreHookLoading || controlStatus.isChecking"
+                :disabled="!controlStatus.isHooked"
+                @click="handleControlAction('restoreHook')"
+                style="width: 120px"
+              >
+                {{ i18n.systemControl.restoreHook }}
+              </n-button>
+            </n-space>
           </n-space>
-        </n-space>
-      </n-space>
-    </n-card>
-
-    <n-card :title="messages[currentLang].settings.activation">
-      <n-form
-        :model="formValue"
-        label-placement="left"
-        label-width="120"
-        require-mark-placement="right-hanging"
-      >
-        <n-form-item
-          :label="messages[currentLang].settings.activationCode"
-          path="activationCode"
-        >
-          <n-input-group style="width: 360px">
-            <n-input
-              v-model:value="formValue.activationCode"
-              :placeholder="messages[currentLang].settings.activationCode"
-              size="large"
-            />
-            <n-button
-              type="primary"
-              @click="handleActivate"
-              :loading="activateLoading"
-              size="large"
-            >
-              {{ messages[currentLang].settings.activate }}
-            </n-button>
-          </n-input-group>
-        </n-form-item>
-
-        <n-form-item>
-          <div style="padding-left: 40px">
-            <n-button
-              type="error"
-              @click="handleLogout"
-              size="large"
-            >
-              {{ i18n.common.logout }}
-            </n-button>
-          </div>
-        </n-form-item>
-      </n-form>
-    </n-card>
-
-    <n-card :title="messages[currentLang].settings.changePassword">
-      <n-form
-        :model="formValue"
-        label-placement="left"
-        label-width="100"
-        require-mark-placement="right-hanging"
-      >
-        <n-form-item :label="messages[currentLang].settings.currentPassword">
-          <n-input
-            v-model:value="formValue.currentPassword"
-            type="password"
-            show-password-on="click"
-            :placeholder="messages[currentLang].settings.currentPassword"
-            maxlength="20"
-            minlength="6"
-            :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
-          />
-        </n-form-item>
-
-        <n-form-item :label="messages[currentLang].settings.newPassword">
-          <n-input
-            v-model:value="formValue.newPassword"
-            type="password"
-            show-password-on="click"
-            :placeholder="messages[currentLang].settings.newPassword"
-            maxlength="20"
-            minlength="6"
-            :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
-          />
-        </n-form-item>
-
-        <n-form-item :label="messages[currentLang].settings.confirmPassword">
-          <n-input
-            v-model:value="formValue.confirmPassword"
-            type="password"
-            show-password-on="click"
-            :placeholder="messages[currentLang].settings.confirmPassword"
-            maxlength="20"
-            minlength="6"
-            :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
-          />
-        </n-form-item>
-
-        <div style="margin-top: 24px">
-          <n-button 
-            type="primary" 
-            @click="handleChangePassword"
-            :loading="passwordChangeLoading"
-          >
-            {{ messages[currentLang].settings.changePassword }}
-          </n-button>
         </div>
-      </n-form>
-    </n-card>
-
-    <n-card title="Language / 语言">
-      <n-space vertical>
-        <language-switch />
+        
+        <!-- 全局偏好设置 -->
+        <div class="section-divider"></div>
+        <div>
+          <div class="section-header">全局偏好设置</div>
+          <div class="preferences-list">
+            <!-- 线路选择 -->
+            <div class="preference-row">
+              <div class="preference-label">{{ i18n.inbound ? i18n.inbound.title : '线路' }}</div>
+              <div class="preference-control">
+                <inbound-selector :show-label="false" />
+              </div>
+            </div>
+            
+            <!-- 语言选择 -->
+            <div class="preference-row">
+              <div class="preference-label">语言</div>
+              <div class="preference-control">
+                <language-switch :show-label="false" />
+              </div>
+            </div>
+          </div>
+        </div>
       </n-space>
     </n-card>
 
+    <!-- 用户设置卡片 -->
+    <n-card :title="messages[currentLang].settings.activation">
+      <n-space vertical :size="16">
+        <!-- 激活码部分 -->
+        <div>
+          <n-form
+            :model="formValue"
+            label-placement="left"
+            label-width="120"
+            require-mark-placement="right-hanging"
+          >
+            <n-form-item
+              :label="messages[currentLang].settings.activationCode"
+              path="activationCode"
+            >
+              <n-input-group style="width: 360px">
+                <n-input
+                  v-model:value="formValue.activationCode"
+                  :placeholder="messages[currentLang].settings.activationCode"
+                  size="large"
+                />
+                <n-button
+                  type="primary"
+                  @click="handleActivate"
+                  :loading="activateLoading"
+                  size="large"
+                >
+                  {{ messages[currentLang].settings.activate }}
+                </n-button>
+              </n-input-group>
+            </n-form-item>
+          </n-form>
+        </div>
+
+        <!-- 密码修改部分 -->
+        <div class="section-divider"></div>
+        <div>
+          <div class="section-header">{{ messages[currentLang].settings.changePassword }}</div>
+          <n-form
+            :model="formValue"
+            label-placement="left"
+            label-width="100"
+            require-mark-placement="right-hanging"
+          >
+            <n-form-item :label="messages[currentLang].settings.currentPassword">
+              <n-input
+                v-model:value="formValue.currentPassword"
+                type="password"
+                show-password-on="click"
+                :placeholder="messages[currentLang].settings.currentPassword"
+                maxlength="20"
+                minlength="6"
+                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+              />
+            </n-form-item>
+
+            <n-form-item :label="messages[currentLang].settings.newPassword">
+              <n-input
+                v-model:value="formValue.newPassword"
+                type="password"
+                show-password-on="click"
+                :placeholder="messages[currentLang].settings.newPassword"
+                maxlength="20"
+                minlength="6"
+                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+              />
+            </n-form-item>
+
+            <n-form-item :label="messages[currentLang].settings.confirmPassword">
+              <n-input
+                v-model:value="formValue.confirmPassword"
+                type="password"
+                show-password-on="click"
+                :placeholder="messages[currentLang].settings.confirmPassword"
+                maxlength="20"
+                minlength="6"
+                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+              />
+            </n-form-item>
+
+            <div style="margin-top: 12px">
+              <n-space>
+                <n-button 
+                  type="primary" 
+                  @click="handleChangePassword"
+                  :loading="passwordChangeLoading"
+                >
+                  {{ messages[currentLang].settings.changePassword }}
+                </n-button>
+                <n-button
+                  type="error"
+                  @click="handleLogout"
+                >
+                  {{ i18n.common.logout }}
+                </n-button>
+              </n-space>
+            </div>
+          </n-form>
+        </div>
+      </n-space>
+    </n-card>
+
+    <!-- 关于信息卡片 -->
     <n-card :title="messages[currentLang].settings.about">
       <n-space vertical :size="12">
         <p>{{ i18n.about.appName }} v{{ version }}</p>
@@ -412,3 +439,79 @@ onMounted(async () => {
     <file-select-modal />
   </n-space>
 </template>
+
+<style scoped>
+.section-divider {
+  height: 1px;
+  background-color: var(--n-border-color);
+  margin: 12px 0;
+}
+
+.section-header {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--n-title-text-color);
+  margin-bottom: 12px;
+}
+
+.preferences-container {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.preference-group {
+  display: flex;
+  flex-direction: column;
+  width: 48%;
+}
+
+.preference-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.preference-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--n-text-color);
+  width: 80px;
+}
+
+.preference-control {
+  flex: 1;
+}
+
+@media (max-width: 600px) {
+  .preferences-container {
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .preference-group {
+    width: 100%;
+  }
+}
+
+.hook-status-row {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.hook-status-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--n-text-color);
+  margin-right: 8px;
+}
+
+.hook-status-value {
+  flex: 1;
+}
+
+.hook-status-actions {
+  margin-left: auto;
+}
+</style>

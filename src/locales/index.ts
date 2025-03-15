@@ -106,9 +106,35 @@ export function useI18n() {
     }
   }
 
+  // 添加t函数用于翻译
+  const t = (key: string, params?: Record<string, any>) => {
+    const keys = key.split('.')
+    let result: any = messages[currentLang.value]
+    
+    // 遍历键路径获取翻译
+    for (const k of keys) {
+      if (result && typeof result === 'object' && k in result) {
+        result = result[k]
+      } else {
+        // 如果找不到翻译，返回键名
+        return key
+      }
+    }
+    
+    // 如果结果是字符串且有参数，替换参数
+    if (typeof result === 'string' && params) {
+      return result.replace(/{([^}]+)}/g, (match, name) => {
+        return params[name] !== undefined ? String(params[name]) : match
+      })
+    }
+    
+    return result as string
+  }
+
   return {
     currentLang,
     setLanguage,
-    i18n: computed(() => messages[currentLang.value])
+    i18n: computed(() => messages[currentLang.value]),
+    t
   }
 } 
