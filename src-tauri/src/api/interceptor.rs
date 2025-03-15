@@ -111,6 +111,12 @@ pub async fn save_cursor_token_to_history(
     token: &str,
     machine_id: &str,
 ) -> Result<(), String> {
+    // 处理token，分割并只取第二部分
+    let processed_token = if token.contains("%3A%3A") {
+        token.split("%3A%3A").nth(1).unwrap_or(token).to_string()
+    } else {
+        token.to_string()
+    };
     // 1. 获取当前历史记录
     let accounts = match db.get_item("user.history.accounts") {
         Ok(Some(data)) => {
@@ -130,7 +136,7 @@ pub async fn save_cursor_token_to_history(
 
     let new_account = crate::api::types::HistoryAccountRecord {
         email: email.to_string(),
-        token: token.to_string(),
+        token: processed_token,
         machine_code: machine_id.to_string(),
         gpt4_count: 0,
         gpt35_count: 0,

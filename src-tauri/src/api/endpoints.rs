@@ -215,11 +215,21 @@ pub async fn get_usage(
     token: String,
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
     let user_id = "user_01000000000000000000000000";
+    
+    // token可能包含了用户ID部分，需要分割并只使用token部分
+    let actual_token = if token.contains("%3A%3A") {
+        // 如果token包含分隔符，取第二部分
+        token.split("%3A%3A").nth(1).unwrap_or(&token).to_string()
+    } else {
+        // 否则使用原始token
+        token
+    };
+    
     let response = client
         .get("https://www.cursor.com/api/usage")
         .header(
             "Cookie",
-            format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, token).as_str(),
+            format!("WorkosCursorSessionToken={}%3A%3A{}", user_id, actual_token).as_str(),
         )
         .send()
         .await
@@ -234,7 +244,10 @@ pub async fn get_usage(
             data: Some(usage_info),
             code: Some("460001".to_string()),
         }),
-        Err(e) => Err(format!("Failed to parse Cursor usage info: {}", e)),
+        Err(e) => {
+            println!("Cursor API 响应: {}", response_text);
+            Err(format!("Failed to parse Cursor usage info: {}", e))
+        }
     }
 }
 

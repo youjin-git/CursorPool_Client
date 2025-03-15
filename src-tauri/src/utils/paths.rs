@@ -44,14 +44,27 @@ impl AppPaths {
 
         let global_storage = base_dir.join("User").join("globalStorage");
 
-        // 获取 Cursor 可执行文件路径
+        // 获取 Cursor 可执行文件路径 - 添加环境变量查找逻辑
         let cursor_exe = if cfg!(target_os = "windows") {
-            let local_app_data = std::env::var("LOCALAPPDATA")
-                .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-            PathBuf::from(local_app_data)
-                .join("Programs")
-                .join("cursor")
-                .join("Cursor.exe")
+            let default_path = {
+                let local_app_data = std::env::var("LOCALAPPDATA")
+                    .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
+                PathBuf::from(local_app_data)
+                    .join("Programs")
+                    .join("cursor")
+                    .join("Cursor.exe")
+            };
+            
+            // 检查默认路径是否存在
+            if default_path.exists() {
+                default_path
+            } else {
+                // 尝试从环境变量PATH中查找
+                match Self::find_cursor_exe_from_env_path() {
+                    Ok(path) => path,
+                    Err(_) => default_path // 如果找不到，依然返回默认路径
+                }
+            }
         } else if cfg!(target_os = "macos") {
             PathBuf::from("/Applications")
                 .join("Cursor.app")
@@ -109,6 +122,58 @@ impl AppPaths {
         }
 
         Ok(paths)
+    }
+
+    // 查找cursor.exe
+    fn find_cursor_exe_from_env_path() -> Result<PathBuf, String> {
+        let path = std::env::var("PATH").map_err(|e| format!("获取PATH环境变量失败: {}", e))?;
+
+        // 分割PATH变量并查找cursor.exe
+        for dir in path.split(';') {
+            let path_buf = PathBuf::from(dir);
+            
+            // 如果PATH中包含cursor相关路径
+            if dir.to_lowercase().contains("cursor") {
+                
+                // 情况1: 如果是"resources/app/bin"这样的路径，向上查找cursor.exe
+                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") {
+                    if dir.to_lowercase().ends_with("bin")
+                        || dir.to_lowercase().contains("\\bin")
+                        || dir.to_lowercase().contains("/bin")
+                    {
+                        // 向上两级查找，cursor.exe通常在bin的上两级目录
+                        if let Some(app_dir) = path_buf.parent() {
+                            if let Some(resources_dir) = app_dir.parent() {
+                                if let Some(cursor_dir) = resources_dir.parent() {
+                                    let cursor_exe_path = cursor_dir.join("Cursor.exe");
+                                    if cursor_exe_path.exists() {
+                                        return Ok(cursor_exe_path);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // 情况2: 直接在当前目录查找
+                let cursor_exe_path = path_buf.join("Cursor.exe");
+                if cursor_exe_path.exists() {
+                    println!("找到Cursor.exe: {}", cursor_exe_path.display());
+                    return Ok(cursor_exe_path);
+                }
+                
+                // 情况3: 在父目录查找
+                if let Some(parent) = path_buf.parent() {
+                    let cursor_exe_path = parent.join("Cursor.exe");
+                    if cursor_exe_path.exists() {
+                        println!("找到Cursor.exe: {}", cursor_exe_path.display());
+                        return Ok(cursor_exe_path);
+                    }
+                }
+            }
+        }
+
+        Err("在环境变量PATH中未找到Cursor.exe".to_string())
     }
 
     // 新增：寻找main.js路径的方法
