@@ -4,7 +4,11 @@
 use api::ApiClient;
 use database::Database;
 use std::env;
+use std::error::Error as StdError;
+use std::path::PathBuf;
+use tracing::{debug, error, info};
 use tauri::{generate_context, generate_handler, Manager};
+use utils::{init_logger, LogConfig, get_app_log_dir};
 
 pub mod api;
 pub mod auth;
@@ -38,14 +42,56 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_positioner::init())
         .setup(|app| {
-            let db = Database::new(&app.handle()).expect("数据库初始化失败");
+            // 初始化日志系统
+            let log_dir = match get_app_log_dir(&app.handle()) {
+                Ok(dir) => dir,
+                Err(e) => {
+                    eprintln!("初始化日志目录失败: {}", e);
+                    PathBuf::from("logs") // 回退到当前目录下的logs文件夹
+                }
+            };
+            
+            // 配置日志系统
+            let log_config = LogConfig {
+                log_dir,
+                console_output: true,
+                log_level: if cfg!(debug_assertions) {
+                    "debug".to_string()
+                } else {
+                    "info".to_string()
+                },
+                json_format: false,
+            };
+            
+            // 初始化日志系统
+            if let Err(e) = init_logger(log_config) {
+                eprintln!("初始化日志系统失败: {}", e);
+            }
+            
+            // 记录应用启动信息
+            info!("应用启动");
+            debug!("调试模式: {}", cfg!(debug_assertions));
+            
+            // 初始化数据库
+            let db = match Database::new(&app.handle()) {
+                Ok(db) => {
+                    info!("数据库初始化成功");
+                    db
+                },
+                Err(e) => {
+                    error!("数据库初始化失败: {}", e);
+                    return Err(Box::<dyn StdError>::from(e.to_string()));
+                }
+            };
             app.manage(db);
 
             // 异步初始化线路配置
             let app_handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = api::inbound::init_inbound_config(&app_handle).await {
-                    eprintln!("初始化线路配置失败: {}", e);
+                    error!("初始化线路配置失败: {}", e);
+                } else {
+                    info!("线路配置初始化成功");
                 }
             });
             
@@ -55,7 +101,12 @@ pub fn run() {
             let api_client = ApiClient::new(Some(app.handle().clone()));
             app.manage(api_client);
 
-            tray::setup_system_tray(app)?;
+            // 初始化系统托盘
+            if let Err(e) = tray::setup_system_tray(app) {
+                error!("初始化系统托盘失败: {}", e);
+                return Err(Box::<dyn StdError>::from(e.to_string()));
+            }
+            info!("系统托盘初始化成功");
             
             Ok(())
         })
