@@ -739,7 +739,7 @@ const formValue = ref({
                     @click="deviceInfo.userInfo?.username && copyText(deviceInfo.userInfo.username)"
                   >{{ deviceInfo.userInfo?.username }}</span>
                   <n-tag :type="levelMap[deviceInfo.userInfo?.level || 1].type" size="tiny" style="transform: scale(0.9)">
-                    {{ levelMap[deviceInfo.userInfo?.level || 1].name }}
+                    {{ deviceInfo.userInfo?.code_level || levelMap[deviceInfo.userInfo?.level || 1].name }}
                   </n-tag>
                   <n-tag v-if="deviceInfo.userInfo?.expireTime" type="success" size="tiny" style="transform: scale(0.9)">
                     {{ formatTimeRemaining(deviceInfo.userInfo.expireTime) }}
