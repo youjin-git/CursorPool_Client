@@ -741,8 +741,11 @@ const formValue = ref({
                   <n-tag :type="levelMap[deviceInfo.userInfo?.level || 1].type" size="tiny" style="transform: scale(0.9)">
                     {{ levelMap[deviceInfo.userInfo?.level || 1].name }}
                   </n-tag>
-                  <n-tag type="success" size="tiny" style="transform: scale(0.9)" v-if="deviceInfo.userInfo?.expireTime">
+                  <n-tag v-if="deviceInfo.userInfo?.expireTime" type="success" size="tiny" style="transform: scale(0.9)">
                     {{ formatTimeRemaining(deviceInfo.userInfo.expireTime) }}
+                  </n-tag>
+                  <n-tag v-else type="error" size="tiny" style="transform: scale(0.9)">
+                    {{ i18n.dashboard.serverNotConnected }}
                   </n-tag>
                 </n-space>
               </n-space>

@@ -131,6 +131,13 @@ export const useHistoryStore = defineStore('history', () => {
         currentAccountEmail.value = currentAccount.currentAccount
       }
       
+      // 自动刷新使用情况
+      try {
+        await refreshAccountsUsage()
+      } catch (error) {
+        console.error('自动刷新账户使用情况失败:', error)
+      }
+      
       return accounts.value
     } catch (error) {
       console.error('获取历史账户失败:', error)
@@ -153,14 +160,23 @@ export const useHistoryStore = defineStore('history', () => {
         try {
           const usage = await getUsage(account.token)
           
-          // 更新前端账户数据
-          account.gpt4Count = usage['gpt-4']?.numRequests || 0
-          account.gpt35Count = usage['gpt-3.5-turbo']?.numRequests || 0
-          account.gpt4MaxUsage = usage['gpt-4']?.maxRequestUsage || null
-          account.gpt35MaxUsage = usage['gpt-3.5-turbo']?.maxRequestUsage || null
-          account.lastUsed = Date.now()
+          // 提取API使用数据
+          const gpt4Usage = usage['gpt-4'];
+          const gpt35Usage = usage['gpt-3.5-turbo'];
           
-          return true
+          // 更新账户对象
+          Object.assign(account, {
+            email: account.email,
+            token: account.token,
+            machineCode: (account as any).machineCode || (account as any).machine_code || '',
+            gpt4Count: gpt4Usage?.numRequests || 0,
+            gpt35Count: gpt35Usage?.numRequests || 0,
+            gpt4MaxUsage: gpt4Usage?.maxRequestUsage != null ? gpt4Usage.maxRequestUsage : 150,
+            gpt35MaxUsage: gpt35Usage?.maxRequestUsage != null ? gpt35Usage.maxRequestUsage : 500,
+            lastUsed: Date.now()
+          });
+          
+          return true;
         } catch (error) {
           console.error(`获取账户 ${account.email} 使用情况失败:`, error)
           return false
@@ -170,8 +186,8 @@ export const useHistoryStore = defineStore('history', () => {
       // 等待所有请求完成
       const results = await Promise.all(updatePromises)
       
-      // 重新获取更新后的账户列表
-      accounts.value = await getHistoryAccounts()
+      // 直接使用更新后的账户列表
+      accounts.value = historyAccounts
       
       return {
         total: historyAccounts.length,

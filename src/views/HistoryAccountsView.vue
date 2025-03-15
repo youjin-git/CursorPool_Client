@@ -21,9 +21,22 @@ const pendingAccount = ref<HistoryAccount | null>(null)
 
 // 计算使用率
 const calculateUsagePercent = (count: number, maxUsage: number | null | undefined) => {
-  if (!maxUsage || maxUsage <= 0) {
-    maxUsage = count > 500 ? count : 500;
+  // 确保count是数字
+  if (typeof count === 'string') {
+    count = parseInt(count, 10) || 0;
   }
+  
+  // 确保count为非负数
+  count = Math.max(0, count || 0);
+  
+  // 确保maxUsage是有效数字且不为0
+  if (maxUsage === undefined || maxUsage === null || maxUsage <= 0 || isNaN(Number(maxUsage))) {
+    maxUsage = count > 150 ? count : 150; // 默认值150与API返回的常见值一致
+  } else {
+    maxUsage = Number(maxUsage);
+  }
+  
+  // 计算百分比并取整
   const percent = (count / maxUsage) * 100;
   return Math.round(Math.min(percent, 100));
 };
@@ -184,11 +197,7 @@ const handleForceKill = async () => {
 
 onMounted(async () => {
   try {
-    // 使用 store 加载数据，不需要再次同步本地账户
     await historyStore.fetchHistoryAccounts(false);
-    
-    // 自动刷新所有账户数据
-    await historyStore.refreshAccountsUsage();
   } catch (error) {
     console.error('加载历史账户失败:', error);
     message.error('加载历史账户失败');

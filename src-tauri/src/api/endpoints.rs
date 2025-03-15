@@ -1,4 +1,5 @@
-use super::client::get_base_url;
+use super::client::ApiClient;
+use super::interceptor::save_cursor_token_to_history;
 use super::types::*;
 use crate::database::Database;
 use chrono::Utc;
@@ -26,11 +27,11 @@ pub struct BugReportRequest {
 /// 检查用户是否存在
 #[tauri::command]
 pub async fn check_user(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     email: String,
 ) -> Result<ApiResponse<serde_json::Value>, String> {
     let response = client
-        .post(format!("{}/checkUser", get_base_url()))
+        .post(format!("{}/checkUser", client.get_base_url()))
         .form(&[("email", email)])
         .send()
         .await
@@ -42,12 +43,12 @@ pub async fn check_user(
 /// 发送验证码
 #[tauri::command]
 pub async fn send_code(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     email: String,
     r#type: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
-        .post(format!("{}/register/sendEmailCode", get_base_url()))
+        .post(format!("{}/register/sendEmailCode", client.get_base_url()))
         .form(&[("email", email), ("type", r#type)])
         .send()
         .await
@@ -59,13 +60,13 @@ pub async fn send_code(
 /// 注册用户
 #[tauri::command]
 pub async fn register(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     email: String,
     code: String,
     password: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
-        .post(format!("{}/emailRegister", get_base_url()))
+        .post(format!("{}/emailRegister", client.get_base_url()))
         .multipart([
             ("email".to_string(), email),
             ("code".to_string(), code),
@@ -83,13 +84,13 @@ pub async fn register(
 /// 用户登录
 #[tauri::command]
 pub async fn login(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     account: String,
     password: String,
     spread: String,
 ) -> Result<ApiResponse<LoginResponse>, String> {
     let response = client
-        .post(format!("{}/login", get_base_url()))
+        .post(format!("{}/login", client.get_base_url()))
         .form(&[
             ("account", account),
             ("password", password),
@@ -105,10 +106,10 @@ pub async fn login(
 /// 获取用户信息
 #[tauri::command]
 pub async fn get_user_info(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
 ) -> Result<ApiResponse<UserInfo>, String> {
     let response = client
-        .get(format!("{}/user", get_base_url()))
+        .get(format!("{}/user", client.get_base_url()))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -119,11 +120,11 @@ pub async fn get_user_info(
 /// 激活账户
 #[tauri::command]
 pub async fn activate(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     code: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
-        .post(format!("{}/user/activate", get_base_url()))
+        .post(format!("{}/user/activate", client.get_base_url()))
         .form(&[("code", code)])
         .send()
         .await
@@ -135,12 +136,12 @@ pub async fn activate(
 /// 修改密码
 #[tauri::command]
 pub async fn change_password(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     old_password: String,
     new_password: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
-        .post(format!("{}/user/updatePassword", get_base_url()))
+        .post(format!("{}/user/updatePassword", client.get_base_url()))
         .form(&[
             ("old_password", old_password.clone()),
             ("new_password", new_password.clone()),
@@ -155,12 +156,12 @@ pub async fn change_password(
 /// 获取账户信息
 #[tauri::command]
 pub async fn get_account(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     db: State<'_, Database>,
     account: Option<String>,
     usage_count: Option<String>,
 ) -> Result<ApiResponse<AccountPoolInfo>, String> {
-    let mut url = format!("{}/accountpool/get", get_base_url());
+    let mut url = format!("{}/accountpool/get", client.get_base_url());
 
     let mut query_params = Vec::new();
     if let Some(acc) = account {
@@ -192,7 +193,7 @@ pub async fn get_account(
                 .to_string();
 
             // 保存到历史记录
-            if let Err(e) = super::interceptor::save_cursor_token_to_history(
+            if let Err(e) = save_cursor_token_to_history(
                 &db,
                 &account_info.account,
                 &account_info.token,
@@ -211,7 +212,7 @@ pub async fn get_account(
 /// 获取 Cursor 使用情况
 #[tauri::command]
 pub async fn get_usage(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     token: String,
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
     let user_id = "user_01000000000000000000000000";
@@ -254,10 +255,10 @@ pub async fn get_usage(
 /// 获取公告信息
 #[tauri::command]
 pub async fn get_public_info(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
 ) -> Result<ApiResponse<PublicInfo>, String> {
     let response = client
-        .get(format!("{}/public/info", get_base_url()))
+        .get(format!("{}/public/info", client.get_base_url()))
         .send()
         .await
         .map_err(|e| e.to_string())?;
@@ -268,13 +269,13 @@ pub async fn get_public_info(
 /// 重置密码
 #[tauri::command]
 pub async fn reset_password(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     email: String,
     code: String,
     password: String,
 ) -> Result<ApiResponse<()>, String> {
     let response = client
-        .post(format!("{}/emailResetPassword", get_base_url()))
+        .post(format!("{}/emailResetPassword", client.get_base_url()))
         .form(&[("email", email), ("code", code), ("password", password)])
         .send()
         .await
@@ -286,7 +287,7 @@ pub async fn reset_password(
 /// 报告错误
 #[tauri::command]
 pub async fn report_bug(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
     severity: String,
     bug_description: String,
     api_key: Option<String>,
@@ -311,7 +312,7 @@ pub async fn report_bug(
     };
 
     let response = client
-        .post(format!("{}/bug/report", get_base_url()))
+        .post(format!("{}/bug/report", client.get_base_url()))
         .json(&request)
         .send()
         .await
@@ -389,7 +390,7 @@ pub async fn del_user_data(
 /// 获取公告列表
 #[tauri::command]
 pub async fn get_article_list(
-    client: State<'_, super::client::ApiClient>,
+    client: State<'_, ApiClient>,
 ) -> Result<ApiResponse<Vec<Article>>, String> {
     // 获取公告数据
     let result = fetch_article_list(&client).await;
@@ -416,9 +417,9 @@ pub async fn get_article_list(
 }
 
 /// 内部函数：获取公告列表数据
-async fn fetch_article_list(client: &super::client::ApiClient) -> Result<Vec<Article>, String> {
+async fn fetch_article_list(client: &ApiClient) -> Result<Vec<Article>, String> {
     let response = client
-        .get(format!("{}/article/list/1", get_base_url()))
+        .get(format!("{}/article/list/1", client.get_base_url()))
         .send()
         .await
         .map_err(|e| e.to_string())?;
