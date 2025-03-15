@@ -8,16 +8,21 @@ const STORAGE_KEY = 'history_accounts'
  * 将后端HistoryAccountRecord转换为前端HistoryAccount
  */
 function convertToFrontendAccount(account: HistoryAccountRecord): HistoryAccount {
+  // 使用类型断言来安全访问字段
+  const anyAccount = account as any;
+  
   return {
     email: account.email,
     token: account.token,
-    machineCode: account.machine_code,
-    gpt4Count: account.gpt4_count,
-    gpt35Count: account.gpt35_count,
-    lastUsed: account.last_used,
-    gpt4MaxUsage: account.gpt4_max_usage,
-    gpt35MaxUsage: account.gpt35_max_usage
-  }
+    machineCode: account.machine_code || (anyAccount.machineCode || ''),
+    gpt4Count: account.gpt4_count || (anyAccount.gpt4Count || 0),
+    gpt35Count: account.gpt35_count || (anyAccount.gpt35Count || 0),
+    gpt4MaxUsage: account.gpt4_max_usage != null ? account.gpt4_max_usage : 
+                 (anyAccount.gpt4MaxUsage != null ? anyAccount.gpt4MaxUsage : 150),
+    gpt35MaxUsage: account.gpt35_max_usage != null ? account.gpt35_max_usage : 
+                  (anyAccount.gpt35MaxUsage != null ? anyAccount.gpt35MaxUsage : 500),
+    lastUsed: account.last_used || (anyAccount.lastUsed || Date.now())
+  };
 }
 
 /**
