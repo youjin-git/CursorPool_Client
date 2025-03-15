@@ -36,7 +36,7 @@ const handleSelect = (key: string) => {
 <template>
   <div class="language-selector" :class="{ 'compact': props.compact }">
     <!-- 标签 -->
-    <div v-if="showLabel" class="selector-label">Language / 语言</div>
+    <div v-if="showLabel" class="selector-label">语言</div>
     
     <!-- 语言选择下拉框 -->
     <n-select

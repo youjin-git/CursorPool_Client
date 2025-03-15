@@ -322,6 +322,7 @@ onMounted(async () => {
             label-placement="left"
             label-width="120"
             require-mark-placement="right-hanging"
+            class="activation-form"
           >
             <n-form-item
               :label="messages[currentLang].settings.activationCode"
@@ -355,6 +356,7 @@ onMounted(async () => {
             label-placement="left"
             label-width="100"
             require-mark-placement="right-hanging"
+            class="password-form"
           >
             <n-form-item :label="messages[currentLang].settings.currentPassword">
               <n-input
@@ -513,5 +515,27 @@ onMounted(async () => {
 
 .hook-status-actions {
   margin-left: auto;
+}
+
+/* 激活码表单样式 */
+.activation-form :deep(.n-form-item-label) {
+  text-align: left;
+}
+
+/* 确保标签文本左对齐 */
+.activation-form :deep(.n-form-item-label__text) {
+  text-align: left;
+  justify-content: flex-start;
+}
+
+/* 密码表单样式 */
+.password-form :deep(.n-form-item-label) {
+  text-align: left;
+}
+
+/* 确保标签文本左对齐 */
+.password-form :deep(.n-form-item-label__text) {
+  text-align: left;
+  justify-content: flex-start;
 }
 </style>
