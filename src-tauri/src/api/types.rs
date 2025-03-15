@@ -39,6 +39,11 @@ pub struct UserInfo {
     pub is_expired: bool,
     // 用户名
     pub username: String,
+    // 用户级别文本
+    #[serde(rename = "code_level")]
+    #[serde(default)]
+    #[serde(skip_serializing_if = "String::is_empty")]
+    pub code_level: String,
 }
 
 // 账户信息

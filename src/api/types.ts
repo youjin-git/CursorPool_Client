@@ -14,6 +14,7 @@ export interface UserInfo {
   level: number
   isExpired: boolean
   username: string
+  code_level?: string
 }
 
 // 账户信息

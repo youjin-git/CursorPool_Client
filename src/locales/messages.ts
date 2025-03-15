@@ -168,7 +168,8 @@ export const messages = {
       unverified: '未验证',
       success: '成功',
       failed: '失败',
-      loading: '加载中...'
+      loading: '加载中...',
+      confirmRestart: '确定重启'
     },
     inbound: {
       title: '线路',
@@ -357,7 +358,8 @@ export const messages = {
       unverified: 'Unverified',
       success: 'Success',
       failed: 'Failed',
-      loading: 'Loading...'
+      loading: 'Loading...',
+      confirmRestart: 'Restart Now'
     },
     inbound: {
       title: '线路',
@@ -545,7 +547,8 @@ export const messages = {
       unverified: '未検証',
       success: '成功',
       failed: '失敗',
-      loading: '読み込み中...'
+      loading: '読み込み中...',
+      confirmRestart: '今すぐ再起動'
     },
     inbound: {
       title: '线路',
@@ -726,7 +729,8 @@ export const messages = {
       cursorRunning: 'Cursor en cours d\'exécution',
       cursorRunningMessage: 'Détecté que le Cursor est en cours d\'exécution, veuillez enregistrer le projet qui n\'a pas été modifié avant de continuer!',
       closingCursor: 'Fermeture du Cursor...',
-      forgotPassword: 'Mot de passe oublié?'
+      forgotPassword: 'Mot de passe oublié?',
+      confirmRestart: 'Redémarrer maintenant'
     },
     inbound: {
       title: '线路',
@@ -903,7 +907,8 @@ export const messages = {
       cursorRunning: 'Cursor läuft',
       cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Cursor schließen...',
-      forgotPassword: 'Mot de passe oublié?'
+      forgotPassword: 'Mot de passe oublié?',
+      confirmRestart: 'Jetzt neu starten'
     },
     inbound: {
       title: '线路',
@@ -1080,7 +1085,8 @@ export const messages = {
       cursorRunning: 'Cursor 실행 중',
       cursorRunningMessage: '변경되지 않은 프로젝트를 저장한 후 계속하세요!',
       closingCursor: 'Cursor 닫는 중...',
-      forgotPassword: '비밀번호를 잊으셨나요?'
+      forgotPassword: '비밀번호를 잊으셨나요?',
+      confirmRestart: '지금 재시작'
     },
     inbound: {
       title: '线路',
@@ -1257,7 +1263,8 @@ export const messages = {
       cursorRunning: 'Cursor в работе',
       cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Закрытие Cursor...',
-      forgotPassword: 'Забыли пароль?'
+      forgotPassword: 'Забыли пароль?',
+      confirmRestart: 'Перезапустить сейчас'
     },
     inbound: {
       title: '线路',
@@ -1434,7 +1441,8 @@ export const messages = {
       cursorRunning: 'Cursor en ejecución',
       cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Cerrando Cursor...',
-      forgotPassword: 'Mot de passe oublié?'
+      forgotPassword: 'Mot de passe oublié?',
+      confirmRestart: 'Reiniciar ahora'
     },
     inbound: {
       title: '线路',

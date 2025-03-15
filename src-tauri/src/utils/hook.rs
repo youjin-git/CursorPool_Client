@@ -7,6 +7,7 @@ use regex::Regex;
 use std::fs;
 use std::path::PathBuf;
 use tauri::State;
+use tracing::error;
 
 lazy_static! {
     /// machineId 函数匹配模式
@@ -55,8 +56,10 @@ impl Hook {
         // 使用带数据库参数的AppPaths创建方法
         let paths = AppPaths::new_with_db(db).map_err(|e| {
             if e.contains("找不到Cursor的main.js文件") {
+                error!(target: "hook", "找不到Cursor的main.js文件: {}", e);
                 HookError::MainJsNotFound(e)
             } else {
+                error!(target: "hook", "创建应用路径失败: {}", e);
                 HookError::Other(format!("创建应用路径失败: {}", e))
             }
         })?;
@@ -65,15 +68,18 @@ impl Hook {
 
         // 检查文件是否存在
         if !file_path.exists() {
-            return Err(HookError::MainJsNotFound(format!(
-                "文件不存在: {}",
-                file_path.display()
-            )));
+            let error_msg = format!("文件不存在: {}", file_path.display());
+            error!(target: "hook", "{}", error_msg);
+            return Err(HookError::MainJsNotFound(error_msg));
         }
 
         fs::read_to_string(file_path)
             .map(|content| (content, file_path.clone()))
-            .map_err(|e| HookError::Other(format!("读取 main.js 失败: {}", e)))
+            .map_err(|e| {
+                let error_msg = format!("读取 main.js 失败: {}", e);
+                error!(target: "hook", "{}", error_msg);
+                HookError::Other(error_msg)
+            })
     }
 
     /// 更新 main.js 文件内容
@@ -86,9 +92,11 @@ impl Hook {
             Ok(result) => result,
             Err(e) => match e {
                 HookError::MainJsNotFound(msg) => {
+                    error!(target: "hook", "找不到main.js: {}", msg);
                     return Err(format!("MAIN_JS_NOT_FOUND:{}", msg));
                 }
                 HookError::Other(msg) => {
+                    error!(target: "hook", "读取main.js失败: {}", msg);
                     if let Some(ref client) = client {
                         ErrorReporter::report_error(
                             client.clone(),
@@ -109,6 +117,7 @@ impl Hook {
         if !backup_path.exists() {
             if let Err(e) = fs::write(&backup_path, &content) {
                 let err_msg = format!("创建备份失败: {}", e);
+                error!(target: "hook", "{}", err_msg);
                 if let Some(ref client) = client {
                     ErrorReporter::report_error(
                         client.clone(),
@@ -128,7 +137,9 @@ impl Hook {
         let mac_machine_id_matches = MAC_MACHINE_ID_REGEX.find_iter(&content).count();
 
         if machine_id_matches == 0 || mac_machine_id_matches == 0 {
-            return Err("无法找到匹配的 machineId 或 macMachineId 函数".to_string());
+            let err_msg = "无法找到匹配的 machineId 或 macMachineId 函数".to_string();
+            error!(target: "hook", "{}", err_msg);
+            return Err(err_msg);
         }
 
         // 替换 machineId
@@ -154,6 +165,7 @@ impl Hook {
         // 写入修改后的内容
         if let Err(e) = fs::write(&file_path, &modified_content) {
             let err_msg = format!("写入修改后的内容失败: {}", e);
+            error!(target: "hook", "{}", err_msg);
             if let Some(ref client) = client {
                 ErrorReporter::report_error(
                     client.clone(),
@@ -170,7 +182,7 @@ impl Hook {
         // 保存成功找到的路径到数据库
         if let Some(ref db) = db {
             if let Err(e) = AppPaths::save_path_to_db(db, &file_path) {
-                eprintln!("保存main.js路径到数据库失败: {}", e);
+                error!(target: "hook", "保存main.js路径到数据库失败: {}", e);
                 // 这里不返回错误，因为hook已经成功了
             }
         }
@@ -188,9 +200,11 @@ impl Hook {
             Ok(result) => result,
             Err(e) => match e {
                 HookError::MainJsNotFound(msg) => {
+                    error!(target: "hook", "找不到main.js: {}", msg);
                     return Err(format!("MAIN_JS_NOT_FOUND:{}", msg));
                 }
                 HookError::Other(msg) => {
+                    error!(target: "hook", "获取main.js路径失败: {}", msg);
                     if let Some(ref client) = client {
                         ErrorReporter::report_error(
                             client.clone(),
@@ -210,6 +224,7 @@ impl Hook {
 
         if !backup_path.exists() {
             let err_msg = "备份文件不存在".to_string();
+            error!(target: "hook", "{}", err_msg);
             if let Some(ref client) = client {
                 ErrorReporter::report_error(
                     client.clone(),
@@ -227,6 +242,7 @@ impl Hook {
             Ok(content) => content,
             Err(e) => {
                 let err_msg = format!("读取备份文件失败: {}", e);
+                error!(target: "hook", "{}", err_msg);
                 if let Some(ref client) = client {
                     ErrorReporter::report_error(
                         client.clone(),
@@ -243,6 +259,7 @@ impl Hook {
 
         if let Err(e) = fs::write(&file_path, &backup_content) {
             let err_msg = format!("恢复文件失败: {}", e);
+            error!(target: "hook", "{}", err_msg);
             if let Some(ref client) = client {
                 ErrorReporter::report_error(
                     client.clone(),
@@ -258,6 +275,7 @@ impl Hook {
 
         if let Err(e) = fs::remove_file(backup_path) {
             let err_msg = format!("删除备份文件失败: {}", e);
+            error!(target: "hook", "{}", err_msg);
             if let Some(ref client) = client {
                 ErrorReporter::report_error(
                     client.clone(),

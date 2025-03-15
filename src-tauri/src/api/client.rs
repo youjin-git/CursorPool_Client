@@ -8,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tauri::AppHandle;
 use tauri::Manager;
+use tracing::error;
 
 /// HTTP 请求客户端，支持拦截器机制
 pub struct ApiClient {
@@ -58,6 +59,7 @@ impl ApiClient {
     /// 发送 HTTP 请求
     pub async fn send(&self, mut request: Request) -> Result<Response, reqwest::Error> {
         let url: String = request.url().to_string();
+        let method = request.method().to_string();
 
         if is_auth_required_url(&url) {
             for interceptor in &self.interceptors {
@@ -67,7 +69,14 @@ impl ApiClient {
             }
         }
 
-        let response = self.client.execute(request).await?;
+        let response = self.client.execute(request).await.map_err(|e| {
+            error!(
+                target: "http_client",
+                "HTTP请求失败 - 方法: {}, URL: {}, 错误: {}",
+                method, url, e
+            );
+            e
+        })?;
 
         if self.app_handle.is_none() {
             return Ok(response);
@@ -78,16 +87,35 @@ impl ApiClient {
         let status = response.status();
         let url_str = url.clone();
 
-        let response_text = response.text().await?;
+        let response_text = response.text().await.map_err(|e| {
+            error!(
+                target: "http_client",
+                "读取响应文本失败 - 方法: {}, URL: {}, 状态码: {}, 错误: {}",
+                method, url_str, status, e
+            );
+            e
+        })?;
 
         if url_str.contains("/user/updatePassword") {
             if let Ok(response_json) = serde_json::from_str::<serde_json::Value>(&response_text) {
                 if response_json["status"] == 200 {
-                    let _ = clear_auth_token(&db).await;
+                    if let Err(e) = clear_auth_token(&db).await {
+                        error!(
+                            target: "http_client",
+                            "清除认证令牌失败 - URL: {}, 错误: {}", 
+                            url_str, e
+                        );
+                    }
                 }
             }
         } else {
-            let _ = save_auth_token(&db, &url_str, &response_text).await;
+            if let Err(e) = save_auth_token(&db, &url_str, &response_text).await {
+                error!(
+                    target: "http_client",
+                    "保存认证令牌失败 - URL: {}, 错误: {}", 
+                    url_str, e
+                );
+            }
         }
 
         Ok(Response::from(
@@ -140,7 +168,20 @@ pub struct RequestBuilder<'a> {
 impl<'a> RequestBuilder<'a> {
     /// 发送请求
     pub async fn send(self) -> Result<Response, reqwest::Error> {
-        let request = self.inner.build()?;
+        // 在构建请求前获取内部构建器的调试信息
+        let debug_info = format!("{:?}", self.inner);
+        
+        let request = match self.inner.build() {
+            Ok(req) => req,
+            Err(e) => {
+                error!(
+                    target: "http_client",
+                    "构建HTTP请求失败 - 请求: {}, 错误: {}", 
+                    debug_info, e
+                );
+                return Err(e);
+            }
+        };
         self.client.send(request).await
     }
 

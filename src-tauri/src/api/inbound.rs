@@ -3,6 +3,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
+use tracing::error;
 
 // 线路配置数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -39,20 +40,30 @@ pub async fn fetch_inbound_config() -> Result<InboundConfig, String> {
     let client = Client::builder()
         .timeout(Duration::from_secs(5))
         .build()
-        .map_err(|e| format!("创建HTTP客户端失败: {}", e))?;
+        .map_err(|e| {
+            error!(target: "inbound", "创建HTTP客户端失败: {}", e);
+            format!("创建HTTP客户端失败: {}", e)
+        })?;
 
     let response = client
         .get(CONFIG_URL)
         .send()
         .await
-        .map_err(|e| format!("请求线路配置失败: {}", e))?;
+        .map_err(|e| {
+            error!(target: "inbound", "请求线路配置失败 - URL: {}, 错误: {}", CONFIG_URL, e);
+            format!("请求线路配置失败: {}", e)
+        })?;
 
     let config = response
         .json::<InboundConfig>()
         .await
-        .map_err(|e| format!("解析线路配置失败: {}", e))?;
+        .map_err(|e| {
+            error!(target: "inbound", "解析线路配置失败: {}", e);
+            format!("解析线路配置失败: {}", e)
+        })?;
 
     if config.inbound.is_empty() {
+        error!(target: "inbound", "线路配置为空");
         return Err("线路配置为空".to_string());
     }
 
@@ -61,10 +72,15 @@ pub async fn fetch_inbound_config() -> Result<InboundConfig, String> {
 
 /// 测试单个线路的延迟
 async fn test_inbound_latency(url: &str) -> Option<Duration> {
-    let client = Client::builder()
+    let client = match Client::builder()
         .timeout(Duration::from_millis(PING_TIMEOUT_MS))
-        .build()
-        .ok()?;
+        .build() {
+            Ok(client) => client,
+            Err(e) => {
+                error!(target: "inbound", "创建延迟测试HTTP客户端失败 - URL: {}, 错误: {}", url, e);
+                return None;
+            }
+        };
     
     // 测试版本信息接口（通常是轻量级的）
     let test_url = format!("{}/version", url);
@@ -75,10 +91,14 @@ async fn test_inbound_latency(url: &str) -> Option<Duration> {
             if response.status().is_success() {
                 Some(start.elapsed())
             } else {
+                error!(target: "inbound", "延迟测试服务器返回错误 - URL: {}, 状态码: {}", test_url, response.status());
                 None // 服务器返回错误
             }
         },
-        Err(_) => None // 请求失败（超时或网络错误）
+        Err(e) => {
+            error!(target: "inbound", "延迟测试请求失败 - URL: {}, 错误: {}", test_url, e);
+            None // 请求失败（超时或网络错误）
+        }
     }
 }
 
@@ -141,10 +161,16 @@ pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
         Ok(config) => {
             // 将配置保存到数据库
             let config_json = serde_json::to_string(&config)
-                .map_err(|e| format!("序列化线路配置失败: {}", e))?;
+                .map_err(|e| {
+                    error!(target: "inbound", "序列化线路配置失败: {}", e);
+                    format!("序列化线路配置失败: {}", e)
+                })?;
             
             db.set_item(INBOUND_CONFIG_KEY, &config_json)
-                .map_err(|e| format!("保存线路配置失败: {}", e))?;
+                .map_err(|e| {
+                    error!(target: "inbound", "保存线路配置失败: {}", e);
+                    format!("保存线路配置失败: {}", e)
+                })?;
             
             // 检查当前是否已有选择的线路
             if let Ok(None) = db.get_item(CURRENT_INBOUND_KEY) {
@@ -154,7 +180,10 @@ pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
                 
                 // 保存最佳线路
                 db.set_item(CURRENT_INBOUND_KEY, &best_index.to_string())
-                    .map_err(|e| format!("设置当前线路失败: {}", e))?;
+                    .map_err(|e| {
+                        error!(target: "inbound", "设置当前线路失败 - 索引: {}, 错误: {}", best_index, e);
+                        format!("设置当前线路失败: {}", e)
+                    })?;
                 
                 println!("已选择最佳线路：[{}] {}", best_index, config.inbound[best_index].name);
             }
@@ -162,6 +191,7 @@ pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
             println!("线路配置初始化成功，共{}条线路", config.inbound.len());
         },
         Err(e) => {
+            error!(target: "inbound", "获取远程线路配置失败: {}", e);
             println!("获取远程线路配置失败: {}，将使用默认线路", e);
             
             // 检查数据库中是否已有配置
@@ -175,13 +205,22 @@ pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
                 };
                 
                 let config_json = serde_json::to_string(&default_config)
-                    .map_err(|e| format!("序列化默认线路配置失败: {}", e))?;
+                    .map_err(|e| {
+                        error!(target: "inbound", "序列化默认线路配置失败: {}", e);
+                        format!("序列化默认线路配置失败: {}", e)
+                    })?;
                 
                 db.set_item(INBOUND_CONFIG_KEY, &config_json)
-                    .map_err(|e| format!("保存默认线路配置失败: {}", e))?;
+                    .map_err(|e| {
+                        error!(target: "inbound", "保存默认线路配置失败: {}", e);
+                        format!("保存默认线路配置失败: {}", e)
+                    })?;
                 
                 db.set_item(CURRENT_INBOUND_KEY, "0")
-                    .map_err(|e| format!("设置当前线路失败: {}", e))?;
+                    .map_err(|e| {
+                        error!(target: "inbound", "设置默认当前线路失败: {}", e);
+                        format!("设置当前线路失败: {}", e)
+                    })?;
                 
                 println!("已创建默认线路配置");
             }
@@ -196,29 +235,43 @@ pub fn get_current_inbound_url(db: &Database) -> String {
     // 获取当前选择的线路索引
     let current_index = match db.get_item(CURRENT_INBOUND_KEY) {
         Ok(Some(index)) => index.parse::<usize>().unwrap_or(0),
-        _ => 0,
+        Ok(None) => {
+            error!(target: "inbound", "未找到当前线路索引配置");
+            0
+        },
+        Err(e) => {
+            error!(target: "inbound", "获取当前线路索引失败: {}", e);
+            0
+        }
     };
-    
+
     // 获取线路配置
     let config = match db.get_item(INBOUND_CONFIG_KEY) {
-        Ok(Some(config_json)) => {
-            match serde_json::from_str::<InboundConfig>(&config_json) {
+        Ok(Some(json)) => {
+            match serde_json::from_str::<InboundConfig>(&json) {
                 Ok(config) => config,
                 Err(e) => {
-                    println!("解析线路配置失败: {}", e);
+                    error!(target: "inbound", "解析线路配置失败: {}", e);
                     return format!("{}/api", DEFAULT_INBOUND_URL);
                 }
             }
         },
-        _ => {
+        Ok(None) => {
+            error!(target: "inbound", "未找到线路配置");
+            return format!("{}/api", DEFAULT_INBOUND_URL);
+        },
+        Err(e) => {
+            error!(target: "inbound", "获取线路配置失败: {}", e);
             return format!("{}/api", DEFAULT_INBOUND_URL);
         }
     };
-    
-    // 获取当前线路URL
-    if let Some(inbound) = config.inbound.get(current_index) {
-        format!("{}/api", inbound.url)
-    } else {
-        format!("{}/api", DEFAULT_INBOUND_URL)
+
+    // 检查索引是否有效
+    if current_index >= config.inbound.len() {
+        error!(target: "inbound", "当前线路索引无效: {}, 线路总数: {}", current_index, config.inbound.len());
+        return format!("{}/api", DEFAULT_INBOUND_URL);
     }
+
+    // 返回API基础URL
+    format!("{}/api", config.inbound[current_index].url)
 } 

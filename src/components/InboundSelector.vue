@@ -4,6 +4,7 @@ import { NSelect, useMessage, useDialog } from 'naive-ui'
 import type { SelectOption } from 'naive-ui'
 import { useInboundStore } from '../stores/inbound'
 import { useI18n } from '../locales'
+import { relaunch } from '@tauri-apps/plugin-process'
 
 const props = defineProps({
   // 是否在紧凑布局中使用（如登录页面）
@@ -42,21 +43,39 @@ const selectOptions = computed<SelectOption[]>(() => {
 // 选择线路
 async function handleSelect(index: number) {
   if (selectedInbound.value === index) return
-  selectedInbound.value = index
-
+  
+  // 记录原始选择
+  const originalIndex = selectedInbound.value
+  
+  // 先尝试调用切换函数，保存到后端
   const result = await inboundStore.switchInbound(index)
+  
   if (result) {
+    // 成功后再更新本地UI状态
+    selectedInbound.value = index
+    
     message.success(t('inbound.switchSuccess', { name: inboundStore.inboundList[index].name }))
     // 提示用户重启应用
     dialog.info({
       title: t('inbound.title'),
       content: t('inbound.restartNeeded'),
-      positiveText: t('common.success')
+      positiveText: t('common.confirmRestart'),
+      closable: false,
+      maskClosable: false,
+      async onPositiveClick() {
+        try {
+          await relaunch()
+          return false
+        } catch (error) {
+          console.error('重启应用失败:', error)
+          return false
+        }
+      }
     })
   } else {
     message.error(t('inbound.switchFailed'))
-    // 恢复选择
-    selectedInbound.value = inboundStore.currentInboundIndex
+    // 保持原来的选择
+    selectedInbound.value = originalIndex
   }
 }
 
@@ -89,7 +108,7 @@ onMounted(async () => {
     <!-- 紧凑模式 - 下拉选择 -->
     <n-select
       v-if="compact"
-      v-model:value="selectedInbound"
+      :value="selectedInbound"
       :options="selectOptions"
       @update:value="handleSelect"
       :disabled="inboundStore.isLoading"
@@ -102,7 +121,7 @@ onMounted(async () => {
     <!-- 展开模式 - 带背景的选择器 -->
     <div v-else class="selector-container">
       <n-select 
-        v-model:value="selectedInbound"
+        :value="selectedInbound"
         :options="selectOptions"
         @update:value="handleSelect"
         :disabled="inboundStore.isLoading"
