@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
-import { NSelect, NDropdown, NButton, NTag, useMessage, useDialog } from 'naive-ui'
+import { NSelect, useMessage, useDialog } from 'naive-ui'
 import type { SelectOption } from 'naive-ui'
 import { useInboundStore } from '../stores/inbound'
-import { h } from 'vue'
 import { useI18n } from '../locales'
 
 const props = defineProps({
@@ -30,7 +29,6 @@ const message = useMessage()
 const dialog = useDialog()
 const inboundStore = useInboundStore()
 const selectedInbound = ref(inboundStore.currentInboundIndex)
-const dropdownShow = ref(false)
 
 // 计算属性
 const selectOptions = computed<SelectOption[]>(() => {

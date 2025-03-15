@@ -34,6 +34,7 @@ export const messages = {
       cursorUsage: 'Cursor 使用量',
       notLoggedIn: '未登录',
       unlimited: '无限制',
+      serverNotConnected: '未连接服务器',
       memberLevel: {
         1: '码农',
         2: '程序员',
@@ -213,6 +214,7 @@ export const messages = {
       cursorUsage: 'Cursor Usage',
       notLoggedIn: 'Not Logged In',
       unlimited: 'Unlimited',
+      serverNotConnected: 'Server Not Connected',
       memberLevel: {
         1: 'Coder',
         2: 'Programmer',
@@ -322,10 +324,10 @@ export const messages = {
         forceKillConfirm: 'I have saved, force close'
       },
       history: {
-        disableUpdate: 'Disable auto update',
-        restoreUpdate: 'Restore auto update',
-        applyHook: 'Apply hook',
-        restoreHook: 'Restore hook'
+        disableUpdate: 'Desactivar actualización automática',
+        restoreUpdate: 'Restaurar actualización automática',
+        applyHook: 'Aplicar hook',
+        restoreHook: 'Restaurar hook'
       }
     },
     about: {
@@ -401,6 +403,7 @@ export const messages = {
       cursorUsage: 'Cursor 使用量',
       notLoggedIn: '未ログイン',
       unlimited: '無制限',
+      serverNotConnected: '未接続',
       memberLevel: {
         1: 'コーダー',
         2: 'プログラマー',
@@ -588,6 +591,7 @@ export const messages = {
       cursorUsage: 'Utilisation du curseur',
       notLoggedIn: 'Non connecté',
       unlimited: 'Illimité',
+      serverNotConnected: 'Non connecté',
       memberLevel: {
         1: 'Codeur',
         2: 'Programmeur',
@@ -690,10 +694,10 @@ export const messages = {
       messages: {
         disableUpdateSuccess: 'Auto update disabled successfully',
         restoreUpdateSuccess: 'Auto update restored successfully',
-        applyHookSuccess: 'Hook applied successfully',
-        restoreHookSuccess: 'Hook restored successfully',
-        cursorRunning: 'Cursor is running, please save your work before continuing!',
-        forceKillConfirm: 'I have saved, force close'
+        applyHookSuccess: 'Hook aplicado con éxito',
+        restoreHookSuccess: 'Hook restaurado con éxito',
+        cursorRunning: 'Cursor en ejecución, por favor guarde su trabajo antes de continuar!',
+        forceKillConfirm: 'He guardado, forzar cierre'
       },
       history: {
         disableUpdate: 'Desactivar actualización automática',
@@ -768,6 +772,7 @@ export const messages = {
       cursorUsage: 'Cursor-Nutzung',
       notLoggedIn: 'Nicht angemeldet',
       unlimited: 'Unbegrenzt',
+      serverNotConnected: 'Nicht verbunden',
       memberLevel: {
         1: 'Coder',
         2: 'Programmierer',
@@ -944,6 +949,7 @@ export const messages = {
       cursorUsage: 'Cursor 사용량',
       notLoggedIn: '로그인하지 않음',
       unlimited: '무제한',
+      serverNotConnected: '서버 연결되지 않음',
       memberLevel: {
         1: '코더',
         2: '프로그래머',
@@ -1120,6 +1126,7 @@ export const messages = {
       cursorUsage: 'Использование курсора',
       notLoggedIn: 'Не авторизован',
       unlimited: 'Неограниченный',
+      serverNotConnected: 'Не подключено',
       memberLevel: {
         1: 'Кодер',
         2: 'Программист',
@@ -1296,6 +1303,7 @@ export const messages = {
       cursorUsage: 'Uso del cursor',
       notLoggedIn: 'No conectado',
       unlimited: 'Ilimitado',
+      serverNotConnected: 'No conectado',
       memberLevel: {
         1: 'Código',
         2: 'Programador',
