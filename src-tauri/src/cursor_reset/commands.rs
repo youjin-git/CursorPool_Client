@@ -310,12 +310,19 @@ pub async fn switch_account(
         }
     }
 
+    // 处理token，分割并只取第二部分
+    let processed_token = if token.contains("%3A%3A") {
+        token.split("%3A%3A").nth(1).unwrap_or(&token).to_string()
+    } else {
+        token.clone()
+    };
+
     // 更新数据库为-新账户
     let account_updates = vec![
         ("cursor.email", email.clone()),
-        ("cursor.accessToken", token.clone()),
-        ("cursorAuth/refreshToken", token.clone()),
-        ("cursorAuth/accessToken", token.clone()),
+        ("cursor.accessToken", processed_token.clone()),
+        ("cursorAuth/refreshToken", processed_token.clone()),
+        ("cursorAuth/accessToken", processed_token.clone()),
         ("cursorAuth/cachedEmail", email.clone()),
     ];
 
@@ -339,7 +346,7 @@ pub async fn switch_account(
     // 如果新账户不在历史记录中，才添加
     if !new_account_exists_in_history {
         if let Err(e) = crate::api::interceptor::save_cursor_token_to_history(
-            &db, &email, &token, &machine_id
+            &db, &email, &processed_token, &machine_id
         ).await {
             eprintln!("保存新Cursor账户到历史记录失败: {}", e);
         }
@@ -356,7 +363,7 @@ pub async fn switch_account(
                 for account in &mut accounts {
                     if account.email == email {
                         // 更新token和最后使用时间
-                        account.token = token.clone();
+                        account.token = processed_token.clone();  // 使用处理后的token
                         account.last_used = now;
                         break;
                     }

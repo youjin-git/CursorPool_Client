@@ -44,7 +44,7 @@ export async function checkUser(email: string): Promise<ApiResponse<any>> {
         const response = await invoke<ApiResponse<any>>('check_user', { email })
         return response
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to check user')
+        throw new ApiError(error instanceof Error ? error.message : '检查用户失败')
     }
 }
 
@@ -53,7 +53,7 @@ export async function sendCode(email: string, type: string): Promise<void> {
         const response = await invoke<ApiResponse<void>>('send_code', { email, type })
         handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to send code')
+        throw new ApiError(error instanceof Error ? error.message : '发送验证码失败')
     }
 }
 
@@ -65,7 +65,7 @@ export async function register(email: string, code: string, password: string, sp
         }
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to register')
+        throw new ApiError(error instanceof Error ? error.message : '注册失败')
     }
 }
 
@@ -74,7 +74,7 @@ export async function login(account: string, password: string, spread: string): 
         const response = await invoke<ApiResponse<LoginResponse>>('login', { account, password, spread })
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to login')
+        throw new ApiError(error instanceof Error ? error.message : '登录失败')
     }
 }
 
@@ -103,7 +103,7 @@ export async function getAccount(account?: string, usageCount?: string): Promise
         const response = await invoke<ApiResponse<AccountPoolInfo>>('get_account', { account, usageCount })
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get account info')
+        throw new ApiError(error instanceof Error ? error.message : '获取账户信息失败')
     }
 }
 
@@ -113,7 +113,7 @@ export async function getUsage(token: string): Promise<UsageInfo> {
         const response = await invoke<ApiResponse<UsageInfo>>('get_usage', { token })
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get usage info')
+        throw new ApiError(error instanceof Error ? error.message : '获取使用情况失败')
     }
 }
 
@@ -123,7 +123,7 @@ export async function getPublicInfo(): Promise<PublicInfo> {
         const response = await invoke<ApiResponse<PublicInfo>>('get_public_info')
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get public info')
+        throw new ApiError(error instanceof Error ? error.message : '获取公共信息失败')
     }
 }
 
@@ -133,7 +133,7 @@ export async function activate(code: string): Promise<void> {
         const response = await invoke<ApiResponse<void>>('activate', { code })
         handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to activate')
+        throw new ApiError(error instanceof Error ? error.message : '激活失败')
     }
 }
 
@@ -142,7 +142,7 @@ export async function changePassword(oldPassword: string, newPassword: string): 
         const response = await invoke<ApiResponse<void>>('change_password', { oldPassword, newPassword })
         handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to change password')
+        throw new ApiError(error instanceof Error ? error.message : '修改密码失败')
     }
 }
 
@@ -154,7 +154,7 @@ export async function resetMachineId(params: { forceKill?: boolean, machineId?: 
             machineId: params.machineId
         })
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to reset machine id')
+        throw new ApiError(error instanceof Error ? error.message : '重置机器码失败')
     }
 }
 
@@ -165,7 +165,7 @@ export async function switchAccount(email: string, token: string, forceKill: boo
             throw new Error('切换账户失败')
         }
     } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Failed to switch account'
+        const errorMsg = error instanceof Error ? error.message : '切换账户失败'
         if (errorMsg.includes('Cursor进程正在运行, 请先关闭Cursor')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')
         }
@@ -177,7 +177,7 @@ export async function getMachineIds(): Promise<MachineInfo> {
     try {
         return await invoke<MachineInfo>('get_machine_ids')
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get machine IDs')
+        throw new ApiError(error instanceof Error ? error.message : '获取机器码失败')
     }
 }
 
@@ -185,7 +185,7 @@ export async function checkCursorRunning(): Promise<boolean> {
     try {
         return await invoke<boolean>('check_cursor_running')
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to check cursor status')
+        throw new ApiError(error instanceof Error ? error.message : '检查Cursor状态失败')
     }
 }
 
@@ -194,7 +194,7 @@ export async function checkAdminPrivileges(): Promise<boolean> {
     try {
         return await invoke<boolean>('check_admin_privileges')
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to check admin privileges')
+        throw new ApiError(error instanceof Error ? error.message : '检查管理员权限失败')
     }
 }
 
@@ -256,7 +256,7 @@ export async function resetPassword(email: string, code: string, password: strin
         })
         handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to reset password')
+        throw new ApiError(error instanceof Error ? error.message : '重置密码失败')
     }
 }
 
@@ -265,7 +265,7 @@ export async function checkIsWindows(): Promise<boolean> {
     try {
         return await invoke<boolean>('check_is_windows');
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to check if system is Windows');
+        throw new ApiError(error instanceof Error ? error.message : '检查系统是否为Windows失败')
     }
 }
 
@@ -284,7 +284,7 @@ export async function logout(): Promise<void> {
         const response = await invoke<ApiResponse<void>>('logout')
         handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to logout')
+        throw new ApiError(error instanceof Error ? error.message : '登出失败')
     }
 }
 
@@ -306,7 +306,7 @@ export async function saveHistoryRecord(record: HistoryRecord): Promise<void> {
         await setUserData('user.history', JSON.stringify(records));
     } catch (error) {
         console.error('保存历史记录失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history record');
+        throw new ApiError(error instanceof Error ? error.message : '保存历史记录失败');
     }
 }
 
@@ -326,7 +326,7 @@ export async function saveHistoryRecords(records: HistoryRecord[]): Promise<void
         await setUserData('user.history', JSON.stringify(existingRecords));
     } catch (error) {
         console.error('批量保存历史记录失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save history records');
+        throw new ApiError(error instanceof Error ? error.message : '保存历史记录失败');
     }
 }
 
@@ -349,7 +349,7 @@ export async function getHistoryRecords(): Promise<HistoryRecord[]> {
         }
     } catch (error) {
         console.error('获取历史记录失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history records');
+        throw new ApiError(error instanceof Error ? error.message : '获取历史记录失败');
     }
 }
 
@@ -361,7 +361,7 @@ export async function clearHistoryRecords(): Promise<void> {
         await delUserData('user.history');
     } catch (error) {
         console.error('清除历史记录失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history records');
+        throw new ApiError(error instanceof Error ? error.message : '清除历史记录失败');
     }
 }
 
@@ -382,7 +382,7 @@ export async function getHistoryAccounts(): Promise<HistoryAccountRecord[]> {
             return [];
         }
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get history accounts')
+        throw new ApiError(error instanceof Error ? error.message : '获取历史账户失败')
     }
 }
 
@@ -401,7 +401,7 @@ export async function removeHistoryAccount(email: string): Promise<void> {
         // 保存回数据库
         await setUserData('user.history.accounts', JSON.stringify(accounts));
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to remove history account')
+        throw new ApiError(error instanceof Error ? error.message : '删除历史账户失败')
     }
 }
 
@@ -413,7 +413,7 @@ export async function clearHistoryAccounts(): Promise<void> {
         await delUserData('user.history.accounts');
     } catch (error) {
         console.error('清除历史账户失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear history accounts');
+        throw new ApiError(error instanceof Error ? error.message : '清除历史账户失败');
     }
 }
 
@@ -426,7 +426,7 @@ export async function saveUserApiToken(token: string): Promise<void> {
         await setUserData('user.info.token', token);
     } catch (error) {
         console.error('保存API Token失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to save API token');
+        throw new ApiError(error instanceof Error ? error.message : '保存API Token失败');
     }
 }
 
@@ -439,7 +439,7 @@ export async function getUserApiToken(): Promise<string | null> {
         return await getUserData('user.info.token');
     } catch (error) {
         console.error('获取API Token失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get API token');
+        throw new ApiError(error instanceof Error ? error.message : '获取API Token失败');
     }
 }
 
@@ -451,7 +451,7 @@ export async function clearUserApiToken(): Promise<void> {
         await delUserData('user.info.token');
     } catch (error) {
         console.error('清除API Token失败:', error);
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to clear API token');
+        throw new ApiError(error instanceof Error ? error.message : '清除API Token失败');
     }
 }
 
@@ -466,7 +466,7 @@ export async function setUserData(key: string, value: string): Promise<void> {
     try {
         await invoke<ApiResponse<any>>('set_user_data', { key, value });
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to set user data');
+        throw new ApiError(error instanceof Error ? error.message : '设置用户数据失败');
     }
 }
 
@@ -481,7 +481,7 @@ export async function getUserData(key: string): Promise<string | null> {
         const result = handleApiResponse(response);
         return result.value;
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to get user data');
+        throw new ApiError(error instanceof Error ? error.message : '获取用户数据失败');
     }
 }
 
@@ -493,7 +493,7 @@ export async function delUserData(key: string): Promise<void> {
     try {
         await invoke<ApiResponse<any>>('del_user_data', { key });
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : 'Failed to delete user data');
+        throw new ApiError(error instanceof Error ? error.message : '删除用户数据失败');
     }
 }
 
