@@ -60,6 +60,12 @@ export interface LoginRequest {
   spread: string
 }
 
+// 注册响应
+export interface RegisterResponse {
+  token: string
+  expires_time: number
+}
+
 // 登录响应
 export interface LoginResponse {
   token?: string

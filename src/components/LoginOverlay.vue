@@ -396,13 +396,18 @@ async function handleRegister() {
     formState.register.error = ''
     
     // 使用Pinia store的register方法
-    await userStore.register(email, code, password, 'web')
+    const success = await userStore.register(email, code, password, 'web')
     message.success('注册成功')
     addHistoryRecord('注册', `用户 ${email} 注册成功`)
     
-    // 自动切换到登录页并填充用户名
-    activeTab.value = 'login'
-    formState.login.username = email
+    // 注册成功，如果已登录直接触发登录成功事件
+    if (success && userStore.isLoggedIn) {
+      emit('login-success')
+    } else {
+      // 注册成功但未自动登录，切换到登录页
+      activeTab.value = 'login'
+      formState.login.username = email
+    }
   } catch (error) {
     message.error(error instanceof Error ? error.message : '注册失败')
   } finally {

@@ -114,7 +114,14 @@ export const useUserStore = defineStore('user', () => {
     try {
       const response = await apiRegister(email, code, password, spread)
       if (response && response.token) {
+        // 保存token后调用检查登录状态接口获取用户信息
         await checkLoginStatus()
+        
+        // 如果获取用户信息失败，尝试直接登录
+        if (!isLoggedIn.value) {
+          await login(email, password, spread)
+        }
+        
         return true
       }
       return false

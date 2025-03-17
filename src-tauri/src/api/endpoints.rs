@@ -78,7 +78,7 @@ pub async fn register(
     email: String,
     code: String,
     password: String,
-) -> Result<ApiResponse<()>, String> {
+) -> Result<ApiResponse<RegisterResponse>, String> {
     let response = client
         .post(format!("{}/emailRegister", client.get_base_url()))
         .multipart([

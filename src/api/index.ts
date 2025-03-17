@@ -9,7 +9,8 @@ import type {
     MachineInfo,
     HistoryRecord,
     HistoryAccountRecord,
-    Article
+    Article,
+    RegisterResponse
 } from './types'
 
 // 错误处理
@@ -59,13 +60,30 @@ export async function sendCode(email: string, type: string): Promise<void> {
 
 export async function register(email: string, code: string, password: string, spread: string): Promise<LoginResponse> {
     try {
-        const response = await invoke<ApiResponse<LoginResponse>>('register', { email, code, password, spread })
+        const response = await invoke<ApiResponse<RegisterResponse>>('register', { email, code, password, spread })
         if (response.status === 200 && response.data?.token) {
-            return response.data as LoginResponse
+            // 保存token
+            try {
+                await saveUserApiToken(response.data.token);
+            } catch (saveError) {
+                console.error('保存token失败:', saveError);
+                // 注意：即使保存token失败，我们仍然继续流程
+            }
+            
+            // 将RegisterResponse转换为LoginResponse格式
+            return {
+                token: response.data.token,
+                // userInfo在这里不可用，需要额外获取
+            }
         }
         return handleApiResponse(response)
     } catch (error) {
-        throw new ApiError(error instanceof Error ? error.message : '注册失败')
+        const errorMsg = error instanceof Error ? error.message : '注册失败';
+        if (errorMsg.includes('invalid type: map, expected unit')) {
+            console.warn('注册API返回格式错误，但注册可能已成功，尝试继续流程');
+            return {} as LoginResponse;
+        }
+        throw new ApiError(errorMsg);
     }
 }
 
