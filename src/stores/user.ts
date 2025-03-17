@@ -24,12 +24,9 @@ export const useUserStore = defineStore('user', () => {
   const isAdmin = ref<boolean | null>(null)
   const isCheckingAdmin = ref(false)
   
-  // 积分相关状态
-  const showInsufficientCreditsModal = ref(false)
   const activationCode = ref('')
   const activationLoading = ref(false)
   const activationError = ref('')
-  const pendingCreditAction = ref<'account' | 'quick' | null>(null)
 
   // Getters
   const username = computed(() => userInfo.value?.username || '')
@@ -165,7 +162,6 @@ export const useUserStore = defineStore('user', () => {
       
       // 重置激活码状态
       activationCode.value = ''
-      showInsufficientCreditsModal.value = false
       
       return true
     } catch (error) {
@@ -211,24 +207,6 @@ export const useUserStore = defineStore('user', () => {
   function checkCredits(requiredCredits: number = 50) {
     return userCredits.value >= requiredCredits
   }
-  
-  /**
-   * 显示积分不足模态框
-   */
-  function showInsufficientCredits(action: 'account' | 'quick') {
-    pendingCreditAction.value = action
-    showInsufficientCreditsModal.value = true
-  }
-  
-  /**
-   * 关闭积分不足模态框
-   */
-  function closeInsufficientCredits() {
-    showInsufficientCreditsModal.value = false
-    pendingCreditAction.value = null
-    activationCode.value = ''
-    activationError.value = ''
-  }
 
   // 返回 store 对象
   return {
@@ -239,11 +217,9 @@ export const useUserStore = defineStore('user', () => {
     loginError,
     isAdmin,
     isCheckingAdmin,
-    showInsufficientCreditsModal,
     activationCode,
     activationLoading,
     activationError,
-    pendingCreditAction,
     
     // Getters
     username,
@@ -260,8 +236,6 @@ export const useUserStore = defineStore('user', () => {
     changePassword,
     resetPassword,
     checkCredits,
-    showInsufficientCredits,
-    closeInsufficientCredits,
     checkIsAdmin,
   }
 }) 
