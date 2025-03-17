@@ -1,6 +1,7 @@
 use super::client::ApiClient;
 use super::interceptor::save_cursor_token_to_history;
 use super::types::*;
+use crate::config;
 use crate::database::Database;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
@@ -77,7 +78,7 @@ pub async fn register(
     email: String,
     code: String,
     password: String,
-) -> Result<ApiResponse<()>, String> {
+) -> Result<ApiResponse<RegisterResponse>, String> {
     let response = client
         .post(format!("{}/emailRegister", client.get_base_url()))
         .multipart([
@@ -271,7 +272,7 @@ pub async fn get_usage(
     client: State<'_, ApiClient>,
     token: String,
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
-    let user_id = "user_01000000000000000000000000";
+    let user_id = config::CONFIG.read().unwrap().api.cursor_user_id.clone();
     
     // token可能包含了用户ID部分，需要分割并只使用token部分
     let actual_token = if token.contains("%3A%3A") {

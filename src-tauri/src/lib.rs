@@ -12,6 +12,7 @@ use utils::{init_logger, LogConfig, get_app_log_dir};
 
 pub mod api;
 pub mod auth;
+pub mod config;
 pub mod cursor_reset;
 pub mod database;
 pub mod tray;
@@ -42,6 +43,11 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_positioner::init())
         .setup(|app| {
+            // 初始化配置
+            if let Err(e) = config::init_config() {
+                eprintln!("初始化配置失败: {}", e);
+            }
+            
             // 初始化日志系统
             let log_dir = match get_app_log_dir(&app.handle()) {
                 Ok(dir) => dir,

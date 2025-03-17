@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon, NForm, NFormItem, NInput, NScrollbar } from 'naive-ui'
+import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon, NScrollbar } from 'naive-ui'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from '../locales'
 import { useMessage } from 'naive-ui'
@@ -202,11 +202,6 @@ const handleMachineCodeChange = async (force_kill: boolean = false) => {
   }
 }
 
-// 添加新的 ref
-const showUnusedCreditsModal = ref(false)
-const unusedCredits = ref(0)
-const pendingAction = ref<'account' | 'quick' | null>(null)
-
 // 添加统一的自动注入函数，并增加日志
 const autoApplyHook = async (): Promise<boolean> => {
   try {
@@ -251,7 +246,8 @@ const handleAccountSwitch = async () => {
     
     // 检查积分是否足够
     if (!userStore.checkCredits(50)) {
-      userStore.showInsufficientCredits('account')
+      message.error(i18n.value.dashboard.insufficientCredits)
+      router.push('/settings')
       return
     }
     
@@ -303,7 +299,8 @@ const handleQuickChange = async () => {
     
     // 检查积分是否足够
     if (!userStore.checkCredits(50)) {
-      userStore.showInsufficientCredits('quick')
+      message.error(i18n.value.dashboard.insufficientCredits)
+      router.push('/settings')
       return
     }
     
@@ -333,36 +330,6 @@ const handleQuickChange = async () => {
   } finally {
     quickChangeLoading.value = false
   }
-}
-
-// 修改确认切换函数
-const handleConfirmSwitch = async () => {
-  showUnusedCreditsModal.value = false
-  if (pendingAction.value === 'account') {
-    // 检查 Cursor 是否在运行
-    const isRunning = await checkCursorRunning()
-    if (isRunning) {
-      showCursorRunningModal.value = true
-      pendingForceKillAction.value = { type: 'account' }
-      return
-    }
-    await executeAccountSwitch()
-  } else if (pendingAction.value === 'quick') {
-    // 检查 Cursor 是否在运行
-    const isRunning = await checkCursorRunning()
-    if (isRunning) {
-      showCursorRunningModal.value = true
-      pendingForceKillAction.value = { type: 'quick' }
-      return
-    }
-    await executeQuickChange()
-  }
-  pendingAction.value = null
-}
-
-const handleCancelSwitch = () => {
-  showUnusedCreditsModal.value = false
-  pendingAction.value = null
 }
 
 // 修改账户切换执行函数
@@ -607,10 +574,6 @@ onMounted(async () => {
 // 添加引导相关状态
 const shouldShowTour = ref(false)
 
-// 添加积分不足模态框状态
-const activationCode = ref('')
-const activationError = ref('')
-
 // 添加加载状态
 const machineCodeLoading = ref(false)
 const accountSwitchLoading = ref(false)
@@ -644,22 +607,6 @@ const handleTourComplete = () => {
   shouldShowTour.value = false
 }
 
-// 激活码处理
-const handleActivate = async () => {
-  if (!activationCode.value) {
-    activationError.value = '请输入激活码'
-    return
-  }
-  
-  try {
-    await userStore.activateCode(activationCode.value)
-    message.success('激活成功')
-    updateLocalViewState()
-  } catch (error) {
-    // 错误处理在 store 中已完成
-  }
-}
-
 // 同步 store 的状态到本地视图状态
 watch(
   [() => cursorStore.machineCode, () => cursorStore.currentAccount, () => cursorStore.hookStatus, 
@@ -673,11 +620,10 @@ watch(
 watch([
   () => showAdminPrivilegeModal,
   () => showCursorRunningModal,
-  () => appStore.showDisclaimerModal,
-  () => userStore.showInsufficientCreditsModal
+  () => appStore.showDisclaimerModal
 ], 
-  ([adminModal, cursorModal, disclaimerModal, creditsModal]) => {
-    if (adminModal || cursorModal || disclaimerModal || creditsModal) {
+  ([adminModal, cursorModal, disclaimerModal]) => {
+    if (adminModal || cursorModal || disclaimerModal) {
       shouldShowTour.value = false
     }
   }
@@ -715,15 +661,11 @@ const handleMachineCodeClick = async () => {
   }
 }
 
-// 添加表单数据
-const formValue = ref({
-  activationCode: ''
-})
 </script>
 
 <template>
   <n-space vertical size="large">
-    <article-list v-if="userStore.userInfo && !appStore.showDisclaimerModal && !userStore.showInsufficientCreditsModal" />
+    <article-list v-if="userStore.userInfo && !appStore.showDisclaimerModal" />
     
     <n-grid :cols="2" :x-gap="24" style="display: grid; grid-template-columns: repeat(2, 1fr);">
       <!-- 用户信息卡片 -->
@@ -891,31 +833,6 @@ const formValue = ref({
       </n-space>
     </n-card>
 
-    <n-modal
-      v-model:show="showUnusedCreditsModal"
-      preset="dialog"
-      title="使用提醒"
-      :closable="true"
-      :mask-closable="false"
-    >
-      <template #default>
-        <p>您还有 {{ unusedCredits }} 次高级模型使用次数未使用</p>
-        <p style="margin-top: 12px; color: #666;">
-          {{ pendingAction === 'quick' ? '一键切换将扣除50积分' : '切换账号将扣除50积分' }}，确定要继续吗？
-        </p>
-      </template>
-      <template #action>
-        <n-space justify="end">
-          <n-button @click="handleCancelSwitch">
-            取消
-          </n-button>
-          <n-button type="primary" @click="handleConfirmSwitch">
-            确认切换
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
-
     <!-- 添加 Cursor 运行提醒模态框 -->
     <cursor-running-modal
       v-model:show="showCursorRunningModal"
@@ -971,54 +888,6 @@ const formValue = ref({
         <n-space justify="end">
           <n-button type="primary" :disabled="!appStore.canConfirmDisclaimer" @click="handleConfirmDisclaimer">
             {{ appStore.canConfirmDisclaimer ? '我已阅读并同意' : `请等待 ${appStore.disclaimerCountdown} 秒` }}
-          </n-button>
-        </n-space>
-      </template>
-    </n-modal>
-
-    <!-- 修改积分不足模态框 -->
-    <n-modal
-      v-model:show="userStore.showInsufficientCreditsModal"
-      preset="dialog"
-      title="额度不足"
-      :closable="true"
-      :mask-closable="false"
-      style="width: 500px"
-    >
-      <n-form
-        :model="formValue"
-        label-placement="left"
-        label-width="auto"
-        require-mark-placement="right-hanging"
-      >
-        <div style="margin-bottom: 16px">
-          <p>您当前对话额度不足，账户切换需要消耗50额度。</p>
-          <p style="margin-top: 12px; color: #ff4d4f;">
-            当前额度: {{ userStore.userCredits }}，还需要: {{ Math.max(0, 50 - userStore.userCredits) }} 额度
-          </p>
-        </div>
-        
-        <n-form-item label="激活码">
-          <n-input
-            v-model:value="userStore.activationCode"
-            type="text"
-            placeholder="请输入卡密"
-            :disabled="userStore.activationLoading"
-          />
-        </n-form-item>
-        
-        <p v-if="userStore.activationError" style="color: #ff4d4f; margin-top: 8px;">
-          {{ userStore.activationError }}
-        </p>
-      </n-form>
-
-      <template #action>
-        <n-space justify="end">
-          <n-button @click="userStore.closeInsufficientCredits()" :disabled="userStore.activationLoading">
-            取消
-          </n-button>
-          <n-button type="primary" @click="handleActivate" :loading="userStore.activationLoading">
-            激活卡密
           </n-button>
         </n-space>
       </template>

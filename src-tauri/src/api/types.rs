@@ -11,6 +11,14 @@ pub struct ApiResponse<T> {
     pub code: Option<String>,
 }
 
+// 注册响应
+#[derive(Debug, Serialize, Deserialize)]
+pub struct RegisterResponse {
+    pub token: String,
+    #[serde(rename = "expires_time")]
+    pub expires_time: i64,
+}
+
 // 登录响应
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LoginResponse {

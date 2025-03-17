@@ -1,11 +1,11 @@
 use crate::api::interceptor::{
     is_auth_required_url, save_auth_token, AuthInterceptor, Interceptor,
 };
+use crate::config;
 use crate::database::Database;
 use reqwest::header::HeaderValue;
 use reqwest::{Client, Request, Response};
 use std::sync::Arc;
-use std::time::Duration;
 use tauri::AppHandle;
 use tauri::Manager;
 use tracing::error;
@@ -22,7 +22,7 @@ impl ApiClient {
     pub fn new(app_handle: Option<AppHandle>) -> Self {
         let client = Arc::new(
             Client::builder()
-                .timeout(Duration::from_secs(10))
+                .timeout(config::get_request_timeout())
                 .build()
                 .expect("Failed to create HTTP client"),
         );
@@ -53,7 +53,7 @@ impl ApiClient {
         }
         
         // 回退到默认URL
-        "https://pool.52ai.org/api".to_string()
+        config::get_default_api_url()
     }
 
     /// 发送 HTTP 请求
@@ -99,7 +99,7 @@ impl ApiClient {
         if url_str.contains("/user/updatePassword") {
             if let Ok(response_json) = serde_json::from_str::<serde_json::Value>(&response_text) {
                 if response_json["status"] == 200 {
-                    if let Err(e) = clear_auth_token(&db).await {
+                    if let Err(e) = crate::api::interceptor::clear_auth_token(&db).await {
                         error!(
                             target: "http_client",
                             "清除认证令牌失败 - URL: {}, 错误: {}", 
@@ -223,11 +223,4 @@ impl<'a> RequestBuilder<'a> {
             client: self.client,
         }
     }
-}
-
-/// 清除认证令牌
-async fn clear_auth_token(db: &tauri::State<'_, Database>) -> Result<(), String> {
-    db.delete_item("user.info.token")
-        .map_err(|e| e.to_string())?;
-    Ok(())
 }
