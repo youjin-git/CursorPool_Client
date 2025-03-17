@@ -1,3 +1,4 @@
+use crate::config;
 use crate::database::Database;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -25,16 +26,6 @@ struct InboundItemWithLatency {
     latency: Option<Duration>,
 }
 
-// 默认URL
-const DEFAULT_INBOUND_URL: &str = "https://pool.52ai.org";
-// 配置文件URL
-const CONFIG_URL: &str = "https://cursorpool.oss-cn-guangzhou.aliyuncs.com/config.json";
-// 数据库键名
-const INBOUND_CONFIG_KEY: &str = "system.inbound.config";
-const CURRENT_INBOUND_KEY: &str = "system.inbound.current";
-// 测速超时时间（毫秒）
-const PING_TIMEOUT_MS: u64 = 5000;
-
 /// 从远程获取线路配置
 pub async fn fetch_inbound_config() -> Result<InboundConfig, String> {
     let client = Client::builder()
@@ -45,12 +36,13 @@ pub async fn fetch_inbound_config() -> Result<InboundConfig, String> {
             format!("创建HTTP客户端失败: {}", e)
         })?;
 
+    let config_url = config::get_config_file_url();
     let response = client
-        .get(CONFIG_URL)
+        .get(&config_url)
         .send()
         .await
         .map_err(|e| {
-            error!(target: "inbound", "请求线路配置失败 - URL: {}, 错误: {}", CONFIG_URL, e);
+            error!(target: "inbound", "请求线路配置失败 - URL: {}, 错误: {}", config_url, e);
             format!("请求线路配置失败: {}", e)
         })?;
 
@@ -72,8 +64,9 @@ pub async fn fetch_inbound_config() -> Result<InboundConfig, String> {
 
 /// 测试单个线路的延迟
 async fn test_inbound_latency(url: &str) -> Option<Duration> {
+    let ping_timeout = config::get_ping_timeout();
     let client = match Client::builder()
-        .timeout(Duration::from_millis(PING_TIMEOUT_MS))
+        .timeout(ping_timeout)
         .build() {
             Ok(client) => client,
             Err(e) => {
@@ -151,56 +144,52 @@ async fn find_fastest_inbound(config: &InboundConfig) -> usize {
 }
 
 /// 初始化线路配置
-pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
-    let db = app.state::<Database>();
+pub async fn init_inbound_config(app_handle: &AppHandle) -> Result<(), String> {
+    let db = app_handle.state::<Database>();
     
-    // 尝试获取远程线路配置
-    let config_result = fetch_inbound_config().await;
-    
-    match config_result {
+    // 尝试从远程获取线路配置
+    match fetch_inbound_config().await {
         Ok(config) => {
-            // 将配置保存到数据库
+            // 序列化配置
             let config_json = serde_json::to_string(&config)
                 .map_err(|e| {
                     error!(target: "inbound", "序列化线路配置失败: {}", e);
                     format!("序列化线路配置失败: {}", e)
                 })?;
             
-            db.set_item(INBOUND_CONFIG_KEY, &config_json)
+            // 保存到数据库
+            let inbound_config_key = config::get_db_key("inbound_config");
+            db.set_item(&inbound_config_key, &config_json)
                 .map_err(|e| {
                     error!(target: "inbound", "保存线路配置失败: {}", e);
                     format!("保存线路配置失败: {}", e)
                 })?;
             
-            // 检查当前是否已有选择的线路
-            if let Ok(None) = db.get_item(CURRENT_INBOUND_KEY) {
-                // 如果没有，进行测速选择最佳线路
-                println!("未找到已选择线路，开始测速选择最佳线路...");
+            // 根据延迟自动选择最佳线路
+            let current_inbound_key = config::get_db_key("current_inbound");
+            if let Ok(None) = db.get_item(&current_inbound_key) {
+                // 如果没有设置当前线路，则执行测速选择最佳线路
                 let best_index = find_fastest_inbound(&config).await;
-                
-                // 保存最佳线路
-                db.set_item(CURRENT_INBOUND_KEY, &best_index.to_string())
+                db.set_item(&current_inbound_key, &best_index.to_string())
                     .map_err(|e| {
-                        error!(target: "inbound", "设置当前线路失败 - 索引: {}, 错误: {}", best_index, e);
+                        error!(target: "inbound", "设置当前线路失败: {}", e);
                         format!("设置当前线路失败: {}", e)
                     })?;
-                
-                println!("已选择最佳线路：[{}] {}", best_index, config.inbound[best_index].name);
             }
-            
-            println!("线路配置初始化成功，共{}条线路", config.inbound.len());
         },
         Err(e) => {
             error!(target: "inbound", "获取远程线路配置失败: {}", e);
             println!("获取远程线路配置失败: {}，将使用默认线路", e);
             
             // 检查数据库中是否已有配置
-            if let Ok(None) = db.get_item(INBOUND_CONFIG_KEY) {
+            let inbound_config_key = config::get_db_key("inbound_config");
+            if let Ok(None) = db.get_item(&inbound_config_key) {
                 // 创建默认配置
+                let default_api_url = config::get_default_api_url();
                 let default_config = InboundConfig {
                     inbound: vec![InboundItem {
                         name: "默认线路".to_string(),
-                        url: DEFAULT_INBOUND_URL.to_string(),
+                        url: default_api_url.split("/api").next().unwrap_or("https://pool.52ai.org").to_string(),
                     }],
                 };
                 
@@ -210,13 +199,14 @@ pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
                         format!("序列化默认线路配置失败: {}", e)
                     })?;
                 
-                db.set_item(INBOUND_CONFIG_KEY, &config_json)
+                db.set_item(&inbound_config_key, &config_json)
                     .map_err(|e| {
                         error!(target: "inbound", "保存默认线路配置失败: {}", e);
                         format!("保存默认线路配置失败: {}", e)
                     })?;
                 
-                db.set_item(CURRENT_INBOUND_KEY, "0")
+                let current_inbound_key = config::get_db_key("current_inbound");
+                db.set_item(&current_inbound_key, "0")
                     .map_err(|e| {
                         error!(target: "inbound", "设置默认当前线路失败: {}", e);
                         format!("设置当前线路失败: {}", e)
@@ -232,8 +222,11 @@ pub async fn init_inbound_config(app: &AppHandle) -> Result<(), String> {
 
 /// 获取当前线路URL
 pub fn get_current_inbound_url(db: &Database) -> String {
+    let default_api_url = config::get_default_api_url();
+    
     // 获取当前选择的线路索引
-    let current_index = match db.get_item(CURRENT_INBOUND_KEY) {
+    let current_inbound_key = config::get_db_key("current_inbound");
+    let current_index = match db.get_item(&current_inbound_key) {
         Ok(Some(index)) => index.parse::<usize>().unwrap_or(0),
         Ok(None) => {
             error!(target: "inbound", "未找到当前线路索引配置");
@@ -246,30 +239,31 @@ pub fn get_current_inbound_url(db: &Database) -> String {
     };
 
     // 获取线路配置
-    let config = match db.get_item(INBOUND_CONFIG_KEY) {
+    let inbound_config_key = config::get_db_key("inbound_config");
+    let config = match db.get_item(&inbound_config_key) {
         Ok(Some(json)) => {
             match serde_json::from_str::<InboundConfig>(&json) {
                 Ok(config) => config,
                 Err(e) => {
                     error!(target: "inbound", "解析线路配置失败: {}", e);
-                    return format!("{}/api", DEFAULT_INBOUND_URL);
+                    return default_api_url;
                 }
             }
         },
         Ok(None) => {
             error!(target: "inbound", "未找到线路配置");
-            return format!("{}/api", DEFAULT_INBOUND_URL);
+            return default_api_url;
         },
         Err(e) => {
             error!(target: "inbound", "获取线路配置失败: {}", e);
-            return format!("{}/api", DEFAULT_INBOUND_URL);
+            return default_api_url;
         }
     };
 
     // 检查索引是否有效
     if current_index >= config.inbound.len() {
         error!(target: "inbound", "当前线路索引无效: {}, 线路总数: {}", current_index, config.inbound.len());
-        return format!("{}/api", DEFAULT_INBOUND_URL);
+        return default_api_url;
     }
 
     // 返回API基础URL

@@ -1,5 +1,7 @@
+use crate::config;
 use crate::database::Database;
 use reqwest::Request;
+use std::ops::Not;
 use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
@@ -26,7 +28,8 @@ impl Interceptor for AuthInterceptor {
     fn intercept(&self, request: &mut Request) -> Result<(), String> {
         let db = self.app_handle.state::<Database>();
 
-        let token = match db.get_item("user.info.token") {
+        let token_key = config::get_db_key("token");
+        let token = match db.get_item(&token_key) {
             Ok(Some(token)) => token,
             _ => return Ok(()),
         };
@@ -36,7 +39,8 @@ impl Interceptor for AuthInterceptor {
             format!("Bearer {}", token).parse().unwrap(),
         );
 
-        let lang = match db.get_item("user.info.lang") {
+        let lang_key = config::get_db_key("lang");
+        let lang = match db.get_item(&lang_key) {
             Ok(Some(lang)) if lang != "zh-CN" => lang,
             _ => "zh-CN".to_string(),
         };
@@ -51,30 +55,7 @@ impl Interceptor for AuthInterceptor {
 
 /// 检查 URL 是否需要认证
 pub fn is_auth_required_url(url: &str) -> bool {
-    if url.contains("cursor.com") {
-        return false;
-    }
-
-    let public_endpoints = [
-        "/login",
-        "/register",
-        "/emailRegister",
-        "/checkUser",
-        "/register/sendEmailCode",
-        "/emailResetPassword",
-        "/version",
-        "/public/info",
-        "/disclaimer",
-        "/api/usage",
-    ];
-
-    for endpoint in public_endpoints {
-        if url.contains(endpoint) {
-            return false;
-        }
-    }
-
-    true
+    config::is_public_endpoint(url).not()
 }
 
 /// 保存认证令牌
@@ -96,12 +77,21 @@ pub async fn save_auth_token(
     if api_response.status == 200 && api_response.data.is_some() {
         let data = api_response.data.unwrap();
         if let Some(token) = data.token {
-            db.set_item("user.info.token", &token)
+            let token_key = config::get_db_key("token");
+            db.set_item(&token_key, &token)
                 .map_err(|e| e.to_string())?;
         }
     }
 
     Ok(())
+}
+
+/// 清除认证令牌
+pub async fn clear_auth_token(
+    db: &tauri::State<'_, Database>,
+) -> Result<(), String> {
+    let token_key = config::get_db_key("token");
+    db.delete_item(&token_key).map_err(|e| e.to_string())
 }
 
 /// 保存Cursor token到历史记录

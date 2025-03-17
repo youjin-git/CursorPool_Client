@@ -1,3 +1,4 @@
+use crate::config;
 use crate::database::Database;
 use std::fs;
 use std::path::Path;
@@ -49,10 +50,8 @@ impl AppPaths {
             let default_path = {
                 let local_app_data = std::env::var("LOCALAPPDATA")
                     .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-                PathBuf::from(local_app_data)
-                    .join("Programs")
-                    .join("cursor")
-                    .join("Cursor.exe")
+                let default_path_str = config::CONFIG.read().unwrap().paths.windows.cursor_exe.clone();
+                PathBuf::from(default_path_str.replace("%LOCALAPPDATA%", &local_app_data))
             };
             
             // 检查默认路径是否存在
@@ -66,29 +65,27 @@ impl AppPaths {
                 }
             }
         } else if cfg!(target_os = "macos") {
-            PathBuf::from("/Applications")
-                .join("Cursor.app")
-                .join("Contents")
-                .join("MacOS")
-                .join("Cursor")
+            let default_path_str = config::CONFIG.read().unwrap().paths.macos.cursor_app.clone();
+            PathBuf::from(default_path_str)
         } else {
-            PathBuf::from("/usr/bin/cursor") // Linux 默认路径
+            let default_path_str = config::CONFIG.read().unwrap().paths.linux.cursor_exe.clone();
+            PathBuf::from(default_path_str)
         };
 
         // 获取 cursor-updater 路径
         let cursor_updater = if cfg!(target_os = "windows") {
             let local_app_data = std::env::var("LOCALAPPDATA")
                 .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-            PathBuf::from(local_app_data).join("cursor-updater")
+            let updater_path_str = config::CONFIG.read().unwrap().paths.windows.cursor_updater.clone();
+            PathBuf::from(updater_path_str.replace("%LOCALAPPDATA%", &local_app_data))
         } else if cfg!(target_os = "macos") {
             let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
-            PathBuf::from(home)
-                .join("Library")
-                .join("Application Support")
-                .join("cursor-updater")
+            let updater_path_str = config::CONFIG.read().unwrap().paths.macos.cursor_updater.clone();
+            PathBuf::from(updater_path_str.replace("~", &home))
         } else {
             let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
-            PathBuf::from(home).join(".config").join("cursor-updater")
+            let updater_path_str = config::CONFIG.read().unwrap().paths.linux.cursor_updater.clone();
+            PathBuf::from(updater_path_str.replace("~", &home))
         };
 
         // 获取 main.js 路径 - 现在优先从数据库查找
@@ -178,33 +175,18 @@ impl AppPaths {
 
     // 新增：寻找main.js路径的方法
     fn find_main_js_path() -> Result<PathBuf, String> {
-        // 首先尝试默认路径
         let default_path = if cfg!(target_os = "windows") {
             let local_app_data = std::env::var("LOCALAPPDATA")
                 .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-            PathBuf::from(local_app_data)
-                .join("Programs")
-                .join("cursor")
-                .join("resources")
-                .join("app")
-                .join("out")
-                .join("main.js")
+            let resources_path_str = config::CONFIG.read().unwrap().paths.windows.cursor_resources.clone();
+            PathBuf::from(resources_path_str.replace("%LOCALAPPDATA%", &local_app_data))
         } else if cfg!(target_os = "macos") {
-            PathBuf::from("/Applications")
-                .join("Cursor.app")
-                .join("Contents")
-                .join("Resources")
-                .join("app")
-                .join("out")
-                .join("main.js")
+            let resources_path_str = config::CONFIG.read().unwrap().paths.macos.cursor_resources.clone();
+            PathBuf::from(resources_path_str)
         } else {
             // Linux 路径
-            PathBuf::from("/usr/lib")
-                .join("cursor")
-                .join("resources")
-                .join("app")
-                .join("out")
-                .join("main.js")
+            let resources_path_str = config::CONFIG.read().unwrap().paths.linux.cursor_resources.clone();
+            PathBuf::from(resources_path_str)
         };
 
         // 检查默认路径是否存在
@@ -440,10 +422,11 @@ impl AppPaths {
 
     // 新增：从数据库获取保存的main.js路径
     pub fn get_saved_path_from_db(db: &Database) -> Result<Option<PathBuf>, String> {
-        match db.get_item(CURSOR_MAIN_JS_PATH_KEY) {
-            Ok(Some(path_str)) => Ok(Some(PathBuf::from(path_str))),
+        let cursor_main_js_path_key = config::get_db_key("cursor_main_js_path");
+        match db.get_item(&cursor_main_js_path_key) {
+            Ok(Some(path)) => Ok(Some(PathBuf::from(path))),
             Ok(None) => Ok(None),
-            Err(e) => Err(format!("从数据库获取路径失败: {}", e)),
+            Err(e) => Err(format!("获取保存的main.js路径失败: {}", e)),
         }
     }
 
