@@ -15,6 +15,7 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import InboundSelector from '../components/InboundSelector.vue'
+import CloseTypeSelector from '../components/CloseTypeSelector.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
 import { 
   changePassword, 
@@ -82,6 +83,9 @@ const handleActivate = async () => {
       '成功兑换激活码'
     )
     formValue.value.activationCode = ''
+    
+    // 设置刷新标记，确保dashboard页面刷新数据
+    localStorage.setItem('need_refresh_dashboard', 'true')
     
     // 激活成功后跳转到 dashboard 页面
     router.push('/dashboard')
@@ -310,6 +314,14 @@ onMounted(async () => {
               <div class="preference-label">语言</div>
               <div class="preference-control">
                 <language-switch :show-label="false" />
+              </div>
+            </div>
+            
+            <!-- 关闭方式选择 -->
+            <div class="preference-row">
+              <div class="preference-label">关闭方式</div>
+              <div class="preference-control">
+                <close-type-selector :show-label="false" />
               </div>
             </div>
           </div>
