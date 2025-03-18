@@ -83,6 +83,9 @@ const handleActivate = async () => {
     )
     formValue.value.activationCode = ''
     
+    // 设置刷新标记，确保dashboard页面刷新数据
+    localStorage.setItem('need_refresh_dashboard', 'true')
+    
     // 激活成功后跳转到 dashboard 页面
     router.push('/dashboard')
   } catch (error) {
