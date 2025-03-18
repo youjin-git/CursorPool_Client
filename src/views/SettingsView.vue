@@ -28,11 +28,13 @@ import { version } from '../../package.json'
 import { useUserStore } from '../stores/user'
 import { useCursorStore } from '../stores'
 import FileSelectModal from '../components/FileSelectModal.vue'
+import { useRouter } from 'vue-router'
 
 const message = useMessage()
 const { currentLang, i18n } = useI18n()
 const userStore = useUserStore()
 const cursorStore = useCursorStore()
+const router = useRouter()
 
 interface SettingsForm {
   activationCode: string
@@ -80,6 +82,9 @@ const handleActivate = async () => {
       '成功兑换激活码'
     )
     formValue.value.activationCode = ''
+    
+    // 激活成功后跳转到 dashboard 页面
+    router.push('/dashboard')
   } catch (error) {
     message.error(error instanceof Error ? error.message : '激活失败')
   } finally {
