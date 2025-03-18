@@ -69,6 +69,7 @@ pub async fn launch_cursor() -> Result<bool, String> {
 #[tauri::command]
 pub async fn reset_machine_id(
     client: State<'_, ApiClient>,
+    db: State<'_, Database>,
     force_kill: bool,
     machine_id: Option<String>,
 ) -> Result<bool, String> {
@@ -100,7 +101,7 @@ pub async fn reset_machine_id(
         }
     }
 
-    let paths = match AppPaths::new() {
+    let paths = match AppPaths::new_with_db(Some(&db)) {
         Ok(p) => p,
         Err(e) => {
             // 上报错误

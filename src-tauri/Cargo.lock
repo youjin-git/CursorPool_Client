@@ -831,7 +831,7 @@ dependencies = [
 
 [[package]]
 name = "cursor-pool"
-version = "1.7.5"
+version = "1.7.6"
 dependencies = [
  "chrono",
  "dotenv",
