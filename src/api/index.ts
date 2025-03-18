@@ -167,7 +167,7 @@ export async function changePassword(oldPassword: string, newPassword: string): 
 // 机器码和账户切换相关 API
 export async function resetMachineId(params: { forceKill?: boolean, machineId?: string } = {}): Promise<boolean> {
     try {
-        return await invoke<boolean>('reset_machine_id', { 
+        return await invoke<boolean>(' reset_machine_id', { 
             forceKill: params.forceKill || false,
             machineId: params.machineId
         })
