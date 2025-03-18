@@ -661,6 +661,23 @@ const handleMachineCodeClick = async () => {
   }
 }
 
+// 监听登录状态变化
+watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
+  // 只在从未登录变为已登录时触发
+  if (newVal === true && oldVal === false) {
+    // 延迟检查，确保所有数据都已加载
+    setTimeout(async () => {
+      if (!appStore.showDisclaimerModal) {
+        await appStore.fetchTourStatus();
+        
+        if (appStore.shouldShowTour) {
+          startTour();
+        }
+      }
+    }, 500);
+  }
+});
+
 </script>
 
 <template>
