@@ -15,6 +15,7 @@ import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import LanguageSwitch from '../components/LanguageSwitch.vue'
 import InboundSelector from '../components/InboundSelector.vue'
+import CloseTypeSelector from '../components/CloseTypeSelector.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
 import { 
   changePassword, 
@@ -313,6 +314,14 @@ onMounted(async () => {
               <div class="preference-label">语言</div>
               <div class="preference-control">
                 <language-switch :show-label="false" />
+              </div>
+            </div>
+            
+            <!-- 关闭方式选择 -->
+            <div class="preference-row">
+              <div class="preference-label">关闭方式</div>
+              <div class="preference-control">
+                <close-type-selector :show-label="false" />
               </div>
             </div>
           </div>

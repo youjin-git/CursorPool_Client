@@ -13,18 +13,21 @@ import {
 } from '@vicons/ionicons5'
 import ThemeToggle from '../components/ThemeToggle.vue'
 import LoginOverlay from '../components/LoginOverlay.vue'
+import CloseConfirmModal from '../components/CloseConfirmModal.vue'
 import { Component, h } from 'vue'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 import { platform } from '@tauri-apps/plugin-os'
-import { useUserStore } from '../stores/user'
+import { useUserStore, useAppCloseStore } from '../stores'
+
 
 // 基础状态
 const router = useRouter() as unknown as Router
 const { currentLang, i18n } = useI18n()
 const appWindow = Window.getCurrent()
 const userStore = useUserStore()
+const appCloseStore = useAppCloseStore()
 
 // 平台相关状态
 const currentPlatform = ref('')
@@ -99,7 +102,7 @@ const windowControls = {
   },
   
   async close() {
-    await appWindow.hide()
+    await appCloseStore.handleCloseRequest()
   }
 }
 
@@ -223,6 +226,9 @@ watch(() => userStore.isLoggedIn, (newValue) => {
       <router-view />
     </n-layout>
   </n-layout>
+
+  <!-- 添加CloseConfirmModal组件 -->
+  <close-confirm-modal />
 </template>
 
 <style scoped>

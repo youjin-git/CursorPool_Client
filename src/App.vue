@@ -5,16 +5,17 @@ import { themeOverrides } from './styles/theme'
 import { useI18n, initLanguage } from './locales'
 import { locales } from './locales'
 import { computed, onMounted } from 'vue'
-import { useHistoryStore } from './stores/history'
-import { useUpdaterStore } from './stores/updater'
-import { useInboundStore } from './stores/inbound'
+import { useHistoryStore, useUpdaterStore, useInboundStore, useAppCloseStore } from './stores'
 import UpdateOverlay from './components/UpdateOverlay.vue'
+import CloseConfirmModal from './components/CloseConfirmModal.vue'
+import { Window } from '@tauri-apps/api/window'
 
 const { currentTheme } = useTheme()
 const { currentLang } = useI18n()
 const historyStore = useHistoryStore()
 const updaterStore = useUpdaterStore()
 const inboundStore = useInboundStore()
+const appCloseStore = useAppCloseStore()
 
 const locale = computed(() => locales[currentLang.value].locale)
 const dateLocale = computed(() => locales[currentLang.value].dateLocale)
@@ -32,6 +33,13 @@ onMounted(async () => {
   
   // 自动检查更新
   await updaterStore.checkForUpdates()
+  
+  // 添加关闭事件监听
+  const appWindow = Window.getCurrent()
+  appWindow.onCloseRequested(async (event) => {
+    event.preventDefault()
+    appCloseStore.handleCloseRequest()
+  })
 })
 </script>
 
@@ -47,6 +55,7 @@ onMounted(async () => {
         <router-view />
         <n-global-style />
         <update-overlay v-if="updaterStore.isUpdating || updaterStore.hasUpdate" />
+        <close-confirm-modal />
       </n-message-provider>
     </n-dialog-provider>
   </n-config-provider>
