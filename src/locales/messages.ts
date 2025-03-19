@@ -58,7 +58,7 @@ export const messages = {
       cpUsage: 'Cursor Pool额度使用量',
       advancedModelUsage: '高级模型使用量',
       basicModelUsage: '普通模型使用量',
-      cannotGetUsage: '无法链接cursor服务器',
+      cannotGetUsage: '无法链接cursor服务器, 请重启软件',
       cursorHistoryDownload: 'Cursor 历史版本下载'
     },
     login: {

@@ -7,8 +7,6 @@ import { checkCursorRunning } from '@/api'
 import type { UserInfo, CursorUserInfo, CursorUsageInfo } from '@/api/types'
 import { WarningOutlined } from '@vicons/antd'
 import { Window } from '@tauri-apps/api/window'
-import { saveAccountToHistory } from '@/utils/historyAccounts'
-import type { HistoryAccount } from '@/types/history'
 import DashboardTour from '../components/DashboardTour.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
 import MarkdownRender from '../components/MarkdownRender.vue'
@@ -231,19 +229,6 @@ const handleAccountSwitch = async () => {
   try {
     accountSwitchLoading.value = true
     
-    // 保存当前账户到历史记录
-    if (deviceInfo.value.cursorInfo?.userInfo) {
-      const historyAccount: HistoryAccount = {
-        email: deviceInfo.value.cursorInfo.userInfo.email,
-        token: deviceInfo.value.cursorToken,
-        machineCode: deviceInfo.value.machineCode,
-        gpt4Count: deviceInfo.value.cursorInfo.usage?.['gpt-4']?.numRequests || 0,
-        gpt35Count: deviceInfo.value.cursorInfo.usage?.['gpt-3.5-turbo']?.numRequests || 0,
-        lastUsed: Date.now()
-      }
-      saveAccountToHistory(historyAccount)
-    }
-    
     // 检查积分是否足够
     if (!userStore.checkCredits(50)) {
       message.error(i18n.value.dashboard.insufficientCredits)
@@ -283,19 +268,6 @@ const handleAccountSwitch = async () => {
 const handleQuickChange = async () => {
   try {
     quickChangeLoading.value = true
-    
-    // 保存当前账户到历史记录
-    if (deviceInfo.value.cursorInfo?.userInfo) {
-      const historyAccount: HistoryAccount = {
-        email: deviceInfo.value.cursorInfo.userInfo.email,
-        token: deviceInfo.value.cursorToken,
-        machineCode: deviceInfo.value.machineCode,
-        gpt4Count: deviceInfo.value.cursorInfo.usage?.['gpt-4']?.numRequests || 0,
-        gpt35Count: deviceInfo.value.cursorInfo.usage?.['gpt-3.5-turbo']?.numRequests || 0,
-        lastUsed: Date.now()
-      }
-      saveAccountToHistory(historyAccount)
-    }
     
     // 检查积分是否足够
     if (!userStore.checkCredits(50)) {
@@ -497,6 +469,9 @@ const handleExit = async () => {
 onMounted(async () => {
   try {
     loading.value = true
+    
+    // 初始化按钮显示状态
+    await appStore.initButtonSettings()
     
     // 检查是否需要强制刷新数据
     const needRefresh = localStorage.getItem('need_refresh_dashboard')
@@ -836,16 +811,34 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
     <!-- 快捷操作卡片 -->
     <n-card :title="i18n.dashboard.quickActions" class="quick-actions-card" style="user-select: none;">
       <n-space vertical>
-        <n-space justify="space-around">
-          <n-button type="primary" @click="handleQuickChange" :disabled="!deviceInfo.userInfo" :loading="quickChangeLoading">
+        <n-space :justify="appStore.showAllButtons ? 'space-around' : 'center'">
+          <n-button 
+            type="primary" 
+            @click="handleQuickChange" 
+            :disabled="!deviceInfo.userInfo" 
+            :loading="quickChangeLoading"
+            :style="!appStore.showAllButtons ? { width: '200px' } : {}"
+          >
             {{ i18n.dashboard.quickChange }}
           </n-button>
-          <n-button type="primary" @click="handleAccountSwitch" :disabled="!deviceInfo.userInfo" :loading="accountSwitchLoading">
-            {{ i18n.dashboard.changeAccount }}
-          </n-button>
-          <n-button type="primary" @click="handleMachineCodeClick" :loading="machineCodeLoading">
-            {{ i18n.dashboard.changeMachineCode }}
-          </n-button>
+          
+          <template v-if="appStore.showAllButtons">
+            <n-button 
+              type="primary" 
+              @click="handleAccountSwitch" 
+              :disabled="!deviceInfo.userInfo" 
+              :loading="accountSwitchLoading"
+            >
+              {{ i18n.dashboard.changeAccount }}
+            </n-button>
+            <n-button 
+              type="primary" 
+              @click="handleMachineCodeClick" 
+              :loading="machineCodeLoading"
+            >
+              {{ i18n.dashboard.changeMachineCode }}
+            </n-button>
+          </template>
         </n-space>
       </n-space>
     </n-card>

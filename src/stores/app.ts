@@ -29,6 +29,9 @@ export const useAppStore = defineStore('app', () => {
   const tourAccepted = ref<string | null>(null)
   const tourLoading = ref(false)
 
+  // 按钮显示状态
+  const showAllButtons = ref(false)
+
   // Getters
   const isDarkMode = computed(() => theme.value === 'dark')
   const currentTheme = computed(() => isDarkMode.value ? darkTheme : null)
@@ -257,6 +260,27 @@ export const useAppStore = defineStore('app', () => {
     }
   }
 
+  // 初始化时获取按钮显示状态
+  async function initButtonSettings() {
+    try {
+      const value = await getUserData('system.button.hide')
+      showAllButtons.value = value === 'true'
+    } catch (error) {
+      console.error('获取按钮显示状态失败:', error)
+      showAllButtons.value = false
+    }
+  }
+  
+  // 设置按钮显示状态
+  async function setButtonVisibility(show: boolean) {
+    try {
+      await setUserData('system.button.hide', show.toString())
+      showAllButtons.value = show
+    } catch (error) {
+      console.error('设置按钮显示状态失败:', error)
+    }
+  }
+
   return {
     // 状态
     theme,
@@ -271,6 +295,7 @@ export const useAppStore = defineStore('app', () => {
     disclaimerLoading,
     tourAccepted,
     tourLoading,
+    showAllButtons,
     
     // Getters
     isDarkMode,
@@ -290,6 +315,8 @@ export const useAppStore = defineStore('app', () => {
     confirmDisclaimer,
     fetchTourStatus,
     setTourStatus,
-    completeTour
+    completeTour,
+    initButtonSettings,
+    setButtonVisibility
   }
 }) 

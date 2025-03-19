@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, nextTick, watch } from 'vue'
+import { ref, onMounted, nextTick, watch, computed } from 'vue'
 import { 
   NCard, 
   NSpace, 
@@ -9,7 +9,8 @@ import {
   NButton,
   NInputGroup,
   useMessage,
-  NSpin
+  NSpin,
+  NSelect
 } from 'naive-ui'
 import { useI18n } from '../locales'
 import { messages } from '../locales/messages'
@@ -30,12 +31,14 @@ import { useUserStore } from '../stores/user'
 import { useCursorStore } from '../stores'
 import FileSelectModal from '../components/FileSelectModal.vue'
 import { useRouter } from 'vue-router'
+import { useAppStore } from '../stores/app'
 
 const message = useMessage()
 const { currentLang, i18n } = useI18n()
 const userStore = useUserStore()
 const cursorStore = useCursorStore()
 const router = useRouter()
+const appStore = useAppStore()
 
 interface SettingsForm {
   activationCode: string
@@ -67,6 +70,26 @@ const pendingControlAction = ref<'applyHook' | 'restoreHook' | null>(null)
 // 为激活和修改密码添加独立的加载状态
 const activateLoading = ref(false)
 const passwordChangeLoading = ref(false)
+
+// 添加按钮模式选项
+const buttonModeOptions = [
+  {
+    label: '简单模式',
+    value: 'simple'
+  },
+  {
+    label: '高级模式',
+    value: 'advanced'
+  }
+]
+
+// 计算属性用于转换值
+const buttonMode = computed({
+  get: () => appStore.showAllButtons ? 'advanced' : 'simple',
+  set: (value: string) => {
+    appStore.setButtonVisibility(value === 'advanced')
+  }
+})
 
 const handleActivate = async () => {
   if (!formValue.value.activationCode) {
@@ -254,6 +277,16 @@ onMounted(async () => {
   // 检查Hook状态
   await checkControlStatus()
 })
+
+// 修改处理函数
+const handleButtonVisibilityChange = async (value: string) => {
+  try {
+    await appStore.setButtonVisibility(value === 'advanced')
+    message.success(value === 'advanced' ? '已切换到高级模式' : '已切换到简单模式')
+  } catch (error) {
+    message.error('设置失败')
+  }
+}
 </script>
 
 <template>
@@ -322,6 +355,20 @@ onMounted(async () => {
               <div class="preference-label">关闭方式</div>
               <div class="preference-control">
                 <close-type-selector :show-label="false" />
+              </div>
+            </div>
+            
+            <!-- 添加按钮显示控制 -->
+            <div class="preference-row">
+              <div class="preference-label">操作模式</div>
+              <div class="preference-control">
+                <n-select
+                  v-model:value="buttonMode"
+                  :options="buttonModeOptions"
+                  @update:value="handleButtonVisibilityChange"
+                  size="small"
+                  :style="{ width: '120px' }"
+                />
               </div>
             </div>
           </div>

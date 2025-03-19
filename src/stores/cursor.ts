@@ -262,9 +262,15 @@ export const useCursorStore = defineStore('cursor', () => {
       }
       
       // 先重置机器码
-      await resetMachineId({ forceKill })
+      try {
+        await resetMachineId({ forceKill })
+      } catch (error) {
+        console.error('重置机器码失败:', error)
+        // 确保在机器码重置失败时立即终止，不执行账户切换
+        throw new Error(`重置机器码失败，已终止账户切换操作: ${error instanceof Error ? error.message : String(error)}`)
+      }
       
-      // 再切换账户
+      // 只有在机器码重置成功后才执行账户切换
       await switchAccount(email, token, forceKill)
       
       // 添加历史记录
