@@ -799,3 +799,29 @@ pub async fn find_cursor_path(
     error!(target: "path", "成功验证并保存Cursor路径");
     Ok(true)
 }
+
+/// 记录错误日志
+#[tauri::command]
+pub fn log_error(message: String, file: Option<String>, line: Option<u32>) {
+    if let (Some(file), Some(line)) = (file, line) {
+        error!(target: "frontend", "{}. Location: {} line {}", message, file, line);
+    } else {
+        error!(target: "frontend", "{}", message);
+    }
+}
+
+/// 记录警告日志
+#[tauri::command]
+pub fn log_warn(message: String, file: Option<String>, line: Option<u32>) {
+    if let (Some(file), Some(line)) = (file, line) {
+        tracing::warn!(target: "frontend", "{}. Location: {} line {}", message, file, line);
+    } else {
+        tracing::warn!(target: "frontend", "{}", message);
+    }
+}
+
+/// 记录信息日志
+#[tauri::command]
+pub fn log_info(message: String) {
+    tracing::info!(target: "frontend", "{}", message);
+}

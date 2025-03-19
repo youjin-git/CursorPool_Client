@@ -117,36 +117,55 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(generate_handler![
+            // 登录
             api::login,
-            api::get_user_info,
-            api::activate,
-            api::change_password,
             api::logout,
-            api::get_account,
-            api::get_usage,
             api::check_user,
             api::send_code,
-            api::get_public_info,
             api::reset_password,
             api::register,
+
+            // 主页
+            api::get_user_info,
+            api::get_account,
+            api::get_usage,
+            api::get_public_info,
+            api::get_article_list,
+            api::mark_article_read,
+
+            // 设置
+            api::activate,
+            api::change_password,
+
+            // 数据库
             api::set_user_data,
             api::get_user_data,
             api::del_user_data,
-            api::get_article_list,
-            api::mark_article_read,
             
+            // 换号
             cursor_reset::commands::reset_machine_id,
             cursor_reset::commands::switch_account,
             cursor_reset::commands::get_machine_ids,
+
+            // 权限
             cursor_reset::commands::check_cursor_running,
             cursor_reset::commands::check_admin_privileges,
+            cursor_reset::commands::check_is_windows,
+
+            // hook
             cursor_reset::commands::is_hook,
             cursor_reset::commands::hook_main_js,
             cursor_reset::commands::restore_hook,
-            cursor_reset::commands::check_is_windows,
+
+            // cursor
             cursor_reset::commands::close_cursor,
             cursor_reset::commands::launch_cursor,
             cursor_reset::commands::find_cursor_path,
+
+            // 日志
+            cursor_reset::commands::log_error,
+            cursor_reset::commands::log_warn,
+            cursor_reset::commands::log_info,
         ])
         .run(generate_context!())
         .expect("error while running tauri application")

@@ -19,7 +19,7 @@ const props = defineProps({
   // 模态框内容
   content: {
     type: String,
-    default: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!'
+    default: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!'
   },
   // 确认按钮文本
   confirmButtonText: {

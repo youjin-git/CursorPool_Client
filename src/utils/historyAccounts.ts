@@ -26,25 +26,6 @@ function convertToFrontendAccount(account: HistoryAccountRecord): HistoryAccount
 }
 
 /**
- * 保存账户到历史记录 - 仅作为兼容层保留
- * 后端会自动管理token，前端不再负责存储
- */
-export async function saveAccountToHistory(account: HistoryAccount) {
-  
-  // 仅在本地存储中保存，作为临时备份
-  const history = getHistoryAccountsFromLocal()
-  const index = history.findIndex(a => a.email === account.email)
-  
-  if (index >= 0) {
-    history[index] = account
-  } else {
-    history.push(account)
-  }
-  
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(history))
-}
-
-/**
  * 获取历史账户列表
  */
 export async function getHistoryAccounts(): Promise<HistoryAccount[]> {

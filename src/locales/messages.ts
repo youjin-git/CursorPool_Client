@@ -58,7 +58,7 @@ export const messages = {
       cpUsage: 'Cursor Pool额度使用量',
       advancedModelUsage: '高级模型使用量',
       basicModelUsage: '普通模型使用量',
-      cannotGetUsage: '无法链接cursor服务器',
+      cannotGetUsage: '无法链接cursor服务器, 请重启软件',
       cursorHistoryDownload: 'Cursor 历史版本下载'
     },
     login: {
@@ -160,7 +160,7 @@ export const messages = {
       copyFailed: '复制失败',
       forceClose: '我已保存, 强制关闭',
       cursorRunning: 'Cursor 正在运行',
-      cursorRunningMessage: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!',
+      cursorRunningMessage: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!',
       closingCursor: '正在关闭 Cursor...',
       forgotPassword: '忘记密码？',
       unknown: '未知',

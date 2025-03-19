@@ -19,6 +19,7 @@ import type { UsageInfo, MachineInfo } from '@/api/types'
 import type { HistoryAccount } from '@/types/history'
 import { useHistoryStore } from './history'
 import { open } from '@tauri-apps/plugin-dialog'
+import Logger from '../utils/logger'
 
 export const useCursorStore = defineStore('cursor', () => {
   // 状态
@@ -148,20 +149,21 @@ export const useCursorStore = defineStore('cursor', () => {
   /**
    * 重置机器码
    */
-  async function resetMachine(params: { forceKill?: boolean, machineId?: string } = {}) {
+  async function resetMachine({ forceKill = false, machineId }: { forceKill?: boolean; machineId?: string } = {}) {
     try {
       machineCodeLoading.value = true
-      isLoading.value = true
+      await Logger.info('开始重置机器码')
       
       // 检查 Cursor 是否在运行
-      if (!params.forceKill) {
+      if (!forceKill) {
         const isRunning = await checkCursorRunning()
         if (isRunning) {
           throw new Error('Cursor进程正在运行, 请先关闭Cursor')
         }
       }
       
-      await resetMachineId(params)
+      await resetMachineId({ forceKill, machineId })
+      await Logger.info('机器码重置成功')
       
       // 添加历史记录
       await saveHistoryRecord({
@@ -177,7 +179,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await fetchCursorUsage()
       return true
     } catch (error) {
-      console.error('重置机器码失败:', error)
+      await Logger.error(`重置机器码失败: ${error}`)
       throw error
     } finally {
       isLoading.value = false
@@ -191,7 +193,7 @@ export const useCursorStore = defineStore('cursor', () => {
   async function switchCursorAccount(email?: string, token?: string, forceKill: boolean = false) {
     try {
       accountSwitchLoading.value = true
-      isLoading.value = true
+      await Logger.info('开始切换账户操作')
       
       // 检查 Cursor 是否在运行
       if (!forceKill) {
@@ -203,15 +205,27 @@ export const useCursorStore = defineStore('cursor', () => {
       
       // 如果未提供邮箱和token，则自动获取
       if (!email || !token) {
-        const accountInfo = await getAccount(undefined, '1')
-        if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
-          throw new Error('无法获取账户信息')
+        try {
+          const accountInfo = await getAccount(undefined, '1')
+          if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
+            await Logger.error('获取账户信息失败，无法进行切换')
+            throw new Error('获取账户信息失败')
+          }
+          email = accountInfo.account_info.account
+          token = accountInfo.account_info.token
+        } catch (error) {
+          await Logger.error('获取新账户失败')
+          throw error
         }
-        email = accountInfo.account_info.account
-        token = accountInfo.account_info.token
       }
       
-      await switchAccount(email, token, forceKill)
+      try {
+        await switchAccount(email, token, forceKill)
+        await Logger.info(`账户切换成功: ${email}`)
+      } catch (error) {
+        await Logger.error(`账户切换失败: ${error}`)
+        throw error
+      }
       
       // 添加历史记录
       await saveHistoryRecord({
@@ -227,7 +241,6 @@ export const useCursorStore = defineStore('cursor', () => {
       await fetchCursorUsage()
       return true
     } catch (error) {
-      console.error('切换账户失败:', error)
       throw error
     } finally {
       isLoading.value = false
@@ -241,7 +254,7 @@ export const useCursorStore = defineStore('cursor', () => {
   async function quickChange(email?: string, token?: string, forceKill: boolean = false) {
     try {
       quickChangeLoading.value = true
-      isLoading.value = true
+      await Logger.info('开始一键换号操作')
       
       // 检查 Cursor 是否在运行
       if (!forceKill) {
@@ -251,21 +264,22 @@ export const useCursorStore = defineStore('cursor', () => {
         }
       }
       
-      // 如果未提供邮箱和token，则自动获取
-      if (!email || !token) {
-        const accountInfo = await getAccount(undefined, '1')
-        if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
-          throw new Error('无法获取账户信息')
-        }
-        email = accountInfo.account_info.account
-        token = accountInfo.account_info.token
+      // 先重置机器码
+      try {
+        await resetMachine({ forceKill })
+      } catch (error) {
+        await Logger.error('一键换号时重置机器码失败')
+        throw error
       }
       
-      // 先重置机器码
-      await resetMachineId({ forceKill })
-      
       // 再切换账户
-      await switchAccount(email, token, forceKill)
+      try {
+        await switchCursorAccount(email, token, forceKill)
+        await Logger.info('一键换号完成')
+      } catch (error) {
+        await Logger.error('一键换号时切换账户失败')
+        throw error
+      }
       
       // 添加历史记录
       await saveHistoryRecord({
@@ -282,7 +296,6 @@ export const useCursorStore = defineStore('cursor', () => {
       
       return true
     } catch (error) {
-      console.error('一键更换失败:', error)
       throw error
     } finally {
       isLoading.value = false
@@ -324,6 +337,7 @@ export const useCursorStore = defineStore('cursor', () => {
    */
   async function applyHookToClient(forceKill: boolean = false) {
     try {
+      await Logger.info('开始注入Hook')
       operationLoading.value = true
       isLoading.value = true
       
@@ -336,9 +350,11 @@ export const useCursorStore = defineStore('cursor', () => {
       // 触发检查以确保状态已更新
       await checkHook()
       
+      await Logger.info('Hook注入成功')
       return true
     } catch (error) {
-      console.error('应用 Hook 失败:', error)
+      await Logger.error(`Hook注入失败: ${error}`)
+      hookStatus.value = false
       throw error
     } finally {
       isLoading.value = false
@@ -351,6 +367,7 @@ export const useCursorStore = defineStore('cursor', () => {
    */
   async function restoreHookFromClient(forceKill: boolean = false) {
     try {
+      await Logger.info('开始恢复Hook')
       operationLoading.value = true
       isLoading.value = true
       
@@ -363,9 +380,10 @@ export const useCursorStore = defineStore('cursor', () => {
       // 触发检查以确保状态已更新
       await checkHook()
       
+      await Logger.info('Hook恢复成功')
       return true
     } catch (error) {
-      console.error('恢复 Hook 失败:', error)
+      await Logger.error(`Hook恢复失败: ${error}`)
       throw error
     } finally {
       isLoading.value = false
