@@ -12,6 +12,7 @@ import type {
     Article,
     RegisterResponse
 } from './types'
+import Logger from '../utils/logger'
 
 // 错误处理
 function handleApiResponse<T>(response: ApiResponse<T>): T {
@@ -172,6 +173,7 @@ export async function resetMachineId(params: { forceKill?: boolean, machineId?: 
             machineId: params.machineId
         })
     } catch (error) {
+        await Logger.error('重置机器码失败', { file: 'api/index.ts' })
         throw new ApiError(error instanceof Error ? error.message : '重置机器码失败')
     }
 }
@@ -180,11 +182,13 @@ export async function switchAccount(email: string, token: string, forceKill: boo
     try {
         const result = await invoke<boolean>('switch_account', { email, token, forceKill })
         if (result !== true) {
+            await Logger.error(`切换账户失败: ${email}`, { file: 'api/index.ts' })
             throw new Error('切换账户失败')
         }
     } catch (error) {
+        await Logger.error(`切换账户失败: ${email}, ${error}`, { file: 'api/index.ts' })
         const errorMsg = error instanceof Error ? error.message : '切换账户失败'
-        if (errorMsg.includes('Cursor进程正在运行, 请先关闭Cursor')) {
+        if (errorMsg.includes('Cursor进程正在运行')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')
         }
         throw error
@@ -195,6 +199,7 @@ export async function getMachineIds(): Promise<MachineInfo> {
     try {
         return await invoke<MachineInfo>('get_machine_ids')
     } catch (error) {
+        await Logger.error('获取机器码失败', { file: 'api/index.ts' })
         throw new ApiError(error instanceof Error ? error.message : '获取机器码失败')
     }
 }
@@ -203,6 +208,7 @@ export async function checkCursorRunning(): Promise<boolean> {
     try {
         return await invoke<boolean>('check_cursor_running')
     } catch (error) {
+        await Logger.error('检查Cursor状态失败', { file: 'api/index.ts' })
         throw new ApiError(error instanceof Error ? error.message : '检查Cursor状态失败')
     }
 }
@@ -231,7 +237,7 @@ export async function applyHook(forceKill: boolean = false): Promise<void> {
         await invoke<void>('hook_main_js', { forceKill })
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error)
-        console.error('应用hook错误:', errorMsg)
+        await Logger.error(`应用hook失败: ${errorMsg}`, { file: 'api/index.ts' })
         
         if (errorMsg.includes('Cursor进程正在运行')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')
@@ -255,7 +261,7 @@ export async function restoreHook(forceKill: boolean = false): Promise<void> {
         await invoke<void>('restore_hook', { forceKill })
     } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error)
-        console.error('恢复hook错误:', errorMsg)
+        await Logger.error(`恢复hook失败: ${errorMsg}`, { file: 'api/index.ts' })
         
         if (errorMsg.includes('Cursor进程正在运行')) {
             throw new Error('请先关闭 Cursor 或选择强制终止进程')

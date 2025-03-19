@@ -60,7 +60,7 @@ pub fn init_logger(config: LogConfig) -> Result<(), String> {
     let env_filter = EnvFilter::try_from_default_env()
         .unwrap_or_else(|_| EnvFilter::new(&log_level));
     
-    // 设置日志格式
+    // 修改日志格式
     if config.json_format {
         // JSON格式
         let json_layer = fmt::layer()
@@ -72,8 +72,8 @@ pub fn init_logger(config: LogConfig) -> Result<(), String> {
             .with(env_filter)
             .with(json_layer);
         
-        // 如果启用控制台输出，添加控制台输出层
         if config.console_output {
+            // 控制台输出可以保留颜色
             let console_layer = fmt::layer()
                 .json()
                 .with_timer(UtcTime::rfc_3339());
@@ -83,25 +83,27 @@ pub fn init_logger(config: LogConfig) -> Result<(), String> {
             subscriber.init();
         }
     } else {
-        // 文本格式（类似loguru）
+        // 文本格式 - 移除颜色相关配置
         let fmt_layer = fmt::layer()
             .with_target(true)
             .with_thread_ids(true)
             .with_level(true)
             .with_timer(UtcTime::rfc_3339())
+            .with_ansi(false)  // 禁用ANSI颜色
             .with_writer(file_appender);
         
         let subscriber = tracing_subscriber::registry()
             .with(env_filter)
             .with(fmt_layer);
         
-        // 如果启用控制台输出，添加控制台输出层
         if config.console_output {
+            // 控制台输出可以保留颜色
             let console_layer = fmt::layer()
                 .with_target(true)
                 .with_thread_ids(true)
                 .with_level(true)
-                .with_timer(UtcTime::rfc_3339());
+                .with_timer(UtcTime::rfc_3339())
+                .with_ansi(true);
             
             subscriber.with(console_layer).init();
         } else {

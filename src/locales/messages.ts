@@ -160,7 +160,7 @@ export const messages = {
       copyFailed: '复制失败',
       forceClose: '我已保存, 强制关闭',
       cursorRunning: 'Cursor 正在运行',
-      cursorRunningMessage: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作!',
+      cursorRunningMessage: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!',
       closingCursor: '正在关闭 Cursor...',
       forgotPassword: '忘记密码？',
       unknown: '未知',

@@ -7,6 +7,11 @@ interface ErrorInfo {
   stack?: string
 }
 
+interface LogOptions {
+  file?: string
+  line?: number
+}
+
 class Logger {
   private static formatError(error: Error | string): ErrorInfo {
     if (error instanceof Error) {
@@ -33,13 +38,13 @@ class Logger {
     }
   }
 
-  static async error(error: Error | string) {
+  static async error(error: Error | string, options?: LogOptions) {
     const errorInfo = this.formatError(error)
     try {
       await invoke('log_error', {
         message: errorInfo.message,
-        file: errorInfo.file,
-        line: errorInfo.line
+        file: options?.file || errorInfo.file,
+        line: options?.line || errorInfo.line
       })
       
       // 如果有堆栈信息，额外记录
@@ -53,9 +58,13 @@ class Logger {
     }
   }
 
-  static async warn(message: string, file?: string, line?: number) {
+  static async warn(message: string, options?: LogOptions) {
     try {
-      await invoke('log_warn', { message, file, line })
+      await invoke('log_warn', { 
+        message, 
+        file: options?.file,
+        line: options?.line 
+      })
     } catch (e) {
       console.error('Failed to log warning:', e)
     }
