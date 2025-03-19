@@ -7,6 +7,7 @@ import "./styles/main.css";
 import 'vfonts/Lato.css'
 // 等宽字体
 import 'vfonts/FiraCode.css'
+import Logger from './utils/logger'
 
 const app = createApp(App);
 const pinia = createPinia();
@@ -14,4 +15,8 @@ const pinia = createPinia();
 
 app.use(router as any);
 app.use(pinia);
+
+// 设置全局错误处理
+Logger.setupErrorHandler()
+
 app.mount("#app");
