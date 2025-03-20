@@ -13,24 +13,32 @@ jobs:
   clippy_check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+        uses: dtolnay/rust-toolchain@stable
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
           components: clippy
       
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+      
       - name: Run Clippy (基本检查)
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --manifest-path=src-tauri/Cargo.toml -- -D warnings
-          
+        run: cd src-tauri && cargo clippy -- -D warnings
+      
       - name: Run Clippy (扩展检查)
-        uses: actions-rs/clippy-check@v1
+        run: cd src-tauri && cargo clippy -- -W clippy::pedantic -W clippy::nursery -W clippy::unwrap_used
+        
+      - name: 添加PR评论
+        if: github.event_name == 'pull_request'
+        uses: actions-ecosystem/action-create-comment@v1
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          args: --manifest-path=src-tauri/Cargo.toml -- -W clippy::pedantic -W clippy::nursery -W clippy::unwrap_used 
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            ## Clippy 检查已完成
+            
+            ✅ 基本检查通过
+            
+            如果你想查看更多建议，可以查看工作流的详细日志。 
