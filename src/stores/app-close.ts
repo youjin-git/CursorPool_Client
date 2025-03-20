@@ -129,6 +129,6 @@ export const useAppCloseStore = defineStore('app-close', () => {
     confirmClose,
     cancelClose,
     initSettings,
-    saveCloseType
+    saveCloseType,
   }
 })

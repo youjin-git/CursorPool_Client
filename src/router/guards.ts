@@ -12,6 +12,6 @@ export function setupRouterGuards(router: Router) {
       } else {
         next()
       }
-    }
+    },
   )
 }

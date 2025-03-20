@@ -6,7 +6,7 @@ import { getHistoryList, syncLocalHistoryToBackend } from '../utils/history'
 import {
   getHistoryAccounts,
   removeHistoryAccount,
-  syncLocalAccountsToBackend
+  syncLocalAccountsToBackend,
 } from '../utils/historyAccounts'
 import { getUsage, getMachineIds } from '@/api'
 
@@ -32,18 +32,18 @@ export const useHistoryStore = defineStore('history', () => {
 
   // 按类型过滤记录
   const filterByType = (type: string) => {
-    return sortedRecords.value.filter(record => record.type === type)
+    return sortedRecords.value.filter((record) => record.type === type)
   }
 
   // 历史账户界面相关计算属性
   // 过滤掉当前账户的列表，不在表格中显示当前账户
   const filteredHistoryAccounts = computed(() => {
-    return accounts.value.filter(acc => acc.email !== currentAccountEmail.value)
+    return accounts.value.filter((acc) => acc.email !== currentAccountEmail.value)
   })
 
   // 计算高使用量账户
   const highUsageAccounts = computed(() => {
-    return accounts.value.filter(account => {
+    return accounts.value.filter((account) => {
       // 计算GPT-4使用率，如果超过90%则认为是高使用量账户
       const gpt4MaxUsage = account.gpt4MaxUsage || 500 // 如果没有最大使用量，默认为500
       const gpt4Usage = (account.gpt4Count / gpt4MaxUsage) * 100
@@ -160,7 +160,7 @@ export const useHistoryStore = defineStore('history', () => {
       const historyAccounts = await getHistoryAccounts()
 
       // 并发获取使用情况
-      const updatePromises = historyAccounts.map(async account => {
+      const updatePromises = historyAccounts.map(async (account) => {
         try {
           const usage = await getUsage(account.token)
 
@@ -177,7 +177,7 @@ export const useHistoryStore = defineStore('history', () => {
             gpt35Count: gpt35Usage?.numRequests || 0,
             gpt4MaxUsage: gpt4Usage?.maxRequestUsage != null ? gpt4Usage.maxRequestUsage : 150,
             gpt35MaxUsage: gpt35Usage?.maxRequestUsage != null ? gpt35Usage.maxRequestUsage : 500,
-            lastUsed: Date.now()
+            lastUsed: Date.now(),
           })
 
           return true
@@ -195,7 +195,7 @@ export const useHistoryStore = defineStore('history', () => {
 
       return {
         total: historyAccounts.length,
-        success: results.filter(Boolean).length
+        success: results.filter(Boolean).length,
       }
     } catch (error) {
       console.error('刷新账户使用情况失败:', error)
@@ -212,7 +212,7 @@ export const useHistoryStore = defineStore('history', () => {
     deletingAccount.value[email] = true
     try {
       await removeHistoryAccount(email)
-      accounts.value = accounts.value.filter(a => a.email !== email)
+      accounts.value = accounts.value.filter((a) => a.email !== email)
       return true
     } catch (error) {
       console.error('删除历史账户失败:', error)
@@ -233,20 +233,22 @@ export const useHistoryStore = defineStore('history', () => {
     clearingHighUsage.value = true
     try {
       // 并发删除高使用量账户
-      const deletePromises = highUsageAccounts.value.map(account =>
-        removeHistoryAccount(account.email)
+      const deletePromises = highUsageAccounts.value.map((account) =>
+        removeHistoryAccount(account.email),
       )
 
       await Promise.all(deletePromises)
 
       // 更新账户列表
-      accounts.value = accounts.value.filter(account => {
+      accounts.value = accounts.value.filter((account) => {
         const gpt4MaxUsage = account.gpt4MaxUsage || 500
         const gpt4Usage = (account.gpt4Count / gpt4MaxUsage) * 100
         return gpt4Usage < 90
       })
 
-      return { success: highUsageAccounts.value.length }
+      return {
+        success: highUsageAccounts.value.length,
+      }
     } catch (error) {
       console.error('清理高使用量账户失败:', error)
       throw error
@@ -301,6 +303,6 @@ export const useHistoryStore = defineStore('history', () => {
     refreshAccountsUsage,
     removeHistoryAccountItem,
     clearHighUsageAccounts,
-    saveCurrentAccountToHistory
+    saveCurrentAccountToHistory,
   }
 })

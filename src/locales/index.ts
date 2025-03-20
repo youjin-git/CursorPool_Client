@@ -16,7 +16,7 @@ import {
   ruRU,
   dateRuRU,
   esAR,
-  dateEsAR
+  dateEsAR,
 } from 'naive-ui'
 import { messages } from './messages'
 import { getUserData, setUserData } from '@/api'
@@ -33,43 +33,43 @@ export const locales: Record<Language, LocaleConfig> = {
   'zh-CN': {
     name: '简体中文',
     locale: zhCN,
-    dateLocale: dateZhCN
+    dateLocale: dateZhCN,
   },
   'en-US': {
     name: 'English',
     locale: enUS,
-    dateLocale: dateEnUS
+    dateLocale: dateEnUS,
   },
   'ja-JP': {
     name: '日本語',
     locale: jaJP,
-    dateLocale: dateJaJP
+    dateLocale: dateJaJP,
   },
   'fr-FR': {
     name: 'Français',
     locale: frFR,
-    dateLocale: dateFrFR
+    dateLocale: dateFrFR,
   },
   'de-DE': {
     name: 'Deutsch',
     locale: deDE,
-    dateLocale: dateDeDE
+    dateLocale: dateDeDE,
   },
   'ko-KR': {
     name: '한국어',
     locale: koKR,
-    dateLocale: dateKoKR
+    dateLocale: dateKoKR,
   },
   'ru-RU': {
     name: 'Русский',
     locale: ruRU,
-    dateLocale: dateRuRU
+    dateLocale: dateRuRU,
   },
   'es-AR': {
     name: 'Español',
     locale: esAR,
-    dateLocale: dateEsAR
-  }
+    dateLocale: dateEsAR,
+  },
 }
 
 // 默认使用中文
@@ -135,6 +135,6 @@ export function useI18n() {
     currentLang,
     setLanguage,
     i18n: computed(() => messages[currentLang.value]),
-    t
+    t,
   }
 }

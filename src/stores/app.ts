@@ -5,7 +5,7 @@ import {
   checkDisclaimerAccepted,
   setDisclaimerAccepted,
   getUserData,
-  setUserData
+  setUserData,
 } from '@/api'
 import type { PublicInfo } from '@/api/types'
 import { darkTheme } from 'naive-ui'
@@ -205,7 +205,7 @@ export const useAppStore = defineStore('app', () => {
     }
 
     // 初始化引导状态
-    fetchTourStatus().catch(error => {
+    fetchTourStatus().catch((error) => {
       console.error('初始化引导状态失败:', error)
     })
   }
@@ -254,7 +254,7 @@ export const useAppStore = defineStore('app', () => {
       showDisclaimerModal.value = false
 
       // 确认免责声明后检查引导状态
-      await new Promise(resolve => setTimeout(resolve, 300))
+      await new Promise((resolve) => setTimeout(resolve, 300))
 
       // 获取最新的引导状态
       await fetchTourStatus()
@@ -323,6 +323,6 @@ export const useAppStore = defineStore('app', () => {
     setTourStatus,
     completeTour,
     initButtonSettings,
-    setButtonVisibility
+    setButtonVisibility,
   }
 })

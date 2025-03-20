@@ -13,7 +13,7 @@ export const useArticleStore = defineStore('article', () => {
   // 计算属性
   const hasArticles = computed(() => articles.value.length > 0)
   const hasUnreadArticles = computed(() =>
-    articles.value.some(article => !readArticleIds.value.includes(article.id))
+    articles.value.some((article) => !readArticleIds.value.includes(article.id)),
   )
 
   // 获取公告列表
@@ -83,6 +83,6 @@ export const useArticleStore = defineStore('article', () => {
     isRead,
     markAsRead,
     init,
-    readArticleIds
+    readArticleIds,
   }
 })

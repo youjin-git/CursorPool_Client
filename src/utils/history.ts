@@ -17,7 +17,7 @@ export async function addHistoryRecord(type: string, detail: string) {
     type,
     detail,
     timestamp: new Date().toLocaleString(),
-    operator: 'System'
+    operator: 'System',
   }
 
   try {
@@ -27,7 +27,7 @@ export async function addHistoryRecord(type: string, detail: string) {
       type_name: newRecord.type,
       detail: newRecord.detail,
       timestamp: newRecord.timestamp,
-      operator: newRecord.operator
+      operator: newRecord.operator,
     })
 
     // 触发更新事件
@@ -55,12 +55,12 @@ export async function getHistoryList(): Promise<HistoryRecords> {
     const records = await getHistoryRecords()
 
     // 转换格式
-    return records.map(record => ({
+    return records.map((record) => ({
       id: record.id,
       type: record.type_name,
       detail: record.detail,
       timestamp: record.timestamp,
-      operator: record.operator
+      operator: record.operator,
     }))
   } catch (error) {
     console.error('从后端获取历史记录失败，回退到本地存储:', error)
@@ -91,12 +91,12 @@ export async function syncLocalHistoryToBackend() {
     }
 
     // 转换格式
-    const backendRecords: HistoryRecord[] = records.map(record => ({
+    const backendRecords: HistoryRecord[] = records.map((record) => ({
       id: record.id,
       type_name: record.type,
       detail: record.detail,
       timestamp: record.timestamp,
-      operator: record.operator
+      operator: record.operator,
     }))
 
     // 批量保存到后端

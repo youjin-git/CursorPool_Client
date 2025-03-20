@@ -9,7 +9,7 @@ import {
   changePassword as apiChangePassword,
   resetPassword as apiResetPassword,
   checkAdminPrivileges,
-  checkIsWindows
+  checkIsWindows,
 } from '@/api'
 import type { UserInfo } from '@/api/types'
 
@@ -243,6 +243,6 @@ export const useUserStore = defineStore('user', () => {
     changePassword,
     resetPassword,
     checkCredits,
-    checkIsAdmin
+    checkIsAdmin,
   }
 })

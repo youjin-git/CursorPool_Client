@@ -76,6 +76,6 @@ export const useInboundStore = defineStore('inbound', () => {
     currentInboundIndex,
     currentInbound,
     fetchInboundList,
-    switchInbound
+    switchInbound,
   }
 })

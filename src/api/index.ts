@@ -10,7 +10,7 @@ import type {
   HistoryRecord,
   HistoryAccountRecord,
   Article,
-  RegisterResponse
+  RegisterResponse,
 } from './types'
 import Logger from '../utils/logger'
 
@@ -53,7 +53,10 @@ export async function checkUser(email: string): Promise<ApiResponse<any>> {
 
 export async function sendCode(email: string, type: string): Promise<void> {
   try {
-    const response = await invoke<ApiResponse<void>>('send_code', { email, type })
+    const response = await invoke<ApiResponse<void>>('send_code', {
+      email,
+      type,
+    })
     handleApiResponse(response)
   } catch (error) {
     throw new ApiError(error instanceof Error ? error.message : '发送验证码失败')
@@ -64,14 +67,14 @@ export async function register(
   email: string,
   code: string,
   password: string,
-  spread: string
+  spread: string,
 ): Promise<LoginResponse> {
   try {
     const response = await invoke<ApiResponse<RegisterResponse>>('register', {
       email,
       code,
       password,
-      spread
+      spread,
     })
     if (response.status === 200 && response.data?.token) {
       // 保存token
@@ -84,7 +87,7 @@ export async function register(
 
       // 将RegisterResponse转换为LoginResponse格式
       return {
-        token: response.data.token
+        token: response.data.token,
         // userInfo在这里不可用，需要额外获取
       }
     }
@@ -102,13 +105,13 @@ export async function register(
 export async function login(
   account: string,
   password: string,
-  spread: string
+  spread: string,
 ): Promise<LoginResponse> {
   try {
     const response = await invoke<ApiResponse<LoginResponse>>('login', {
       account,
       password,
-      spread
+      spread,
     })
     return handleApiResponse(response)
   } catch (error) {
@@ -140,7 +143,7 @@ export async function getAccount(account?: string, usageCount?: string): Promise
   try {
     const response = await invoke<ApiResponse<AccountPoolInfo>>('get_account', {
       account,
-      usageCount
+      usageCount,
     })
     return handleApiResponse(response)
   } catch (error) {
@@ -151,7 +154,9 @@ export async function getAccount(account?: string, usageCount?: string): Promise
 // Cursor 平台相关 API
 export async function getUsage(token: string): Promise<UsageInfo> {
   try {
-    const response = await invoke<ApiResponse<UsageInfo>>('get_usage', { token })
+    const response = await invoke<ApiResponse<UsageInfo>>('get_usage', {
+      token,
+    })
     return handleApiResponse(response)
   } catch (error) {
     throw new ApiError(error instanceof Error ? error.message : '获取使用情况失败')
@@ -182,7 +187,7 @@ export async function changePassword(oldPassword: string, newPassword: string): 
   try {
     const response = await invoke<ApiResponse<void>>('change_password', {
       oldPassword,
-      newPassword
+      newPassword,
     })
     handleApiResponse(response)
   } catch (error) {
@@ -192,12 +197,15 @@ export async function changePassword(oldPassword: string, newPassword: string): 
 
 // 机器码和账户切换相关 API
 export async function resetMachineId(
-  params: { forceKill?: boolean; machineId?: string } = {}
+  params: {
+    forceKill?: boolean
+    machineId?: string
+  } = {},
 ): Promise<boolean> {
   try {
     return await invoke<boolean>('reset_machine_id', {
       forceKill: params.forceKill || false,
-      machineId: params.machineId
+      machineId: params.machineId,
     })
   } catch (error) {
     await Logger.error('重置机器码失败', { file: 'api/index.ts' })
@@ -208,16 +216,22 @@ export async function resetMachineId(
 export async function switchAccount(
   email: string,
   token: string,
-  forceKill: boolean = false
+  forceKill: boolean = false,
 ): Promise<void> {
   try {
-    const result = await invoke<boolean>('switch_account', { email, token, forceKill })
+    const result = await invoke<boolean>('switch_account', {
+      email,
+      token,
+      forceKill,
+    })
     if (result !== true) {
       await Logger.error(`切换账户失败: ${email}`, { file: 'api/index.ts' })
       throw new Error('切换账户失败')
     }
   } catch (error) {
-    await Logger.error(`切换账户失败: ${email}, ${error}`, { file: 'api/index.ts' })
+    await Logger.error(`切换账户失败: ${email}, ${error}`, {
+      file: 'api/index.ts',
+    })
     const errorMsg = error instanceof Error ? error.message : '切换账户失败'
     if (errorMsg.includes('Cursor进程正在运行')) {
       throw new Error('请先关闭 Cursor 或选择强制终止进程')
@@ -265,7 +279,9 @@ export async function checkHookStatus(): Promise<boolean> {
 
 export async function applyHook(forceKill: boolean = false): Promise<void> {
   try {
-    await invoke<void>('hook_main_js', { forceKill })
+    await invoke<void>('hook_main_js', {
+      forceKill,
+    })
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     await Logger.error(`应用hook失败: ${errorMsg}`, { file: 'api/index.ts' })
@@ -289,7 +305,9 @@ export async function findCursorPath(selectedPath: string): Promise<boolean> {
 
 export async function restoreHook(forceKill: boolean = false): Promise<void> {
   try {
-    await invoke<void>('restore_hook', { forceKill })
+    await invoke<void>('restore_hook', {
+      forceKill,
+    })
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error)
     await Logger.error(`恢复hook失败: ${errorMsg}`, { file: 'api/index.ts' })
@@ -307,7 +325,7 @@ export async function resetPassword(email: string, code: string, password: strin
     const response = await invoke<ApiResponse<void>>('reset_password', {
       email,
       code,
-      password
+      password,
     })
     handleApiResponse(response)
   } catch (error) {
@@ -451,7 +469,7 @@ export async function removeHistoryAccount(email: string): Promise<void> {
     let accounts = await getHistoryAccounts()
 
     // 过滤掉要删除的账户
-    accounts = accounts.filter(a => a.email !== email)
+    accounts = accounts.filter((a) => a.email !== email)
 
     // 保存回数据库
     await setUserData('user.history.accounts', JSON.stringify(accounts))
@@ -532,7 +550,11 @@ export async function setUserData(key: string, value: string): Promise<void> {
  */
 export async function getUserData(key: string): Promise<string | null> {
   try {
-    const response = await invoke<ApiResponse<{ value: string | null }>>('get_user_data', { key })
+    const response = await invoke<
+      ApiResponse<{
+        value: string | null
+      }>
+    >('get_user_data', { key })
     const result = handleApiResponse(response)
     return result.value
   } catch (error) {

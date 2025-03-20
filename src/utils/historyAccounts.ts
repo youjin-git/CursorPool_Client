@@ -1,7 +1,7 @@
 import type { HistoryAccount } from '@/types/history'
 import {
   getHistoryAccounts as apiGetHistoryAccounts,
-  removeHistoryAccount as apiRemoveHistoryAccount
+  removeHistoryAccount as apiRemoveHistoryAccount,
 } from '@/api'
 import type { HistoryAccountRecord } from '@/api/types'
 
@@ -32,7 +32,7 @@ function convertToFrontendAccount(account: HistoryAccountRecord): HistoryAccount
         : anyAccount.gpt35MaxUsage != null
           ? anyAccount.gpt35MaxUsage
           : 500,
-    lastUsed: account.last_used || anyAccount.lastUsed || Date.now()
+    lastUsed: account.last_used || anyAccount.lastUsed || Date.now(),
   }
 }
 
@@ -72,7 +72,7 @@ export async function removeHistoryAccount(email: string) {
 
     // 如果后端删除失败，回退到本地存储
     const history = getHistoryAccountsFromLocal()
-    const filtered = history.filter(a => a.email !== email)
+    const filtered = history.filter((a) => a.email !== email)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
   }
 }

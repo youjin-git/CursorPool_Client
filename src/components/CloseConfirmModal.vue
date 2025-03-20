@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import { NModal, NRadioGroup, NRadio, NSpace, NFormItem, useMessage, NCheckbox } from 'naive-ui'
-import { useAppCloseStore } from '@/stores'
+  import { NModal, NRadioGroup, NRadio, NSpace, NFormItem, useMessage, NCheckbox } from 'naive-ui'
+  import { useAppCloseStore } from '@/stores'
 
-const message = useMessage()
-const appCloseStore = useAppCloseStore()
+  const message = useMessage()
+  const appCloseStore = useAppCloseStore()
 
-// 处理确认按钮点击
-const handleConfirm = async () => {
-  try {
-    await appCloseStore.confirmClose()
-  } catch (error) {
-    message.error('操作失败，请重试')
+  // 处理确认按钮点击
+  const handleConfirm = async () => {
+    try {
+      await appCloseStore.confirmClose()
+    } catch (error) {
+      message.error('操作失败，请重试')
+    }
   }
-}
 </script>
 
 <template>
@@ -38,7 +38,7 @@ const handleConfirm = async () => {
     </n-form-item>
 
     <n-form-item>
-      <n-checkbox v-model:checked="appCloseStore.savePreference"> 记住我的选择 </n-checkbox>
+      <n-checkbox v-model:checked="appCloseStore.savePreference">记住我的选择</n-checkbox>
     </n-form-item>
   </n-modal>
 </template>

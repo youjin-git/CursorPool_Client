@@ -13,7 +13,7 @@ import {
   checkCursorRunning,
   getAccount,
   saveHistoryRecord,
-  findCursorPath
+  findCursorPath,
 } from '@/api'
 import type { UsageInfo, MachineInfo } from '@/api/types'
 import type { HistoryAccount } from '@/types/history'
@@ -31,7 +31,7 @@ export const useCursorStore = defineStore('cursor', () => {
     usage: UsageInfo | null
   }>({
     userInfo: null,
-    usage: null
+    usage: null,
   })
   const isLoading = ref(false)
   const hookStatus = ref<boolean | null>(null)
@@ -48,26 +48,39 @@ export const useCursorStore = defineStore('cursor', () => {
   const showSelectFileModal = ref(false)
   const fileSelectError = ref('')
   const fileSelectLoading = ref(false)
-  const pendingAction = ref<{ type: string; params?: any } | null>(null)
+  const pendingAction = ref<{
+    type: string
+    params?: any
+  } | null>(null)
 
   // Getters
   const gpt4Usage = computed(() => {
     const usage = cursorInfo.value?.usage?.['gpt-4']
-    if (!usage) return { used: 0, total: 0, percentage: 0 }
+    if (!usage)
+      return {
+        used: 0,
+        total: 0,
+        percentage: 0,
+      }
     return {
       used: usage.numRequests || 0,
       total: usage.maxRequestUsage || 0,
-      percentage: getUsagePercentage(usage.numRequests, usage.maxRequestUsage)
+      percentage: getUsagePercentage(usage.numRequests, usage.maxRequestUsage),
     }
   })
 
   const gpt35Usage = computed(() => {
     const usage = cursorInfo.value?.usage?.['gpt-3.5-turbo']
-    if (!usage) return { used: 0, total: 0, percentage: 0 }
+    if (!usage)
+      return {
+        used: 0,
+        total: 0,
+        percentage: 0,
+      }
     return {
       used: usage.numRequests || 0,
       total: usage.maxRequestUsage || 0,
-      percentage: getUsagePercentage(usage.numRequests, usage.maxRequestUsage)
+      percentage: getUsagePercentage(usage.numRequests, usage.maxRequestUsage),
     }
   })
 
@@ -134,9 +147,9 @@ export const useCursorStore = defineStore('cursor', () => {
           name: currentAccount.value.split('@')[0],
           sub: '',
           updated_at: new Date().toISOString(),
-          picture: null
+          picture: null,
         },
-        usage: usageData
+        usage: usageData,
       }
     } catch (error) {
       console.error('获取 Cursor 使用量失败:', error)
@@ -151,8 +164,11 @@ export const useCursorStore = defineStore('cursor', () => {
    */
   async function resetMachine({
     forceKill = false,
-    machineId
-  }: { forceKill?: boolean; machineId?: string } = {}) {
+    machineId,
+  }: {
+    forceKill?: boolean
+    machineId?: string
+  } = {}) {
     try {
       machineCodeLoading.value = true
       await Logger.info('开始重置机器码')
@@ -165,7 +181,10 @@ export const useCursorStore = defineStore('cursor', () => {
         }
       }
 
-      await resetMachineId({ forceKill, machineId })
+      await resetMachineId({
+        forceKill,
+        machineId,
+      })
       await Logger.info('机器码重置成功')
 
       // 添加历史记录
@@ -174,7 +193,7 @@ export const useCursorStore = defineStore('cursor', () => {
         type_name: '机器码修改',
         detail: `修改机器码: ${machineCode.value}`,
         timestamp: new Date().toISOString(),
-        operator: '用户'
+        operator: '用户',
       })
 
       // 重置成功后刷新数据
@@ -208,27 +227,17 @@ export const useCursorStore = defineStore('cursor', () => {
 
       // 如果未提供邮箱和token，则自动获取
       if (!email || !token) {
-        try {
-          const accountInfo = await getAccount(undefined, '1')
-          if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
-            await Logger.error('获取账户信息失败，无法进行切换')
-            throw new Error('获取账户信息失败')
-          }
-          email = accountInfo.account_info.account
-          token = accountInfo.account_info.token
-        } catch (error) {
-          await Logger.error('获取新账户失败')
-          throw error
+        const accountInfo = await getAccount(undefined, '1')
+        if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
+          await Logger.error('获取账户信息失败，无法进行切换')
+          throw new Error('获取账户信息失败')
         }
+        email = accountInfo.account_info.account
+        token = accountInfo.account_info.token
       }
 
-      try {
-        await switchAccount(email, token, forceKill)
-        await Logger.info(`账户切换成功: ${email}`)
-      } catch (error) {
-        await Logger.error(`账户切换失败: ${error}`)
-        throw error
-      }
+      await switchAccount(email, token, forceKill)
+      await Logger.info(`账户切换成功: ${email}`)
 
       // 添加历史记录
       await saveHistoryRecord({
@@ -236,7 +245,7 @@ export const useCursorStore = defineStore('cursor', () => {
         type_name: '账户切换',
         detail: `切换到账户: ${email} 扣除50积分`,
         timestamp: new Date().toISOString(),
-        operator: '用户'
+        operator: '用户',
       })
 
       // 切换成功后刷新数据
@@ -244,6 +253,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await fetchCursorUsage()
       return true
     } catch (error) {
+      await Logger.error(`账户切换失败: ${error}`)
       throw error
     } finally {
       isLoading.value = false
@@ -269,7 +279,9 @@ export const useCursorStore = defineStore('cursor', () => {
 
       // 先重置机器码
       try {
-        await resetMachine({ forceKill })
+        await resetMachine({
+          forceKill,
+        })
       } catch (error) {
         await Logger.error('一键换号时重置机器码失败')
         throw error
@@ -290,7 +302,7 @@ export const useCursorStore = defineStore('cursor', () => {
         type_name: '一键切换',
         detail: `切换到账户: ${email} 并重置机器码 扣除50积分`,
         timestamp: new Date().toISOString(),
-        operator: '用户'
+        operator: '用户',
       })
 
       // 刷新数据
@@ -298,6 +310,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await fetchCursorUsage()
 
       return true
+      // eslint-disable-next-line no-useless-catch
     } catch (error) {
       throw error
     } finally {
@@ -470,7 +483,7 @@ export const useCursorStore = defineStore('cursor', () => {
         // 返回需要处理的状态
         return {
           status: 'running',
-          account
+          account,
         }
       }
 
@@ -480,13 +493,15 @@ export const useCursorStore = defineStore('cursor', () => {
         const hookSuccess = await applyHookToClient(false)
         if (!hookSuccess) {
           return {
-            status: 'hook_failed'
+            status: 'hook_failed',
           }
         }
       }
 
       // 切换账户 - 后端会自动保存历史记录
-      await resetMachineId({ machineId: account.machineCode })
+      await resetMachineId({
+        machineId: account.machineCode,
+      })
       await switchAccount(account.email, account.token, false)
 
       await saveHistoryRecord({
@@ -494,7 +509,7 @@ export const useCursorStore = defineStore('cursor', () => {
         type_name: '历史账户切换',
         detail: `切换到历史账户: ${account.email}`,
         timestamp: new Date().toISOString(),
-        operator: '用户'
+        operator: '用户',
       })
 
       // 刷新数据
@@ -502,7 +517,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await fetchCursorUsage()
 
       return {
-        status: 'success'
+        status: 'success',
       }
     } catch (error) {
       console.error('切换到历史账户失败:', error)
@@ -523,18 +538,22 @@ export const useCursorStore = defineStore('cursor', () => {
     try {
       // 关闭 Cursor
       await closeCursorApp()
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // 检查并应用钩子
       if (!(await checkHookStatus())) {
         const hookSuccess = await applyHookToClient(true)
         if (!hookSuccess) {
-          return { status: 'hook_failed' }
+          return {
+            status: 'hook_failed',
+          }
         }
       }
 
       // 账户切换 - 后端会自动保存历史记录
-      await resetMachineId({ machineId: account.machineCode })
+      await resetMachineId({
+        machineId: account.machineCode,
+      })
       await switchAccount(account.email, account.token, true)
 
       await saveHistoryRecord({
@@ -542,7 +561,7 @@ export const useCursorStore = defineStore('cursor', () => {
         type_name: '历史账户切换',
         detail: `切换到历史账户: ${account.email}`,
         timestamp: new Date().toISOString(),
-        operator: '用户'
+        operator: '用户',
       })
 
       // 刷新数据
@@ -578,10 +597,19 @@ export const useCursorStore = defineStore('cursor', () => {
       const selected = await open({
         multiple: false,
         filters: [
-          { name: 'Cursor程序', extensions: ['exe'] },
-          { name: 'JavaScript文件', extensions: ['js'] },
-          { name: '所有文件', extensions: ['*'] }
-        ]
+          {
+            name: 'Cursor程序',
+            extensions: ['exe'],
+          },
+          {
+            name: 'JavaScript文件',
+            extensions: ['js'],
+          },
+          {
+            name: '所有文件',
+            extensions: ['*'],
+          },
+        ],
       })
 
       // 检查用户是否取消了选择
@@ -603,7 +631,9 @@ export const useCursorStore = defineStore('cursor', () => {
         // 如果有待处理的操作，执行它
         if (pendingAction.value) {
           // 保存然后清空待处理操作
-          const currentAction = { ...pendingAction.value }
+          const currentAction = {
+            ...pendingAction.value,
+          }
           pendingAction.value = null
 
           try {
@@ -644,7 +674,10 @@ export const useCursorStore = defineStore('cursor', () => {
    * 设置待执行的操作
    */
   function setPendingAction(type: string, params?: any) {
-    pendingAction.value = { type, params }
+    pendingAction.value = {
+      type,
+      params,
+    }
     showSelectFileModal.value = true
   }
 
@@ -693,6 +726,6 @@ export const useCursorStore = defineStore('cursor', () => {
 
     // 添加文件选择相关方法
     handleSelectCursorPath,
-    setPendingAction
+    setPendingAction,
   }
 })

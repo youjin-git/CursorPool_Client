@@ -101,7 +101,7 @@ export const useUpdaterStore = defineStore('updater', () => {
             if (totalBytes.value > 0) {
               downloadProgress.value = Math.min(
                 Math.round((downloadedBytes.value / totalBytes.value) * 100),
-                99 // 保留安装的1%
+                99, // 保留安装的1%
               )
             }
             break
@@ -118,7 +118,7 @@ export const useUpdaterStore = defineStore('updater', () => {
       downloadProgress.value = 100
 
       // 添加延迟确保用户能看到100%完成状态
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      await new Promise((resolve) => setTimeout(resolve, 1000))
 
       // Windows会自动重启，其他平台需要手动重启
       await relaunch()
@@ -177,6 +177,6 @@ export const useUpdaterStore = defineStore('updater', () => {
     progressPercentage,
 
     // 方法
-    checkForUpdates
+    checkForUpdates,
   }
 })
