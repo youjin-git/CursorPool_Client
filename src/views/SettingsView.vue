@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick, watch, computed } from 'vue'
-import { 
-  NCard, 
-  NSpace, 
-  NForm, 
-  NFormItem, 
-  NInput, 
+import {
+  NCard,
+  NSpace,
+  NForm,
+  NFormItem,
+  NInput,
   NButton,
   NInputGroup,
   useMessage,
@@ -18,13 +18,7 @@ import LanguageSwitch from '../components/LanguageSwitch.vue'
 import InboundSelector from '../components/InboundSelector.vue'
 import CloseTypeSelector from '../components/CloseTypeSelector.vue'
 import CursorRunningModal from '../components/CursorRunningModal.vue'
-import { 
-  changePassword, 
-  activate, 
-  checkCursorRunning,
-  applyHook,
-  restoreHook,
-} from '@/api'
+import { changePassword, activate, checkCursorRunning, applyHook, restoreHook } from '@/api'
 import { addHistoryRecord } from '../utils/history'
 import { version } from '../../package.json'
 import { useUserStore } from '../stores/user'
@@ -85,7 +79,7 @@ const buttonModeOptions = [
 
 // 计算属性用于转换值
 const buttonMode = computed({
-  get: () => appStore.showAllButtons ? 'advanced' : 'simple',
+  get: () => (appStore.showAllButtons ? 'advanced' : 'simple'),
   set: (value: string) => {
     appStore.setButtonVisibility(value === 'advanced')
   }
@@ -96,20 +90,17 @@ const handleActivate = async () => {
     message.error('请输入激活码')
     return
   }
-  
+
   activateLoading.value = true
   try {
     await activate(formValue.value.activationCode)
     message.success('激活成功')
-    addHistoryRecord(
-      '激活码兑换',
-      '成功兑换激活码'
-    )
+    addHistoryRecord('激活码兑换', '成功兑换激活码')
     formValue.value.activationCode = ''
-    
+
     // 设置刷新标记，确保dashboard页面刷新数据
     localStorage.setItem('need_refresh_dashboard', 'true')
-    
+
     // 激活成功后跳转到 dashboard 页面
     router.push('/dashboard')
   } catch (error) {
@@ -120,28 +111,29 @@ const handleActivate = async () => {
 }
 
 const handleChangePassword = async () => {
-  if (!formValue.value.currentPassword || !formValue.value.newPassword || !formValue.value.confirmPassword) {
+  if (
+    !formValue.value.currentPassword ||
+    !formValue.value.newPassword ||
+    !formValue.value.confirmPassword
+  ) {
     message.error('请填写完整密码信息')
     return
   }
-  
+
   if (formValue.value.newPassword !== formValue.value.confirmPassword) {
     message.error('两次输入的新密码不一致')
     return
   }
-  
+
   passwordChangeLoading.value = true
   try {
-    await changePassword(
-      formValue.value.currentPassword,
-      formValue.value.newPassword
-    )
+    await changePassword(formValue.value.currentPassword, formValue.value.newPassword)
     message.success('密码修改成功')
-    
+
     formValue.value.currentPassword = ''
     formValue.value.newPassword = ''
     formValue.value.confirmPassword = ''
-    
+
     await handleLogout()
   } catch (error) {
     message.error(error instanceof Error ? error.message : '密码修改失败')
@@ -160,11 +152,14 @@ const handleLogout = async () => {
 }
 
 // 修改 handleControlAction 函数
-const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_kill: boolean = false) => {
+const handleControlAction = async (
+  action: 'applyHook' | 'restoreHook',
+  force_kill: boolean = false
+) => {
   // 根据操作设置对应的加载状态
   const loadingRef = {
-    'applyHook': applyHookLoading,
-    'restoreHook': restoreHookLoading
+    applyHook: applyHookLoading,
+    restoreHook: restoreHookLoading
   }[action]
 
   try {
@@ -181,7 +176,7 @@ const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_ki
     try {
       let successMessage = ''
       let historyAction = ''
-      
+
       switch (action) {
         case 'applyHook':
           await applyHook(force_kill)
@@ -200,13 +195,13 @@ const handleControlAction = async (action: 'applyHook' | 'restoreHook', force_ki
       message.success(successMessage)
       showControlRunningModal.value = false
       addHistoryRecord('系统控制', historyAction)
-      
+
       // 操作完成后重新检查状态
       await checkControlStatus()
     } catch (error) {
       // 获取完整的错误信息
       const errorMsg = error instanceof Error ? error.message : String(error)
-      
+
       // 检查是否包含MAIN_JS_NOT_FOUND
       if (errorMsg.includes('MAIN_JS_NOT_FOUND')) {
         cursorStore.setPendingAction(action, { forceKill: force_kill })
@@ -228,12 +223,12 @@ const checkControlStatus = async () => {
   try {
     // 添加loading状态
     controlStatus.value.isChecking = true
-    
+
     // 使用cursorStore的checkHook方法，保持状态同步
     const hookResult = await cursorStore.checkHook()
     // 处理可能为null的情况
     controlStatus.value.isHooked = hookResult === true
-    
+
     // 确保UI反映最新状态
     await nextTick()
   } catch (error) {
@@ -253,18 +248,25 @@ const handleControlForceKill = async () => {
 }
 
 // 监听cursorStore的hookStatus变化
-watch(() => cursorStore.hookStatus, (newStatus) => {
-  if (newStatus !== null) {
-    controlStatus.value.isHooked = newStatus
-  }
-}, { immediate: true })
+watch(
+  () => cursorStore.hookStatus,
+  newStatus => {
+    if (newStatus !== null) {
+      controlStatus.value.isHooked = newStatus
+    }
+  },
+  { immediate: true }
+)
 
 // 监听文件选择模态框的显示状态
-watch(() => cursorStore.showSelectFileModal, (newValue, oldValue) => {
-  if (oldValue && !newValue) {
-    checkControlStatus()
+watch(
+  () => cursorStore.showSelectFileModal,
+  (newValue, oldValue) => {
+    if (oldValue && !newValue) {
+      checkControlStatus()
+    }
   }
-})
+)
 
 // 在组件挂载时检查控制状态
 onMounted(async () => {
@@ -273,7 +275,7 @@ onMounted(async () => {
     isHooked: cursorStore.hookStatus ?? false,
     isChecking: false
   }
-  
+
   // 检查Hook状态
   await checkControlStatus()
 })
@@ -303,32 +305,36 @@ const handleButtonVisibilityChange = async (value: string) => {
                 <n-spin size="small" />
               </template>
               <template v-else>
-                {{ controlStatus.isHooked ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
+                {{
+                  controlStatus.isHooked
+                    ? i18n.systemControl.hookApplied
+                    : i18n.systemControl.hookNotApplied
+                }}
               </template>
             </span>
             <n-space>
-              <n-button 
-                type="warning" 
+              <n-button
+                type="warning"
                 :loading="applyHookLoading || controlStatus.isChecking"
                 :disabled="controlStatus.isHooked"
-                @click="handleControlAction('applyHook')"
                 style="width: 120px"
+                @click="handleControlAction('applyHook')"
               >
                 {{ i18n.systemControl.applyHook }}
               </n-button>
-              <n-button 
+              <n-button
                 type="primary"
                 :loading="restoreHookLoading || controlStatus.isChecking"
                 :disabled="!controlStatus.isHooked"
-                @click="handleControlAction('restoreHook')"
                 style="width: 120px"
+                @click="handleControlAction('restoreHook')"
               >
                 {{ i18n.systemControl.restoreHook }}
               </n-button>
             </n-space>
           </n-space>
         </div>
-        
+
         <!-- 全局偏好设置 -->
         <div class="section-divider"></div>
         <div>
@@ -341,7 +347,7 @@ const handleButtonVisibilityChange = async (value: string) => {
                 <inbound-selector :show-label="false" />
               </div>
             </div>
-            
+
             <!-- 语言选择 -->
             <div class="preference-row">
               <div class="preference-label">语言</div>
@@ -349,7 +355,7 @@ const handleButtonVisibilityChange = async (value: string) => {
                 <language-switch :show-label="false" />
               </div>
             </div>
-            
+
             <!-- 关闭方式选择 -->
             <div class="preference-row">
               <div class="preference-label">关闭方式</div>
@@ -357,7 +363,7 @@ const handleButtonVisibilityChange = async (value: string) => {
                 <close-type-selector :show-label="false" />
               </div>
             </div>
-            
+
             <!-- 添加按钮显示控制 -->
             <div class="preference-row">
               <div class="preference-label">操作模式</div>
@@ -365,9 +371,9 @@ const handleButtonVisibilityChange = async (value: string) => {
                 <n-select
                   v-model:value="buttonMode"
                   :options="buttonModeOptions"
-                  @update:value="handleButtonVisibilityChange"
                   size="small"
                   :style="{ width: '120px' }"
+                  @update:value="handleButtonVisibilityChange"
                 />
               </div>
             </div>
@@ -400,9 +406,9 @@ const handleButtonVisibilityChange = async (value: string) => {
                 />
                 <n-button
                   type="primary"
-                  @click="handleActivate"
                   :loading="activateLoading"
                   size="large"
+                  @click="handleActivate"
                 >
                   {{ messages[currentLang].settings.activate }}
                 </n-button>
@@ -430,7 +436,7 @@ const handleButtonVisibilityChange = async (value: string) => {
                 :placeholder="messages[currentLang].settings.currentPassword"
                 maxlength="20"
                 minlength="6"
-                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+                :allow-input="value => /^[a-zA-Z0-9]*$/.test(value)"
               />
             </n-form-item>
 
@@ -442,7 +448,7 @@ const handleButtonVisibilityChange = async (value: string) => {
                 :placeholder="messages[currentLang].settings.newPassword"
                 maxlength="20"
                 minlength="6"
-                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+                :allow-input="value => /^[a-zA-Z0-9]*$/.test(value)"
               />
             </n-form-item>
 
@@ -454,23 +460,20 @@ const handleButtonVisibilityChange = async (value: string) => {
                 :placeholder="messages[currentLang].settings.confirmPassword"
                 maxlength="20"
                 minlength="6"
-                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+                :allow-input="value => /^[a-zA-Z0-9]*$/.test(value)"
               />
             </n-form-item>
 
             <div style="margin-top: 12px">
               <n-space>
-                <n-button 
-                  type="primary" 
-                  @click="handleChangePassword"
+                <n-button
+                  type="primary"
                   :loading="passwordChangeLoading"
+                  @click="handleChangePassword"
                 >
                   {{ messages[currentLang].settings.changePassword }}
                 </n-button>
-                <n-button
-                  type="error"
-                  @click="handleLogout"
-                >
+                <n-button type="error" @click="handleLogout">
                   {{ i18n.common.logout }}
                 </n-button>
               </n-space>
@@ -485,8 +488,13 @@ const handleButtonVisibilityChange = async (value: string) => {
       <n-space vertical :size="12">
         <p>{{ i18n.about.appName }} v{{ version }}</p>
         <p>
-          {{ i18n.about.copyright }} © {{ new Date().getFullYear() }} 
-          <n-button text tag="a" href="https://github.com/Sanyela" target="_blank">Sanyela</n-button> & 
+          {{ i18n.about.copyright }} © {{ new Date().getFullYear() }}
+          <n-button
+text
+tag="a" href="https://github.com/Sanyela" target="_blank"
+            >Sanyela</n-button
+          >
+          &
           <n-button text tag="a" href="https://github.com/Cloxl" target="_blank">Cloxl</n-button>
         </p>
         <p>{{ i18n.about.license }}</p>
@@ -554,7 +562,7 @@ const handleButtonVisibilityChange = async (value: string) => {
     flex-direction: column;
     gap: 16px;
   }
-  
+
   .preference-group {
     width: 100%;
   }

@@ -74,12 +74,15 @@ watch(() => props.content, renderMarkdown)
   font-weight: 600;
 }
 
-.markdown-body :deep(p), .markdown-body :deep(ul), .markdown-body :deep(ol) {
+.markdown-body :deep(p),
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
   margin-top: 0;
   margin-bottom: 16px;
 }
 
-.markdown-body :deep(ul), .markdown-body :deep(ol) {
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
   padding-left: 2em;
 }
 
@@ -137,7 +140,8 @@ watch(() => props.content, renderMarkdown)
   border-collapse: collapse;
 }
 
-.markdown-body :deep(table th), .markdown-body :deep(table td) {
+.markdown-body :deep(table th),
+.markdown-body :deep(table td) {
   padding: 6px 13px;
   border: 1px solid #dfe2e5;
 }
@@ -145,4 +149,4 @@ watch(() => props.content, renderMarkdown)
 .markdown-body :deep(table tr:nth-child(2n)) {
   background-color: #f6f8fa;
 }
-</style> 
+</style>

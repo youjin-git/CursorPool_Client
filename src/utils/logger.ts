@@ -46,7 +46,7 @@ class Logger {
         file: options?.file || errorInfo.file,
         line: options?.line || errorInfo.line
       })
-      
+
       // 如果有堆栈信息，额外记录
       if (errorInfo.stack) {
         await invoke('log_error', {
@@ -60,10 +60,10 @@ class Logger {
 
   static async warn(message: string, options?: LogOptions) {
     try {
-      await invoke('log_warn', { 
-        message, 
+      await invoke('log_warn', {
+        message,
         file: options?.file,
-        line: options?.line 
+        line: options?.line
       })
     } catch (e) {
       console.error('Failed to log warning:', e)
@@ -88,10 +88,10 @@ class Logger {
       }
     }
 
-    window.addEventListener('unhandledrejection', async (event) => {
+    window.addEventListener('unhandledrejection', async event => {
       await this.error(`Unhandled Promise rejection: ${event.reason}`)
     })
   }
 }
 
-export default Logger 
+export default Logger

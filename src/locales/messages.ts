@@ -83,7 +83,7 @@ export const messages = {
       userNotExists: '该邮箱未注册, 请先注册账户',
       emailInvalid: '请输入有效的邮箱地址',
       emailUnsupported: '暂不支持该邮箱域名',
-      passwordInvalid: '密码必须包含至少8个字符, 包括大小写字母和数字',
+      passwordInvalid: '密码必须包含至少8个字符, 包括大小写字母和数字'
     },
     settings: {
       activation: '激活码兑换',
@@ -148,7 +148,7 @@ export const messages = {
       appName: 'Cursor Pool',
       copyright: '版权所有',
       license: '基于 MIT 协议开源，修改和分发时需保留版权信息',
-      allRightsReserved: '保留所有权利',
+      allRightsReserved: '保留所有权利'
     },
     language: {
       title: '语言设置',
@@ -160,7 +160,8 @@ export const messages = {
       copyFailed: '复制失败',
       forceClose: '我已保存, 强制关闭',
       cursorRunning: 'Cursor 正在运行',
-      cursorRunningMessage: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!',
+      cursorRunningMessage:
+        '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!',
       closingCursor: '正在关闭 Cursor...',
       forgotPassword: '忘记密码？',
       unknown: '未知',
@@ -230,7 +231,8 @@ export const messages = {
       later: '稍后更新',
       downloadNow: '立即下载',
       unusedCreditsWarning: 'Usage Reminder',
-      unusedCreditsMessage: 'You still have {count} advanced model usage credits left. Are you sure you want to switch accounts?',
+      unusedCreditsMessage:
+        'You still have {count} advanced model usage credits left. Are you sure you want to switch accounts?',
       confirmSwitch: 'Confirm',
       cancelSwitch: 'Cancel',
       ccStatus: 'CC Status',
@@ -265,7 +267,8 @@ export const messages = {
       userNotExists: 'This email is not registered, please register first',
       emailInvalid: 'Please enter a valid email address',
       emailUnsupported: 'This email domain is not supported',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: 'Activation',
@@ -338,8 +341,9 @@ export const messages = {
       version: 'Version',
       appName: 'Cursor Pool',
       copyright: 'Copyright',
-      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
-      allRightsReserved: 'All Rights Reserved',
+      license:
+        'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved'
     },
     language: {
       title: 'Language Settings',
@@ -351,7 +355,8 @@ export const messages = {
       copyFailed: 'Copy failed',
       forceClose: 'I have saved, force close',
       cursorRunning: 'Cursor is running',
-      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      cursorRunningMessage:
+        'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Closing Cursor...',
       forgotPassword: 'Forgot password?',
       unknown: 'Unknown',
@@ -421,7 +426,8 @@ export const messages = {
       later: '後で更新',
       downloadNow: '今すぐダウンロード',
       unusedCreditsWarning: '使用確認',
-      unusedCreditsMessage: 'まだ {count} 回の高度なモデル使用回数が残っています。アカウントを切り替えてもよろしいですか？',
+      unusedCreditsMessage:
+        'まだ {count} 回の高度なモデル使用回数が残っています。アカウントを切り替えてもよろしいですか？',
       confirmSwitch: '確認',
       cancelSwitch: 'キャンセル',
       ccStatus: 'CC状態',
@@ -455,7 +461,8 @@ export const messages = {
       userNotExists: 'このメールアドレスは未登録です。先に登録してください',
       emailInvalid: '有効なメールアドレスを入力してください',
       emailUnsupported: 'このメールドメインは現在サポートされていません',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: 'アクティベーション',
@@ -528,8 +535,9 @@ export const messages = {
       version: 'バージョン',
       appName: 'Cursor Pool',
       copyright: '著作権情報',
-      license: 'MITライセンスの下でオープンソース化。変更や配布の際は著作権表示を保持する必要があります。',
-      allRightsReserved: '全著作権所有',
+      license:
+        'MITライセンスの下でオープンソース化。変更や配布の際は著作権表示を保持する必要があります。',
+      allRightsReserved: '全著作権所有'
     },
     language: {
       title: '言語設定',
@@ -541,7 +549,8 @@ export const messages = {
       copyFailed: 'コピーに失敗しました',
       forceClose: '保存しましたので、強制的に閉じます',
       cursorRunning: 'Cursor が動作中',
-      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      cursorRunningMessage:
+        'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Cursor を閉じています...',
       forgotPassword: 'パスワードを忘れた場合',
       confirmRestart: 'Redémarrer maintenant'
@@ -566,8 +575,8 @@ export const messages = {
       deviceInfo: 'Informations sur le périphérique',
       machineCode: 'Code de la machine',
       currentAccount: 'Compte actuel',
-      expiryDate: 'Date d\'expiration',
-      usageStats: 'Statistiques d\'utilisation',
+      expiryDate: "Date d'expiration",
+      usageStats: "Statistiques d'utilisation",
       advancedModel: 'Utilisation du modèle avancé',
       normalModel: 'Utilisation du modèle normal',
       quickActions: 'Actions rapides',
@@ -582,8 +591,8 @@ export const messages = {
       machineChangeFailed: 'Changement de machine échoué',
       userInfo: 'Informations utilisateur',
       level: 'Niveau de membre',
-      username: 'Nom d\'utilisateur',
-      expireTime: 'Date d\'expiration',
+      username: "Nom d'utilisateur",
+      expireTime: "Date d'expiration",
       dailyUsage: 'Utilisation quotidienne',
       cursorInfo: 'Informations sur le curseur',
       cursorAccount: 'Compte du curseur',
@@ -603,13 +612,14 @@ export const messages = {
       newVersion: 'Nouvelle version',
       later: 'Mettre à jour plus tard',
       downloadNow: 'Télécharger maintenant',
-      unusedCreditsWarning: 'Rappel d\'utilisation',
-      unusedCreditsMessage: 'Il vous reste {count} crédits d\'utilisation du modèle avancé. Êtes-vous sûr de vouloir changer de compte ?',
+      unusedCreditsWarning: "Rappel d'utilisation",
+      unusedCreditsMessage:
+        "Il vous reste {count} crédits d'utilisation du modèle avancé. Êtes-vous sûr de vouloir changer de compte ?",
       confirmSwitch: 'Confirmer',
       cancelSwitch: 'Annuler',
       ccStatus: 'État CC',
-      registerTime: 'Heure d\'inscription',
-      insufficientCredits: 'Crédits insuffisants, veuillez recharger d\'abord',
+      registerTime: "Heure d'inscription",
+      insufficientCredits: "Crédits insuffisants, veuillez recharger d'abord",
       email: 'Email',
       cpUsage: 'CP积分使用量',
       advancedModelUsage: '高级模型使用量',
@@ -632,17 +642,18 @@ export const messages = {
       loginSuccess: 'Connexion réussie',
       loginFailed: 'Connexion échouée',
       noAccount: 'Pas de compte ?',
-      register: 'S\'inscrire maintenant',
+      register: "S'inscrire maintenant",
       hasAccount: 'Vous avez déjà un compte ? Connectez-vous',
       userExists: 'Cet email est déjà enregistré, passage en mode connexion',
-      userNotExists: 'Cet email n\'est pas enregistré, veuillez vous inscrire d\'abord',
+      userNotExists: "Cet email n'est pas enregistré, veuillez vous inscrire d'abord",
       emailInvalid: 'Veuillez entrer une adresse e-mail valide',
-      emailUnsupported: 'Ce domaine e-mail n\'est pas supporté',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      emailUnsupported: "Ce domaine e-mail n'est pas supporté",
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: 'Activation',
-      activationCode: 'Code d\'activation',
+      activationCode: "Code d'activation",
       activate: 'Activer',
       changePassword: 'Changer le mot de passe',
       currentPassword: 'Mot de passe actuel',
@@ -659,15 +670,15 @@ export const messages = {
       time: 'Heure',
       operator: 'Opérateur',
       datePlaceholder: 'Sélectionner la plage de dates',
-      clearHistory: 'Vider l\'historique',
+      clearHistory: "Vider l'historique",
       clearSuccess: 'Historique vidé avec succès',
-      clearFailed: 'Échec de la vidage de l\'historique'
+      clearFailed: "Échec de la vidage de l'historique"
     },
     message: {
-      pleaseInputActivationCode: 'Veuillez saisir le code d\'activation',
+      pleaseInputActivationCode: "Veuillez saisir le code d'activation",
       activationSuccess: 'Activation réussie',
       activationFailed: 'Activation échouée',
-      pleaseInputEmail: 'Veuillez saisir l\'email',
+      pleaseInputEmail: "Veuillez saisir l'email",
       addSuccess: 'Ajout réussi',
       switchSuccess: 'Changement de compte effectué: {email}',
       deleteSuccess: 'Suppression réussie',
@@ -711,8 +722,9 @@ export const messages = {
       version: 'Version',
       appName: 'Cursor Pool',
       copyright: 'Copyright',
-      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
-      allRightsReserved: 'All Rights Reserved',
+      license:
+        'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved'
     },
     language: {
       title: 'Paramètres de langue',
@@ -722,9 +734,10 @@ export const messages = {
       logout: 'Se déconnecter',
       copySuccess: 'Copie réussie',
       copyFailed: 'Échec de la copie',
-      forceClose: 'J\'ai sauvegardé, fermer forcément',
-      cursorRunning: 'Cursor en cours d\'exécution',
-      cursorRunningMessage: 'Détecté que le Cursor est en cours d\'exécution, veuillez enregistrer le projet qui n\'a pas été modifié avant de continuer!',
+      forceClose: "J'ai sauvegardé, fermer forcément",
+      cursorRunning: "Cursor en cours d'exécution",
+      cursorRunningMessage:
+        "Détecté que le Cursor est en cours d'exécution, veuillez enregistrer le projet qui n'a pas été modifié avant de continuer!",
       closingCursor: 'Fermeture du Cursor...',
       forgotPassword: 'Mot de passe oublié?',
       confirmRestart: 'Redémarrer maintenant'
@@ -817,7 +830,8 @@ export const messages = {
       userNotExists: 'Diese E-Mail ist nicht registriert, bitte registrieren Sie sich zuerst',
       emailInvalid: 'Bitte geben Sie eine gültige E-Mail-Adresse ein',
       emailUnsupported: 'Dieser E-Mail-Domain ist derzeit keine Unterstützung verfügbar',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: 'Aktivierung',
@@ -890,8 +904,9 @@ export const messages = {
       version: 'Version',
       appName: 'Cursor Pool',
       copyright: 'Copyright',
-      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
-      allRightsReserved: 'All Rights Reserved',
+      license:
+        'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved'
     },
     language: {
       title: 'Spracheinstellungen',
@@ -903,7 +918,8 @@ export const messages = {
       copyFailed: 'Kopie fehlgeschlagen',
       forceClose: 'Ich habe gespeichert, erzwingend schließen',
       cursorRunning: 'Cursor läuft',
-      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      cursorRunningMessage:
+        'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Cursor schließen...',
       forgotPassword: 'Mot de passe oublié?',
       confirmRestart: 'Jetzt neu starten'
@@ -996,7 +1012,8 @@ export const messages = {
       userNotExists: '등록되지 않은 이메일입니다. 먼저 회원가입을 해주세요',
       emailInvalid: '유효한 이메일 주소를 입력하세요',
       emailUnsupported: '이 이메인은 현재 지원되지 않습니다',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: '활성화',
@@ -1069,8 +1086,9 @@ export const messages = {
       version: '버전',
       appName: 'Cursor Pool',
       copyright: 'Copyright',
-      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
-      allRightsReserved: 'All Rights Reserved',      
+      license:
+        'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved'
     },
     language: {
       title: '언어 설정',
@@ -1175,7 +1193,8 @@ export const messages = {
       userNotExists: 'Этот email не зарегистрирован, пожалуйста, зарегистрируйтесь',
       emailInvalid: 'Введите действительный адрес электронной почты',
       emailUnsupported: 'Этот email-домен не поддерживается',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: 'Активация',
@@ -1248,8 +1267,9 @@ export const messages = {
       version: 'Версия',
       appName: 'Cursor Pool',
       copyright: 'Copyright',
-      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
-      allRightsReserved: 'All Rights Reserved',      
+      license:
+        'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved'
     },
     language: {
       title: 'Язык',
@@ -1261,7 +1281,8 @@ export const messages = {
       copyFailed: 'Копирование не удалось',
       forceClose: 'Я сохранил, закройте принудительно',
       cursorRunning: 'Cursor в работе',
-      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      cursorRunningMessage:
+        'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Закрытие Cursor...',
       forgotPassword: 'Забыли пароль?',
       confirmRestart: 'Перезапустить сейчас'
@@ -1354,7 +1375,8 @@ export const messages = {
       userNotExists: 'Este correo no está registrado, por favor regístrese primero',
       emailInvalid: 'Ingrese una dirección de correo electrónico válida',
       emailUnsupported: 'Este dominio de correo electrónico no es compatible',
-      passwordInvalid: 'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers',
+      passwordInvalid:
+        'Password must contain at least 8 characters, including uppercase, lowercase letters and numbers'
     },
     settings: {
       activation: 'Activación',
@@ -1427,8 +1449,9 @@ export const messages = {
       version: 'Versión',
       appName: 'Cursor Pool',
       copyright: 'Copyright',
-      license: 'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
-      allRightsReserved: 'All Rights Reserved',
+      license:
+        'Open-sourced under MIT License. Copyright notice must be preserved when modified or distributed.',
+      allRightsReserved: 'All Rights Reserved'
     },
     language: {
       title: 'Configuración de idioma',
@@ -1440,7 +1463,8 @@ export const messages = {
       copyFailed: 'Copia fallida',
       forceClose: 'Guardar y cerrar forzadamente',
       cursorRunning: 'Cursor en ejecución',
-      cursorRunningMessage: 'Detected Cursor is running, please save the project that has not been changed before continuing!',
+      cursorRunningMessage:
+        'Detected Cursor is running, please save the project that has not been changed before continuing!',
       closingCursor: 'Cerrando Cursor...',
       forgotPassword: 'Mot de passe oublié?',
       confirmRestart: 'Reiniciar ahora'
@@ -1456,4 +1480,4 @@ export const messages = {
   }
 } as const
 
-export type MessageSchema = typeof messages['zh-CN']
+export type MessageSchema = (typeof messages)['zh-CN']

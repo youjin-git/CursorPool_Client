@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref, reactive, computed, watch } from 'vue'
-import { 
-  NCard, 
-  NForm, 
-  NFormItem, 
-  NInput, 
-  NButton, 
+import {
+  NCard,
+  NForm,
+  NFormItem,
+  NInput,
+  NButton,
   useMessage,
   NSpace,
   NAutoComplete,
@@ -90,7 +90,7 @@ const formState = reactive({
     loading: false,
     error: ''
   },
-  
+
   // 注册表单
   register: {
     password: '',
@@ -106,34 +106,41 @@ const formState = reactive({
 })
 
 // 监听Pinia中的登录错误
-watch(() => userStore.loginError, (newError) => {
-  if (newError) {
-    if (activeTab.value === 'login') {
-      message.error(newError)
-    } else {
-      message.error(newError)
+watch(
+  () => userStore.loginError,
+  newError => {
+    if (newError) {
+      if (activeTab.value === 'login') {
+        message.error(newError)
+      } else {
+        message.error(newError)
+      }
     }
   }
-})
+)
 
 // 计算属性
 const canSendCode = computed(() => {
-  return formState.register.email && 
-         formState.register.countdown === 0 && 
-         !formState.register.codeSending
+  return (
+    formState.register.email &&
+    formState.register.countdown === 0 &&
+    !formState.register.codeSending
+  )
 })
 
 const canRegister = computed(() => {
-  return formState.register.password && 
-         formState.register.confirmPassword && 
-         formState.register.email && 
-         formState.register.code
+  return (
+    formState.register.password &&
+    formState.register.confirmPassword &&
+    formState.register.email &&
+    formState.register.code
+  )
 })
 
 // 计算标题
-const formTitle = computed(() => 
-  activeTab.value === 'login' 
-    ? messages[currentLang.value].login.title 
+const formTitle = computed(() =>
+  activeTab.value === 'login'
+    ? messages[currentLang.value].login.title
     : messages[currentLang.value].login.registerButton
 )
 
@@ -141,34 +148,44 @@ const formTitle = computed(() =>
 const renderLabel = (option: SelectOption) => {
   const domain = option.value?.toString().split('@')[1]
   const provider = emailProviders.find(p => p.domain === domain)
-  
+
   return [
     option.label as string,
     ' ',
-    h(NTag, {
-      size: 'small',
-      type: (provider?.color || 'default') as 'error' | 'success' | 'warning' | 'info' | 'default' | 'primary'
-    }, { default: () => provider?.label || '邮箱' })
+    h(
+      NTag,
+      {
+        size: 'small',
+        type: (provider?.color || 'default') as
+          | 'error'
+          | 'success'
+          | 'warning'
+          | 'info'
+          | 'default'
+          | 'primary'
+      },
+      { default: () => provider?.label || '邮箱' }
+    )
   ]
 }
 
 // 邮箱自动完成选项 - 登录
 const loginEmailOptions = computed(() => {
   const inputValue = formState.login.username
-  
+
   // 如果已经是完整的有效邮箱，不显示选项
   if (isValidEmail(inputValue)) {
     return []
   }
-  
+
   const atIndex = inputValue.lastIndexOf('@')
-  
+
   // 只有当用户输入@后才显示选项
   if (atIndex === -1) return []
-  
+
   const username = inputValue.substring(0, atIndex)
   if (!username) return []
-  
+
   return emailProviders.map(provider => ({
     label: `${username}@${provider.domain}`,
     value: `${username}@${provider.domain}`
@@ -178,20 +195,20 @@ const loginEmailOptions = computed(() => {
 // 邮箱自动完成选项 - 注册
 const registerEmailOptions = computed(() => {
   const inputValue = formState.register.email
-  
+
   // 如果已经是完整的有效邮箱，不显示选项
   if (isValidEmail(inputValue)) {
     return []
   }
-  
+
   const atIndex = inputValue.lastIndexOf('@')
-  
+
   // 只有当用户输入@后才显示选项
   if (atIndex === -1) return []
-  
+
   const username = inputValue.substring(0, atIndex)
   if (!username) return []
-  
+
   return emailProviders.map(provider => ({
     label: `${username}@${provider.domain}`,
     value: `${username}@${provider.domain}`
@@ -202,38 +219,36 @@ const registerEmailOptions = computed(() => {
 function isValidEmail(email: string): boolean {
   if (!emailRegex.test(email)) return false
   const domain = email.split('@')[1]
-  return emailProviders.some(provider => provider.domain === domain) || 
-         hiddenValidDomains.includes(domain)
+  return (
+    emailProviders.some(provider => provider.domain === domain) ||
+    hiddenValidDomains.includes(domain)
+  )
 }
 
 // 检查邮箱后缀是否有效
 function checkEmailDomain(email: string): 'error' | 'warning' | undefined {
   if (!email) return undefined
   if (!emailRegex.test(email)) return 'error'
-  
+
   const domain = email.split('@')[1]
-  if (domain && 
-      !emailProviders.some(p => p.domain === domain) && 
-      !hiddenValidDomains.includes(domain)) {
+  if (
+    domain &&
+    !emailProviders.some(p => p.domain === domain) &&
+    !hiddenValidDomains.includes(domain)
+  ) {
     return 'error'
   }
   return undefined
 }
 
 // 登录邮箱状态
-const loginEmailStatus = computed(() => 
-  checkEmailDomain(formState.login.username)
-)
+const loginEmailStatus = computed(() => checkEmailDomain(formState.login.username))
 
 // 注册邮箱状态
-const registerEmailStatus = computed(() => 
-  checkEmailDomain(formState.register.email)
-)
+const registerEmailStatus = computed(() => checkEmailDomain(formState.register.email))
 
 // 忘记密码邮箱状态
-const forgotPasswordEmailStatus = computed(() => 
-  checkEmailDomain(forgotPasswordForm.value.email)
-)
+const forgotPasswordEmailStatus = computed(() => checkEmailDomain(forgotPasswordForm.value.email))
 
 /**
  * 表单验证
@@ -243,12 +258,12 @@ const validators = {
   validatePassword(value: string): boolean {
     return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]{6,20}$/.test(value)
   },
-  
+
   // 邮箱验证
   validateEmail(value: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)
   },
-  
+
   // 验证码验证
   validateCode(value: string): boolean {
     return /^\d{6}$/.test(value)
@@ -260,27 +275,27 @@ const validators = {
  */
 async function handleLogin() {
   const { username, password } = formState.login
-  
+
   // 表单验证
   if (!username || !password) {
     message.error('请填写完整的登录信息')
     return
   }
-  
+
   if (!validators.validateEmail(username)) {
     message.error('邮箱格式不正确')
     return
   }
-  
+
   if (!validators.validatePassword(password)) {
     message.error('密码格式不正确，请使用6-20位字母、数字或特殊字符')
     return
   }
-  
+
   try {
     formState.login.loading = true
     formState.login.error = ''
-    
+
     // 使用Pinia store的login方法
     await userStore.login(username, password, 'web')
     message.success('登录成功')
@@ -306,7 +321,7 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
     }
     return
   }
-  
+
   if (!validators.validateEmail(email)) {
     if (type === 'register') {
       message.error('邮箱格式不正确')
@@ -315,12 +330,12 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
     }
     return
   }
-  
+
   try {
     if (type === 'register') {
       formState.register.codeSending = true
       formState.register.error = ''
-      
+
       // 检查用户是否已存在
       const result = await checkUser(email)
       if (result.msg === '已存在') {
@@ -330,14 +345,14 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
     } else {
       forgotPasswordCodeSending.value = true
     }
-    
+
     // 发送验证码 - 这个API调用保留，因为Pinia store中没有对应的方法
     await sendCode(email, type)
     message.success('验证码已发送')
-    
+
     if (type === 'register') {
       formState.register.codeSent = true
-      
+
       // 开始倒计时
       formState.register.countdown = 60
       const timer = setInterval(() => {
@@ -364,42 +379,42 @@ async function handleSendCode(email: string, type: 'register' | 'reset' = 'regis
  */
 async function handleRegister() {
   const { password, confirmPassword, email, code } = formState.register
-  
+
   // 表单验证
   if (!password || !confirmPassword || !email || !code) {
     message.error('请填写完整的注册信息')
     return
   }
-  
+
   if (!validators.validatePassword(password)) {
     message.error('密码格式不正确，请使用6-20位字母、数字或特殊字符')
     return
   }
-  
+
   if (password !== confirmPassword) {
     message.error('两次输入的密码不一致')
     return
   }
-  
+
   if (!validators.validateEmail(email)) {
     message.error('邮箱格式不正确')
     return
   }
-  
+
   if (!validators.validateCode(code)) {
     message.error('验证码格式不正确')
     return
   }
-  
+
   try {
     formState.register.loading = true
     formState.register.error = ''
-    
+
     // 使用Pinia store的register方法
     const success = await userStore.register(email, code, password, 'web')
     message.success('注册成功')
     addHistoryRecord('注册', `用户 ${email} 注册成功`)
-    
+
     // 注册成功，如果已登录直接触发登录成功事件
     if (success && userStore.isLoggedIn) {
       emit('login-success')
@@ -419,26 +434,29 @@ async function handleRegister() {
  * 处理忘记密码
  */
 async function handleForgotPassword() {
-  if (!forgotPasswordForm.value.email || !validators.validateEmail(forgotPasswordForm.value.email)) {
+  if (
+    !forgotPasswordForm.value.email ||
+    !validators.validateEmail(forgotPasswordForm.value.email)
+  ) {
     message.error('请输入有效的邮箱地址')
     return
   }
-  
+
   if (!forgotPasswordForm.value.smsCode) {
     message.error('请输入验证码')
     return
   }
-  
+
   if (!forgotPasswordForm.value.newPassword) {
     message.error('请输入新密码')
     return
   }
-  
+
   if (forgotPasswordForm.value.newPassword !== forgotPasswordForm.value.confirmPassword) {
     message.error('两次输入的密码不一致')
     return
   }
-  
+
   forgotPasswordLoading.value = true
   try {
     // 使用Pinia store的resetPassword方法
@@ -482,7 +500,7 @@ async function handleForgotPassword() {
                 @keyup.enter="handleLogin"
               />
             </n-form-item>
-            
+
             <n-form-item>
               <n-input
                 v-model:value="formState.login.password"
@@ -493,26 +511,22 @@ async function handleForgotPassword() {
                 @keyup.enter="handleLogin"
               />
             </n-form-item>
-            
+
             <n-space justify="space-between">
               <n-space align="center">
-                <n-button
-                  type="primary"
-                  :loading="formState.login.loading"
-                  @click="handleLogin"
-                >
+                <n-button type="primary" :loading="formState.login.loading" @click="handleLogin">
                   {{ messages[currentLang].login.loginButton }}
                 </n-button>
                 <inbound-selector compact :show-label="false" />
               </n-space>
-              
+
               <n-button text @click="showForgotPassword = true">
                 {{ t('common.forgotPassword') }}
               </n-button>
             </n-space>
           </n-form>
         </n-tab-pane>
-        
+
         <!-- 注册标签页 -->
         <n-tab-pane name="register" :tab="messages[currentLang].login.registerButton">
           <n-form class="compact-form">
@@ -526,7 +540,7 @@ async function handleForgotPassword() {
                 maxlength="50"
               />
             </n-form-item>
-            
+
             <n-form-item>
               <n-input-group>
                 <n-input
@@ -536,18 +550,23 @@ async function handleForgotPassword() {
                 <n-button
                   :disabled="!canSendCode || registerEmailStatus === 'error'"
                   :loading="formState.register.codeSending"
-                  @click="handleSendCode(formState.register.email, 'register')"
                   class="send-code-btn"
                   type="primary"
                   ghost
+                  @click="handleSendCode(formState.register.email, 'register')"
                 >
-                  {{ formState.register.countdown > 0 
-                    ? messages[currentLang].login.resendCode.replace('{seconds}', formState.register.countdown.toString())
-                    : messages[currentLang].login.sendCode }}
+                  {{
+                    formState.register.countdown > 0
+                      ? messages[currentLang].login.resendCode.replace(
+                          '{seconds}',
+                          formState.register.countdown.toString()
+                        )
+                      : messages[currentLang].login.sendCode
+                  }}
                 </n-button>
               </n-input-group>
             </n-form-item>
-            
+
             <n-form-item>
               <n-input
                 v-model:value="formState.register.password"
@@ -557,7 +576,7 @@ async function handleForgotPassword() {
                 maxlength="20"
               />
             </n-form-item>
-            
+
             <n-form-item>
               <n-input
                 v-model:value="formState.register.confirmPassword"
@@ -567,14 +586,14 @@ async function handleForgotPassword() {
                 maxlength="20"
               />
             </n-form-item>
-            
+
             <n-button
               type="primary"
               block
               :disabled="!canRegister"
               :loading="formState.register.loading"
-              @click="handleRegister"
               style="margin-top: 8px"
+              @click="handleRegister"
             >
               {{ messages[currentLang].login.registerButton }}
             </n-button>
@@ -586,7 +605,10 @@ async function handleForgotPassword() {
 
   <!-- 忘记密码模态框 -->
   <n-modal v-model:show="showForgotPassword">
-    <n-card style="width: 400px" :title="messages[currentLang].login.loginButton === '登录' ? '重置密码' : 'Reset Password'">
+    <n-card
+      style="width: 400px"
+      :title="messages[currentLang].login.loginButton === '登录' ? '重置密码' : 'Reset Password'"
+    >
       <n-form class="compact-form">
         <n-form-item :label="messages[currentLang].login.emailPlaceholder">
           <n-auto-complete
@@ -607,12 +629,16 @@ async function handleForgotPassword() {
               :disabled="forgotPasswordLoading"
             />
             <n-button
-              :disabled="forgotPasswordLoading || !validators.validateEmail(forgotPasswordForm.email) || forgotPasswordEmailStatus === 'error'"
-              @click="handleSendCode(forgotPasswordForm.email, 'reset')"
+              :disabled="
+                forgotPasswordLoading ||
+                !validators.validateEmail(forgotPasswordForm.email) ||
+                forgotPasswordEmailStatus === 'error'
+              "
               class="send-code-btn"
               type="primary"
               ghost
               :loading="forgotPasswordCodeSending"
+              @click="handleSendCode(forgotPasswordForm.email, 'reset')"
             >
               {{ messages[currentLang].login.sendCode }}
             </n-button>
@@ -641,11 +667,7 @@ async function handleForgotPassword() {
           <n-button @click="showForgotPassword = false">
             {{ messages[currentLang].login.loginButton === '登录' ? '取消' : 'Cancel' }}
           </n-button>
-          <n-button
-            type="primary"
-            @click="handleForgotPassword"
-            :loading="forgotPasswordLoading"
-          >
+          <n-button type="primary" :loading="forgotPasswordLoading" @click="handleForgotPassword">
             {{ messages[currentLang].login.loginButton === '登录' ? '重置密码' : 'Reset Password' }}
           </n-button>
         </n-space>
@@ -718,7 +740,7 @@ async function handleForgotPassword() {
 /* 标签页下划线样式 */
 .full-width-tabs :deep(.n-tabs-bar) {
   width: 50% !important;
-  transition: transform .3s var(--n-bezier);
+  transition: transform 0.3s var(--n-bezier);
 }
 
 /* 缩小输入框间距 */

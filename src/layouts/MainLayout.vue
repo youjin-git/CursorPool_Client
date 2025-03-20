@@ -3,8 +3,8 @@ import { NLayout, NLayoutSider, NMenu, NIcon, NSpin } from 'naive-ui'
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import type { Router } from 'vue-router'
 import { useRouter } from 'vue-router'
-import { 
-  HomeSharp, 
+import {
+  HomeSharp,
   SettingsSharp,
   TimeSharp,
   Close,
@@ -20,7 +20,6 @@ import { messages } from '../locales/messages'
 import { Window } from '@tauri-apps/api/window'
 import { platform } from '@tauri-apps/plugin-os'
 import { useUserStore, useAppCloseStore } from '../stores'
-
 
 // 基础状态
 const router = useRouter() as unknown as Router
@@ -40,7 +39,7 @@ const showLoginOverlay = computed(() => !isLoggedIn.value && !isCheckingLogin.va
 
 // 侧边栏状态
 const collapsed = ref(true)
-const contentMarginLeft = computed(() => collapsed.value ? '64px' : '200px')
+const contentMarginLeft = computed(() => (collapsed.value ? '64px' : '200px'))
 const currentPath = computed(() => router.currentRoute.value.path.substring(1) || 'dashboard')
 
 /**
@@ -100,7 +99,7 @@ const windowControls = {
   async minimize() {
     await appWindow.minimize()
   },
-  
+
   async close() {
     await appCloseStore.handleCloseRequest()
   }
@@ -118,14 +117,14 @@ const handleLoginSuccess = async () => {
 onMounted(async () => {
   // 使用store检查登录状态
   await userStore.checkLoginStatus()
-  
+
   // 获取平台信息
   try {
     currentPlatform.value = await platform()
   } catch (error) {
     console.error('获取平台信息失败:', error)
   }
-  
+
   // 添加用户登出事件监听
   window.addEventListener('user-logout', handleUserLogout)
 })
@@ -137,27 +136,27 @@ onUnmounted(() => {
 })
 
 // 监听store中的登录状态变化
-watch(() => userStore.isLoggedIn, (newValue) => {
-  if (!newValue) {
-    if (router.currentRoute.value.path !== '/dashboard') {
-      router.push('/dashboard')
-    } else {
-      router.replace('/dashboard')
+watch(
+  () => userStore.isLoggedIn,
+  newValue => {
+    if (!newValue) {
+      if (router.currentRoute.value.path !== '/dashboard') {
+        router.push('/dashboard')
+      } else {
+        router.replace('/dashboard')
+      }
     }
   }
-})
+)
 </script>
 
 <template>
-  <n-layout has-sider :style="isMacOS ? {} : { borderRadius: '6px' }" style="height: 100vh;">
+  <n-layout has-sider :style="isMacOS ? {} : { borderRadius: '6px' }" style="height: 100vh">
     <!-- 统一的拖拽区域 -->
     <div class="drag-region" data-tauri-drag-region></div>
 
     <!-- 登录遮罩 -->
-    <login-overlay
-      v-if="showLoginOverlay"
-      @login-success="handleLoginSuccess"
-    />
+    <login-overlay v-if="showLoginOverlay" @login-success="handleLoginSuccess" />
 
     <!-- 加载指示器 -->
     <div v-if="isCheckingLogin" class="loading-overlay">
@@ -186,21 +185,15 @@ watch(() => userStore.isLoggedIn, (newValue) => {
       :width="200"
       :collapsed="collapsed"
       show-trigger
+      :native-scrollbar="false"
+      style="position: fixed; height: 100vh; left: 0; top: 0; z-index: 999"
+      data-tauri-drag-region
       @collapse="collapsed = true"
       @expand="collapsed = false"
-      :native-scrollbar="false"
-      style="
-        position: fixed;
-        height: 100vh;
-        left: 0;
-        top: 0;
-        z-index: 999;
-      "
-      data-tauri-drag-region
     >
       <div class="logo">
-        <h2 v-if="!collapsed" style="user-select: none;">{{ i18n.appName }}</h2>
-        <h2 v-else style="user-select: none;">CP</h2>
+        <h2 v-if="!collapsed" style="user-select: none">{{ i18n.appName }}</h2>
+        <h2 v-else style="user-select: none">CP</h2>
       </div>
       <n-menu
         :options="menuOptions"
@@ -209,17 +202,17 @@ watch(() => userStore.isLoggedIn, (newValue) => {
         :collapsed-icon-size="24"
         :icon-size="24"
         :value="currentPath"
-        @update:value="handleMenuClick"
         style="-webkit-app-region: no-drag"
+        @update:value="handleMenuClick"
       />
       <div class="sider-footer" style="-webkit-app-region: no-drag">
         <theme-toggle style="-webkit-app-region: no-drag" />
       </div>
     </n-layout-sider>
-    
+
     <!-- 主内容区 -->
-    <n-layout 
-      :native-scrollbar="false" 
+    <n-layout
+      :native-scrollbar="false"
       content-style="padding: 40px 24px 24px 24px;"
       :style="{ marginLeft: contentMarginLeft }"
     >

@@ -1,5 +1,18 @@
 <script setup lang="ts">
-import { NCard, NSpace, NButton, NProgress, NNumberAnimation, NGrid, NGridItem, NTag, NDivider, NModal, NIcon, NScrollbar } from 'naive-ui'
+import {
+  NCard,
+  NSpace,
+  NButton,
+  NProgress,
+  NNumberAnimation,
+  NGrid,
+  NGridItem,
+  NTag,
+  NDivider,
+  NModal,
+  NIcon,
+  NScrollbar
+} from 'naive-ui'
 import { ref, onMounted, computed, watch } from 'vue'
 import { useI18n } from '../locales'
 import { useMessage } from 'naive-ui'
@@ -36,22 +49,22 @@ const formatDate = (dateStr: string) => {
 // 计算并格式化剩余时间
 const formatTimeRemaining = (expireTimeStr: string) => {
   if (!expireTimeStr) return '未知'
-  
+
   // 解析过期时间
   const expireTime = new Date(expireTimeStr.replace(/-/g, '/'))
   const now = new Date()
-  
+
   // 如果已过期，返回已过期提示
   if (expireTime <= now) return '已过期'
-  
+
   // 计算剩余毫秒数
   const remainingMs = expireTime.getTime() - now.getTime()
-  
+
   // 转换为天、小时、分钟
   const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24))
   const hours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const minutes = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60))
-  
+
   // 只显示最大的时间单位，精简信息量
   if (days > 0) {
     return `${days}天`
@@ -109,7 +122,10 @@ const getUsagePercentage = (used: number, total: number) => {
 }
 
 // 会员等级映射
-const levelMap: Record<number, { name: string; type: 'default' | 'info' | 'success' | 'warning' | 'error' }> = {
+const levelMap: Record<
+  number,
+  { name: string; type: 'default' | 'info' | 'success' | 'warning' | 'error' }
+> = {
   1: { name: i18n.value.dashboard.memberLevel[1], type: 'default' },
   2: { name: i18n.value.dashboard.memberLevel[2], type: 'info' },
   3: { name: i18n.value.dashboard.memberLevel[3], type: 'success' },
@@ -122,10 +138,7 @@ const accountUsagePercentage = computed(() => {
   if (!userStore.userInfo?.totalCount) return 0
   // 总数量大于等于9999 无限制 进度条显示为0
   if (userStore.userInfo.totalCount >= 9999) return 0
-  return getUsagePercentage(
-    userStore.userInfo.usedCount,
-    userStore.userInfo.totalCount
-  )
+  return getUsagePercentage(userStore.userInfo.usedCount, userStore.userInfo.totalCount)
 })
 
 // Cursor高级模型使用量百分比
@@ -163,11 +176,10 @@ async function fetchCursorInfo() {
     updateLocalViewState()
   } catch (error) {
     console.error('获取 Cursor 账户信息失败:', error)
-    
+
     // 由于这是非核心功能，使用轻量级提示
-    message.warning(error instanceof Error 
-      ? error.message 
-      : 'Cursor 账户信息获取失败，部分功能可能受限'
+    message.warning(
+      error instanceof Error ? error.message : 'Cursor 账户信息获取失败，部分功能可能受限'
     )
   } finally {
     loading.value = false
@@ -177,7 +189,7 @@ async function fetchCursorInfo() {
 // 添加新的 ref
 const showCursorRunningModal = ref(false)
 const pendingForceKillAction = ref<{
-  type: 'machine' | 'account' | 'quick' | 'hook',
+  type: 'machine' | 'account' | 'quick' | 'hook'
   params?: any
 } | null>(null)
 
@@ -186,7 +198,7 @@ const handleMachineCodeChange = async (force_kill: boolean = false) => {
   try {
     await cursorStore.resetMachine({ forceKill: force_kill })
     message.success(i18n.value.dashboard.machineChangeSuccess)
-    
+
     await fetchUserInfo()
     updateLocalViewState()
   } catch (error) {
@@ -207,10 +219,10 @@ const autoApplyHook = async (): Promise<boolean> => {
     await cursorStore.applyHookToClient(false)
     message.destroyAll()
     message.success(i18n.value.systemControl.messages.applyHookSuccess)
-    
+
     // 更新视图状态
     updateLocalViewState()
-    
+
     // 返回注入结果
     return deviceInfo.value.hookStatus === true
   } catch (error) {
@@ -228,27 +240,27 @@ const autoApplyHook = async (): Promise<boolean> => {
 const handleAccountSwitch = async () => {
   try {
     accountSwitchLoading.value = true
-    
+
     // 检查积分是否足够
     if (!userStore.checkCredits(50)) {
       message.error(i18n.value.dashboard.insufficientCredits)
       router.push('/settings')
       return
     }
-    
+
     // 检查 Cursor 是否在运行
     const isRunning = await checkCursorRunning()
-    
+
     if (isRunning) {
       showCursorRunningModal.value = true
       pendingForceKillAction.value = { type: 'account' }
       return
     }
-    
+
     // 检查 Hook 状态，如果未注入，直接调用注入
     if (!deviceInfo.value.hookStatus) {
       const hookSuccess = await autoApplyHook()
-      
+
       if (hookSuccess) {
         await executeAccountSwitch()
       }
@@ -268,27 +280,27 @@ const handleAccountSwitch = async () => {
 const handleQuickChange = async () => {
   try {
     quickChangeLoading.value = true
-    
+
     // 检查积分是否足够
     if (!userStore.checkCredits(50)) {
       message.error(i18n.value.dashboard.insufficientCredits)
       router.push('/settings')
       return
     }
-    
+
     // 检查 Cursor 是否在运行
     const isRunning = await checkCursorRunning()
-    
+
     if (isRunning) {
       showCursorRunningModal.value = true
       pendingForceKillAction.value = { type: 'quick' }
       return
     }
-    
+
     // 检查 Hook 状态，如果未注入，直接调用注入
     if (!deviceInfo.value.hookStatus) {
       const hookSuccess = await autoApplyHook()
-      
+
       if (hookSuccess) {
         await executeQuickChange()
       }
@@ -309,7 +321,7 @@ const executeAccountSwitch = async (force_kill: boolean = false) => {
   try {
     await cursorStore.switchCursorAccount(undefined, undefined, force_kill)
     message.success(i18n.value.dashboard.accountChangeSuccess)
-    
+
     await fetchUserInfo()
     updateLocalViewState()
   } catch (error) {
@@ -323,9 +335,9 @@ const executeQuickChange = async (force_kill: boolean = false) => {
   try {
     await cursorStore.quickChange(undefined, undefined, force_kill)
     message.success(i18n.value.dashboard.changeSuccess)
-    
+
     await fetchUserInfo()
-    
+
     // 更新视图状态
     updateLocalViewState()
   } catch (error) {
@@ -347,25 +359,25 @@ const handleForceKill = async () => {
   try {
     loading.value = true
     message.loading('正在关闭 Cursor...', { duration: 0 })
-    
+
     // 关闭Cursor
     await cursorStore.closeCursorApp()
-    
+
     // 等待一段时间确保进程完全关闭
     await new Promise(resolve => setTimeout(resolve, 1000))
-    
+
     message.destroyAll() // 清除 loading 消息
-    
+
     // 根据类型执行相应操作
     let operationSuccess = false
     let operationMessage = ''
-    
+
     // 先检查是否需要注入
     if (!deviceInfo.value.hookStatus) {
       message.loading('正在注入...', { duration: 0 })
       try {
         const hookSuccess = await autoApplyHook()
-        
+
         if (!hookSuccess) {
           message.destroyAll()
           return
@@ -377,7 +389,7 @@ const handleForceKill = async () => {
         return
       }
     }
-    
+
     // 根据类型执行具体操作
     if (pendingForceKillAction.value.type === 'machine') {
       message.loading('正在更换机器码...', { duration: 0 })
@@ -405,15 +417,15 @@ const handleForceKill = async () => {
         return
       }
     }
-    
+
     message.destroyAll() // 清除操作中的loading消息
-    
+
     if (operationSuccess) {
       message.success(operationMessage)
-      
+
       // 等待一小段时间确保所有后端操作完成
       await new Promise(resolve => setTimeout(resolve, 500))
-      
+
       // 直接启动Cursor，不再询问
       message.loading('正在启动 Cursor...', { duration: 0 })
       try {
@@ -422,7 +434,10 @@ const handleForceKill = async () => {
         message.success('Cursor 已启动')
       } catch (launchError) {
         message.destroyAll()
-        message.error('启动 Cursor 失败: ' + (launchError instanceof Error ? launchError.message : String(launchError)))
+        message.error(
+          '启动 Cursor 失败: ' +
+            (launchError instanceof Error ? launchError.message : String(launchError))
+        )
       }
     }
   } catch (error) {
@@ -436,11 +451,14 @@ const handleForceKill = async () => {
 
 const copyText = (text: string) => {
   if (!text) return
-  navigator.clipboard.writeText(text).then(() => {
-    message.success(i18n.value.common.copySuccess)
-  }).catch(() => {
-    message.error(i18n.value.common.copyFailed)
-  })
+  navigator.clipboard
+    .writeText(text)
+    .then(() => {
+      message.success(i18n.value.common.copySuccess)
+    })
+    .catch(() => {
+      message.error(i18n.value.common.copyFailed)
+    })
 }
 
 // 添加新的 ref
@@ -469,32 +487,32 @@ const handleExit = async () => {
 onMounted(async () => {
   try {
     loading.value = true
-    
+
     // 初始化按钮显示状态
     await appStore.initButtonSettings()
-    
+
     // 检查是否需要强制刷新数据
     const needRefresh = localStorage.getItem('need_refresh_dashboard')
     if (needRefresh === 'true' || !userStore.userInfo || !cursorStore.cursorInfo.userInfo) {
       // 清除刷新标记
       localStorage.removeItem('need_refresh_dashboard')
-      
+
       // 初始化应用设置
       appStore.initAppSettings()
-      
+
       // 获取用户信息
       await fetchUserInfo()
-      
+
       // 获取Cursor信息
       await fetchMachineIds()
       await fetchCursorInfo()
-      
+
       // 更新视图状态
       updateLocalViewState()
-      
+
       // 检查管理员权限
       await checkPrivileges()
-      
+
       // 检查免责声明
       await appStore.fetchDisclaimer()
 
@@ -503,14 +521,14 @@ onMounted(async () => {
         if (!appStore.showDisclaimerModal) {
           // 使用appStore的方法获取引导状态
           await appStore.fetchTourStatus()
-          
+
           // 使用store中的计算属性
           const isLoggedIn = userStore.userInfo !== null
-          
+
           // 只有当用户已登录且引导状态不为true时才显示引导
           if (isLoggedIn && appStore.shouldShowTour) {
-            console.log('开始显示引导', { 
-              tourAccepted: appStore.tourAccepted, 
+            console.log('开始显示引导', {
+              tourAccepted: appStore.tourAccepted,
               isLoggedIn,
               shouldShowTour: appStore.shouldShowTour
             })
@@ -558,11 +576,11 @@ const quickChangeLoading = ref(false)
 const handleConfirmDisclaimer = async () => {
   // 确认免责声明，会自动检查引导状态
   const success = await appStore.confirmDisclaimer()
-  
+
   if (success) {
     // 检查是否需要显示引导
     const isLoggedIn = userStore.userInfo !== null
-    
+
     // 只有当用户已登录且引导状态不为true时才显示引导
     if (isLoggedIn && appStore.shouldShowTour) {
       setTimeout(() => {
@@ -584,19 +602,21 @@ const handleTourComplete = () => {
 
 // 同步 store 的状态到本地视图状态
 watch(
-  [() => cursorStore.machineCode, () => cursorStore.currentAccount, () => cursorStore.hookStatus, 
-   () => cursorStore.cursorInfo, () => userStore.userInfo],
+  [
+    () => cursorStore.machineCode,
+    () => cursorStore.currentAccount,
+    () => cursorStore.hookStatus,
+    () => cursorStore.cursorInfo,
+    () => userStore.userInfo
+  ],
   () => {
     updateLocalViewState()
   }
 )
 
 // 监听模态框状态变化，如果有模态框显示，则隐藏引导
-watch([
-  () => showAdminPrivilegeModal,
-  () => showCursorRunningModal,
-  () => appStore.showDisclaimerModal
-], 
+watch(
+  [() => showAdminPrivilegeModal, () => showCursorRunningModal, () => appStore.showDisclaimerModal],
   ([adminModal, cursorModal, disclaimerModal]) => {
     if (adminModal || cursorModal || disclaimerModal) {
       shouldShowTour.value = false
@@ -608,7 +628,7 @@ watch([
 const handleMachineCodeClick = async () => {
   try {
     machineCodeLoading.value = true
-    
+
     // 检查 Cursor 是否在运行
     const isRunning = await checkCursorRunning()
     if (isRunning) {
@@ -616,11 +636,11 @@ const handleMachineCodeClick = async () => {
       pendingForceKillAction.value = { type: 'machine' }
       return
     }
-    
+
     // 检查 Hook 状态，如果未注入，直接调用注入
     if (!deviceInfo.value.hookStatus) {
       const hookSuccess = await autoApplyHook()
-      
+
       if (hookSuccess) {
         await handleMachineCodeChange(false)
       }
@@ -637,45 +657,64 @@ const handleMachineCodeClick = async () => {
 }
 
 // 监听登录状态变化
-watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
-  // 只在从未登录变为已登录时触发
-  if (newVal === true && oldVal === false) {
-    // 延迟检查，确保所有数据都已加载
-    setTimeout(async () => {
-      if (!appStore.showDisclaimerModal) {
-        await appStore.fetchTourStatus();
-        
-        if (appStore.shouldShowTour) {
-          startTour();
-        }
-      }
-    }, 500);
-  }
-});
+watch(
+  () => userStore.isLoggedIn,
+  (newVal, oldVal) => {
+    // 只在从未登录变为已登录时触发
+    if (newVal === true && oldVal === false) {
+      // 延迟检查，确保所有数据都已加载
+      setTimeout(async () => {
+        if (!appStore.showDisclaimerModal) {
+          await appStore.fetchTourStatus()
 
+          if (appStore.shouldShowTour) {
+            startTour()
+          }
+        }
+      }, 500)
+    }
+  }
+)
 </script>
 
 <template>
   <n-space vertical size="large">
     <article-list v-if="userStore.userInfo && !appStore.showDisclaimerModal" />
-    
-    <n-grid :cols="2" :x-gap="24" style="display: grid; grid-template-columns: repeat(2, 1fr);">
+
+    <n-grid :cols="2" :x-gap="24" style="display: grid; grid-template-columns: repeat(2, 1fr)">
       <!-- 用户信息卡片 -->
-      <n-grid-item style="display: grid;">
-        <n-card :title="i18n.dashboard.userInfo" class="user-info-card" style="height: 100%; user-select: none;">
+      <n-grid-item style="display: grid">
+        <n-card
+          :title="i18n.dashboard.userInfo"
+          class="user-info-card"
+          style="height: 100%; user-select: none"
+        >
           <n-space vertical>
-            <n-space vertical :size="12" style="user-select: none;">
-              <n-space :size="8" style="line-height: 1.2;" class="user-info-username">
+            <n-space vertical :size="12" style="user-select: none">
+              <n-space :size="8" style="line-height: 1.2" class="user-info-username">
                 <span style="width: 70px">{{ i18n.dashboard.username }}</span>
                 <n-space :size="4" align="center">
-                  <span 
-                    style="font-size: 14px; cursor: pointer;" 
+                  <span
+                    style="font-size: 14px; cursor: pointer"
                     @click="deviceInfo.userInfo?.username && copyText(deviceInfo.userInfo.username)"
-                  >{{ deviceInfo.userInfo?.username }}</span>
-                  <n-tag :type="levelMap[deviceInfo.userInfo?.level || 1].type" size="tiny" style="transform: scale(0.9)">
-                    {{ deviceInfo.userInfo?.code_level || levelMap[deviceInfo.userInfo?.level || 1].name }}
+                    >{{ deviceInfo.userInfo?.username }}</span
+                  >
+                  <n-tag
+                    :type="levelMap[deviceInfo.userInfo?.level || 1].type"
+                    size="tiny"
+                    style="transform: scale(0.9)"
+                  >
+                    {{
+                      deviceInfo.userInfo?.code_level ||
+                      levelMap[deviceInfo.userInfo?.level || 1].name
+                    }}
                   </n-tag>
-                  <n-tag v-if="deviceInfo.userInfo?.expireTime" type="success" size="tiny" style="transform: scale(0.9)">
+                  <n-tag
+                    v-if="deviceInfo.userInfo?.expireTime"
+                    type="success"
+                    size="tiny"
+                    style="transform: scale(0.9)"
+                  >
                     {{ formatTimeRemaining(deviceInfo.userInfo.expireTime) }}
                   </n-tag>
                   <n-tag v-else type="error" size="tiny" style="transform: scale(0.9)">
@@ -686,56 +725,93 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
 
               <n-divider style="margin: 0" />
 
-              <n-space :size="8" style="line-height: 1.2;" class="user-info-email">
+              <n-space :size="8" style="line-height: 1.2" class="user-info-email">
                 <span style="width: 70px">{{ i18n.dashboard.email }}</span>
                 <n-space :size="4" align="center">
-                  <span 
-                    style="font-size: 14px; cursor: pointer;" 
-                    @click="deviceInfo.cursorInfo.userInfo?.email && copyText(deviceInfo.cursorInfo.userInfo?.email)"
-                  >{{ deviceInfo.cursorInfo.userInfo?.email || '未绑定' }}</span>
-                  <n-tag :type="deviceInfo.cursorInfo.userInfo?.email_verified ? 'success' : 'warning'" size="tiny" style="transform: scale(0.9)">
-                    {{ deviceInfo.cursorInfo.userInfo?.email_verified ? i18n.systemControl.clientVerified : i18n.systemControl.clientUnverified }}
+                  <span
+                    style="font-size: 14px; cursor: pointer"
+                    @click="
+                      deviceInfo.cursorInfo.userInfo?.email &&
+                      copyText(deviceInfo.cursorInfo.userInfo?.email)
+                    "
+                    >{{ deviceInfo.cursorInfo.userInfo?.email || '未绑定' }}</span
+                  >
+                  <n-tag
+                    :type="deviceInfo.cursorInfo.userInfo?.email_verified ? 'success' : 'warning'"
+                    size="tiny"
+                    style="transform: scale(0.9)"
+                  >
+                    {{
+                      deviceInfo.cursorInfo.userInfo?.email_verified
+                        ? i18n.systemControl.clientVerified
+                        : i18n.systemControl.clientUnverified
+                    }}
                   </n-tag>
                 </n-space>
               </n-space>
-              <n-space :size="8" style="line-height: 1.2;" class="user-info-cc-status">
+              <n-space :size="8" style="line-height: 1.2" class="user-info-cc-status">
                 <span style="width: 70px">{{ i18n.dashboard.ccStatus }}</span>
                 <n-tag :type="deviceInfo.hookStatus === true ? 'success' : 'error'" size="tiny">
-                  {{ deviceInfo.hookStatus === true ? i18n.systemControl.hookApplied : i18n.systemControl.hookNotApplied }}
+                  {{
+                    deviceInfo.hookStatus === true
+                      ? i18n.systemControl.hookApplied
+                      : i18n.systemControl.hookNotApplied
+                  }}
                 </n-tag>
               </n-space>
-              <n-space :size="8" style="line-height: 1.2;" class="user-info-register-time">
+              <n-space :size="8" style="line-height: 1.2" class="user-info-register-time">
                 <span style="width: 70px">{{ i18n.dashboard.registerTime }}</span>
-                <span 
-                  style="font-size: 14px; cursor: pointer;" 
-                  @click="copyText(deviceInfo.cursorInfo.usage?.startOfMonth ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth) : '')"
-                >{{ deviceInfo.cursorInfo.usage?.startOfMonth ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth) : '未知' }}</span>
+                <span
+                  style="font-size: 14px; cursor: pointer"
+                  @click="
+                    copyText(
+                      deviceInfo.cursorInfo.usage?.startOfMonth
+                        ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth)
+                        : ''
+                    )
+                  "
+                  >{{
+                    deviceInfo.cursorInfo.usage?.startOfMonth
+                      ? formatDate(deviceInfo.cursorInfo.usage.startOfMonth)
+                      : '未知'
+                  }}</span
+                >
               </n-space>
-              <span 
-                style="font-size: 12px; color: #999; word-break: break-all; text-align: center; cursor: pointer;" 
-                @click="copyText(deviceInfo.machineCode)"
+              <span
+                style="
+                  font-size: 12px;
+                  color: #999;
+                  word-break: break-all;
+                  text-align: center;
+                  cursor: pointer;
+                "
                 class="user-info-machine-code"
-              >{{ deviceInfo.machineCode }}</span>
+                @click="copyText(deviceInfo.machineCode)"
+                >{{ deviceInfo.machineCode }}</span
+              >
             </n-space>
           </n-space>
         </n-card>
       </n-grid-item>
 
       <!-- 使用统计卡片 -->
-      <n-grid-item style="display: grid;">
-        <n-card :title="i18n.dashboard.usageStats" style="height: 100%; user-select: none;">
-          <n-space vertical :size="24" style="height: 100%; justify-content: space-around;">
+      <n-grid-item style="display: grid">
+        <n-card :title="i18n.dashboard.usageStats" style="height: 100%; user-select: none">
+          <n-space vertical :size="24" style="height: 100%; justify-content: space-around">
             <!-- 账户使用统计 -->
             <n-space vertical :size="8" class="cursor-pool-usage">
               <n-space justify="space-between">
                 <span>{{ i18n.dashboard.cpUsage }}</span>
                 <n-space :size="0">
-                  <n-number-animation 
-                    :from="0" 
+                  <n-number-animation
+                    :from="0"
                     :to="(deviceInfo.userInfo?.usedCount || 0) * 50"
                     :duration="1000"
                   />
-                  <span v-if="deviceInfo.userInfo?.totalCount && deviceInfo.userInfo.totalCount >= 9999">/{{ i18n.dashboard.unlimited }}</span>
+                  <span
+                    v-if="deviceInfo.userInfo?.totalCount && deviceInfo.userInfo.totalCount >= 9999"
+                    >/{{ i18n.dashboard.unlimited }}</span
+                  >
                   <span v-else>/{{ (deviceInfo.userInfo?.totalCount || 0) * 50 }}</span>
                 </n-space>
               </n-space>
@@ -755,7 +831,7 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
               <n-space justify="space-between">
                 <span>{{ i18n.dashboard.advancedModelUsage }}</span>
                 <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">
-                  <n-number-animation 
+                  <n-number-animation
                     :from="0"
                     :to="deviceInfo.cursorInfo.usage['gpt-4']?.numRequests || 0"
                     :duration="1000"
@@ -780,8 +856,8 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
               <n-space justify="space-between">
                 <span>{{ i18n.dashboard.basicModelUsage }}</span>
                 <n-space v-if="deviceInfo.cursorInfo.usage" :size="0">
-                  <n-number-animation 
-                    :from="0" 
+                  <n-number-animation
+                    :from="0"
                     :to="deviceInfo.cursorInfo.usage['gpt-3.5-turbo']?.numRequests || 0"
                     :duration="1000"
                   />
@@ -802,40 +878,39 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
                 :processing="loading"
               />
             </n-space>
-
           </n-space>
         </n-card>
       </n-grid-item>
     </n-grid>
 
     <!-- 快捷操作卡片 -->
-    <n-card :title="i18n.dashboard.quickActions" class="quick-actions-card" style="user-select: none;">
+    <n-card
+      :title="i18n.dashboard.quickActions"
+      class="quick-actions-card"
+      style="user-select: none"
+    >
       <n-space vertical>
         <n-space :justify="appStore.showAllButtons ? 'space-around' : 'center'">
-          <n-button 
-            type="primary" 
-            @click="handleQuickChange" 
-            :disabled="!deviceInfo.userInfo" 
+          <n-button
+            type="primary"
+            :disabled="!deviceInfo.userInfo"
             :loading="quickChangeLoading"
             :style="!appStore.showAllButtons ? { width: '200px' } : {}"
+            @click="handleQuickChange"
           >
             {{ i18n.dashboard.quickChange }}
           </n-button>
-          
+
           <template v-if="appStore.showAllButtons">
-            <n-button 
-              type="primary" 
-              @click="handleAccountSwitch" 
-              :disabled="!deviceInfo.userInfo" 
+            <n-button
+              type="primary"
+              :disabled="!deviceInfo.userInfo"
               :loading="accountSwitchLoading"
+              @click="handleAccountSwitch"
             >
               {{ i18n.dashboard.changeAccount }}
             </n-button>
-            <n-button 
-              type="primary" 
-              @click="handleMachineCodeClick" 
-              :loading="machineCodeLoading"
-            >
+            <n-button type="primary" :loading="machineCodeLoading" @click="handleMachineCodeClick">
               {{ i18n.dashboard.changeMachineCode }}
             </n-button>
           </template>
@@ -869,16 +944,14 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
           <span>需要管理员权限</span>
         </n-space>
       </template>
-      <div style="margin: 24px 0;">
+      <div style="margin: 24px 0">
         <p>本程序需要管理员权限才能正常运行。</p>
-        <p style="margin-top: 12px; color: #999;">
+        <p style="margin-top: 12px; color: #999">
           请右键点击程序图标,选择"以管理员身份运行"后重新启动程序。
         </p>
       </div>
       <template #action>
-        <n-button type="error" @click="handleExit" block>
-          退出程序
-        </n-button>
+        <n-button type="error" block @click="handleExit"> 退出程序 </n-button>
       </template>
     </n-modal>
 
@@ -886,25 +959,33 @@ watch(() => userStore.isLoggedIn, (newVal, oldVal) => {
     <n-modal
       v-model:show="appStore.showDisclaimerModal"
       preset="card"
-      style="width: 600px; max-width: 90vw;"
+      style="width: 600px; max-width: 90vw"
       title="免责声明"
       :closable="false"
       :mask-closable="false"
     >
-      <n-scrollbar style="height: 60vh; overflow: auto;">
+      <n-scrollbar style="height: 60vh; overflow: auto">
         <MarkdownRender :content="appStore.disclaimerContent" />
       </n-scrollbar>
       <template #footer>
         <n-space justify="end">
-          <n-button type="primary" :disabled="!appStore.canConfirmDisclaimer" @click="handleConfirmDisclaimer">
-            {{ appStore.canConfirmDisclaimer ? '我已阅读并同意' : `请等待 ${appStore.disclaimerCountdown} 秒` }}
+          <n-button
+            type="primary"
+            :disabled="!appStore.canConfirmDisclaimer"
+            @click="handleConfirmDisclaimer"
+          >
+            {{
+              appStore.canConfirmDisclaimer
+                ? '我已阅读并同意'
+                : `请等待 ${appStore.disclaimerCountdown} 秒`
+            }}
           </n-button>
         </n-space>
       </template>
     </n-modal>
 
     <!-- 添加引导组件 -->
-    <DashboardTour :show="shouldShowTour" :onComplete="handleTourComplete" />
+    <DashboardTour :show="shouldShowTour" :on-complete="handleTourComplete" />
   </n-space>
 </template>
 

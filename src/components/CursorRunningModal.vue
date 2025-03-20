@@ -19,7 +19,8 @@ const props = defineProps({
   // 模态框内容
   content: {
     type: String,
-    default: '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!'
+    default:
+      '检测到 Cursor 正在运行, 请保存尚未更改的项目再继续操作! 不保存会导致Cursor报错! 报错了请别联系客服!'
   },
   // 确认按钮文本
   confirmButtonText: {
@@ -28,7 +29,14 @@ const props = defineProps({
   },
   // 确认按钮类型
   confirmButtonType: {
-    type: String as () => 'default' | 'tertiary' | 'primary' | 'info' | 'success' | 'warning' | 'error',
+    type: String as () =>
+      | 'default'
+      | 'tertiary'
+      | 'primary'
+      | 'info'
+      | 'success'
+      | 'warning'
+      | 'error',
     default: 'warning'
   }
 })
@@ -49,12 +57,15 @@ const emit = defineEmits([
 const modalVisible = ref(props.show)
 
 // 监听props.show的变化，更新内部状态
-watch(() => props.show, (newValue) => {
-  modalVisible.value = newValue
-})
+watch(
+  () => props.show,
+  newValue => {
+    modalVisible.value = newValue
+  }
+)
 
 // 监听内部状态变化，更新父组件状态
-watch(modalVisible, (newValue) => {
+watch(modalVisible, newValue => {
   if (newValue !== props.show) {
     emit('update:show', newValue)
   }
@@ -97,4 +108,4 @@ const handleConfirm = () => {
       </n-space>
     </template>
   </n-modal>
-</template> 
+</template>

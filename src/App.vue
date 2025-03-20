@@ -24,19 +24,19 @@ const dateLocale = computed(() => locales[currentLang.value].dateLocale)
 onMounted(async () => {
   // 初始化语言设置
   await initLanguage()
-  
+
   // 使用统一的初始化方法
   await historyStore.init()
-  
+
   // 初始化线路配置
   await inboundStore.fetchInboundList()
-  
+
   // 自动检查更新
   await updaterStore.checkForUpdates()
-  
+
   // 添加关闭事件监听
   const appWindow = Window.getCurrent()
-  appWindow.onCloseRequested(async (event) => {
+  appWindow.onCloseRequested(async event => {
     event.preventDefault()
     appCloseStore.handleCloseRequest()
   })
@@ -64,6 +64,12 @@ onMounted(async () => {
 <style>
 body {
   margin: 0;
-  font-family: "JetBrains Mono", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  font-family:
+    'JetBrains Mono',
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    system-ui,
+    sans-serif;
 }
 </style>

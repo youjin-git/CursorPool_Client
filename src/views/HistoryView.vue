@@ -63,12 +63,12 @@ const filteredRecords = computed(() => {
   if (!dateRange.value) {
     return historyStore.sortedRecords
   }
-  
+
   const [startTime, endTime] = dateRange.value
   // 将结束日期调整到当天的23:59:59
   const endOfDay = new Date(endTime)
   endOfDay.setHours(23, 59, 59, 999)
-  
+
   return historyStore.sortedRecords.filter(record => {
     const recordTime = new Date(record.timestamp).getTime()
     return recordTime >= startTime && recordTime <= endOfDay.getTime()
@@ -88,7 +88,7 @@ const columns: DataTableColumns<OperationRecord> = [
     title: () => messages[currentLang.value].history.time,
     key: 'timestamp',
     sorter: 'default',
-    render: (row) => {
+    render: row => {
       const date = new Date(row.timestamp)
       return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`
     }
@@ -110,11 +110,11 @@ const columns: DataTableColumns<OperationRecord> = [
           clearable
           :placeholder="i18n.history.datePlaceholder"
         />
-        <n-button 
-          type="error" 
-          @click="clearHistory"
+        <n-button
+          type="error"
           :loading="isLoading"
           :disabled="historyStore.sortedRecords.length === 0"
+          @click="clearHistory"
         >
           {{ i18n.history.clearHistory }}
         </n-button>
@@ -133,4 +133,4 @@ const columns: DataTableColumns<OperationRecord> = [
       />
     </n-card>
   </n-space>
-</template> 
+</template>

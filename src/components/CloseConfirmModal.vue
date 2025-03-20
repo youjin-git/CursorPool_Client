@@ -22,12 +22,12 @@ const handleConfirm = async () => {
     title="关闭确认"
     positive-text="确认"
     negative-text="取消"
+    :mask-closable="false"
     @positive-click="handleConfirm"
     @negative-click="appCloseStore.cancelClose"
-    :mask-closable="false"
   >
-    <div style="margin-bottom: 12px;">请选择关闭方式：</div>
-    
+    <div style="margin-bottom: 12px">请选择关闭方式：</div>
+
     <n-form-item>
       <n-radio-group v-model:value="appCloseStore.closeType">
         <n-space vertical>
@@ -36,11 +36,9 @@ const handleConfirm = async () => {
         </n-space>
       </n-radio-group>
     </n-form-item>
-    
+
     <n-form-item>
-      <n-checkbox v-model:checked="appCloseStore.savePreference">
-        记住我的选择
-      </n-checkbox>
+      <n-checkbox v-model:checked="appCloseStore.savePreference"> 记住我的选择 </n-checkbox>
     </n-form-item>
   </n-modal>
-</template> 
+</template>

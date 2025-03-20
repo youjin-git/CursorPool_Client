@@ -22,9 +22,9 @@ const progressColor = computed(() => {
 })
 
 // 计算是否显示加载图标
-const showSpinner = computed(() => 
-  updaterStore.isChecking || 
-  (updaterStore.isDownloading && updaterStore.progressPercentage < 5)
+const showSpinner = computed(
+  () =>
+    updaterStore.isChecking || (updaterStore.isDownloading && updaterStore.progressPercentage < 5)
 )
 </script>
 
@@ -35,9 +35,9 @@ const showSpinner = computed(() =>
         <div v-if="showSpinner" class="loading-spinner">
           <n-spin size="large" />
         </div>
-        
+
         <div class="status-text">{{ statusText }}</div>
-        
+
         <n-space vertical class="progress-container">
           <n-progress
             type="line"
@@ -48,10 +48,10 @@ const showSpinner = computed(() =>
             indicator-placement="inside"
           />
         </n-space>
-        
+
         <div v-if="updaterStore.isDownloading" class="byte-info">
-          {{ Math.round(updaterStore.downloadedBytes / 1024 / 1024 * 100) / 100 }} MB / 
-          {{ Math.round(updaterStore.totalBytes / 1024 / 1024 * 100) / 100 }} MB
+          {{ Math.round((updaterStore.downloadedBytes / 1024 / 1024) * 100) / 100 }} MB /
+          {{ Math.round((updaterStore.totalBytes / 1024 / 1024) * 100) / 100 }} MB
         </div>
       </div>
     </n-card>

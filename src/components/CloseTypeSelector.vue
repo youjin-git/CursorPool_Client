@@ -54,7 +54,7 @@ onMounted(async () => {
 const handleChange = async (value: string) => {
   // 更新UI显示
   selectedCloseType.value = value
-  
+
   try {
     // 如果选择"每次询问"，则删除设置
     if (value === 'ask') {
@@ -71,18 +71,18 @@ const handleChange = async (value: string) => {
 </script>
 
 <template>
-  <div class="close-type-selector" :class="{ 'compact': props.compact }">
+  <div class="close-type-selector" :class="{ compact: props.compact }">
     <!-- 标签 -->
     <div v-if="showLabel" class="selector-label">关闭方式</div>
-    
+
     <!-- 展开模式 - 带背景的选择器 -->
     <div class="selector-container">
       <n-select
         v-model:value="selectedCloseType"
         :options="closeTypeOptions"
-        @update:value="handleChange"
         size="small"
         :style="{ width: props.compact ? '100px' : '120px' }"
+        @update:value="handleChange"
       />
     </div>
   </div>
@@ -101,7 +101,7 @@ const handleChange = async (value: string) => {
 }
 
 .selector-container {
-  background-color: var(--n-color-hover, rgba(0,0,0,0.05));
+  background-color: var(--n-color-hover, rgba(0, 0, 0, 0.05));
   padding: 0;
   border-radius: 4px;
   display: flex;
@@ -115,7 +115,7 @@ const handleChange = async (value: string) => {
 
 /* 暗色主题适配 */
 :root[data-theme='dark'] .selector-container {
-  background-color: var(--n-color-hover, rgba(255,255,255,0.1));
+  background-color: var(--n-color-hover, rgba(255, 255, 255, 0.1));
 }
 
 :deep(.n-select .n-base-selection) {
@@ -130,4 +130,4 @@ const handleChange = async (value: string) => {
 :deep(.n-base-selection__border) {
   border: none !important;
 }
-</style> 
+</style>

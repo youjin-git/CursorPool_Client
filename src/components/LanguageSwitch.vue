@@ -20,7 +20,7 @@ const props = defineProps({
 const { currentLang, setLanguage } = useI18n()
 
 // 将选项格式化为Select组件需要的格式
-const selectOptions = computed(() => 
+const selectOptions = computed(() =>
   Object.entries(locales).map(([key, value]) => ({
     label: value.name,
     value: key,
@@ -34,17 +34,17 @@ const handleSelect = (key: string) => {
 </script>
 
 <template>
-  <div class="language-selector" :class="{ 'compact': props.compact }">
+  <div class="language-selector" :class="{ compact: props.compact }">
     <!-- 标签 -->
     <div v-if="showLabel" class="selector-label">语言</div>
-    
+
     <!-- 语言选择下拉框 -->
     <n-select
       v-model:value="currentLang"
       :options="selectOptions"
-      @update:value="handleSelect"
       size="small"
       :style="{ width: props.compact ? '100px' : '120px' }"
+      @update:value="handleSelect"
     />
   </div>
 </template>
@@ -77,4 +77,4 @@ const handleSelect = (key: string) => {
 :deep(.n-base-selection__border) {
   border: none !important;
 }
-</style> 
+</style>

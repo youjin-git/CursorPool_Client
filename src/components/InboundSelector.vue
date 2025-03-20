@@ -43,17 +43,17 @@ const selectOptions = computed<SelectOption[]>(() => {
 // 选择线路
 async function handleSelect(index: number) {
   if (selectedInbound.value === index) return
-  
+
   // 记录原始选择
   const originalIndex = selectedInbound.value
-  
+
   // 先尝试调用切换函数，保存到后端
   const result = await inboundStore.switchInbound(index)
-  
+
   if (result) {
     // 成功后再更新本地UI状态
     selectedInbound.value = index
-    
+
     message.success(t('inbound.switchSuccess', { name: inboundStore.inboundList[index].name }))
     // 提示用户重启应用
     dialog.info({
@@ -80,9 +80,12 @@ async function handleSelect(index: number) {
 }
 
 // 监听store中的当前选择变化
-watch(() => inboundStore.currentInboundIndex, (newIndex) => {
-  selectedInbound.value = newIndex
-})
+watch(
+  () => inboundStore.currentInboundIndex,
+  newIndex => {
+    selectedInbound.value = newIndex
+  }
+)
 
 // 组件挂载时获取线路列表
 onMounted(async () => {
@@ -95,40 +98,40 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div 
-    class="inbound-selector" 
-    :class="{ 
-      'compact': props.compact, 
-      'icon-only': props.iconOnly 
+  <div
+    class="inbound-selector"
+    :class="{
+      compact: props.compact,
+      'icon-only': props.iconOnly
     }"
   >
     <!-- 标签 -->
     <div v-if="showLabel && !iconOnly" class="selector-label">{{ t('inbound.title') }}</div>
-    
+
     <!-- 紧凑模式 - 下拉选择 -->
     <n-select
       v-if="compact"
       :value="selectedInbound"
       :options="selectOptions"
-      @update:value="handleSelect"
       :disabled="inboundStore.isLoading"
       :loading="inboundStore.isLoading"
       size="small"
       :style="{ width: '100px' }"
       :placeholder="t('inbound.selector')"
+      @update:value="handleSelect"
     />
-    
+
     <!-- 展开模式 - 带背景的选择器 -->
     <div v-else class="selector-container">
-      <n-select 
+      <n-select
         :value="selectedInbound"
         :options="selectOptions"
-        @update:value="handleSelect"
         :disabled="inboundStore.isLoading"
         :loading="inboundStore.isLoading"
         size="small"
         :style="{ width: iconOnly ? 'auto' : '120px' }"
         :placeholder="t('inbound.selector')"
+        @update:value="handleSelect"
       />
     </div>
   </div>
@@ -147,7 +150,7 @@ onMounted(async () => {
 }
 
 .selector-container {
-  background-color: var(--n-color-hover, rgba(0,0,0,0.05));
+  background-color: var(--n-color-hover, rgba(0, 0, 0, 0.05));
   padding: 0;
   border-radius: 4px;
   display: flex;
@@ -165,7 +168,7 @@ onMounted(async () => {
 
 /* 暗色主题适配 */
 :root[data-theme='dark'] .selector-container {
-  background-color: var(--n-color-hover, rgba(255,255,255,0.1));
+  background-color: var(--n-color-hover, rgba(255, 255, 255, 0.1));
 }
 
 :deep(.n-select .n-base-selection) {
@@ -180,4 +183,4 @@ onMounted(async () => {
 :deep(.n-base-selection__border) {
   border: none !important;
 }
-</style> 
+</style>
