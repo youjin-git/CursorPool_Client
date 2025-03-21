@@ -6,8 +6,8 @@
   import { locales } from './locales'
   import { computed, onMounted } from 'vue'
   import { useHistoryStore, useUpdaterStore, useInboundStore, useAppCloseStore } from './stores'
-  import * as UpdateOverlay from './components/UpdateOverlay.vue'
-  import * as CloseConfirmModal from './components/CloseConfirmModal.vue'
+  import UpdateOverlay from './components/UpdateOverlay.vue'
+  import CloseConfirmModal from './components/CloseConfirmModal.vue'
   import { Window } from '@tauri-apps/api/window'
 
   const { currentTheme } = useTheme()

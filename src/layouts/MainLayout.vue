@@ -236,7 +236,7 @@
   <close-confirm-modal />
 </template>
 
-<style scoped lang="scss">
+<style scoped>
   .logo {
     padding: 16px;
     text-align: center;

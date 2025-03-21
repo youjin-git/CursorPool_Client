@@ -14,16 +14,16 @@
   } from 'naive-ui'
   import { useI18n } from '../locales'
   import { messages } from '../locales/messages'
-  import * as LanguageSwitch from '../components/LanguageSwitch.vue'
-  import * as InboundSelector from '../components/InboundSelector.vue'
-  import * as CloseTypeSelector from '../components/CloseTypeSelector.vue'
-  import * as CursorRunningModal from '../components/CursorRunningModal.vue'
+  import LanguageSwitch from '../components/LanguageSwitch.vue'
+  import InboundSelector from '../components/InboundSelector.vue'
+  import CloseTypeSelector from '../components/CloseTypeSelector.vue'
+  import CursorRunningModal from '../components/CursorRunningModal.vue'
   import { changePassword, activate, checkCursorRunning, applyHook, restoreHook } from '@/api'
   import { addHistoryRecord } from '../utils/history'
   import { version } from '../../package.json'
   import { useUserStore } from '../stores/user'
   import { useCursorStore } from '../stores'
-  import * as FileSelectModal from '../components/FileSelectModal.vue'
+  import FileSelectModal from '../components/FileSelectModal.vue'
   import { useRouter } from 'vue-router'
   import { useAppStore } from '../stores/app'
 
@@ -505,14 +505,6 @@
           <n-button text tag="a" href="https://github.com/Cloxl" target="_blank">Cloxl</n-button>
         </p>
         <p>{{ i18n.about.license }}</p>
-        <a
-          href="https://github.com/yourusername/yourrepo/releases"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="github-link"
-        >
-          GitHub Releases
-        </a>
       </n-space>
     </n-card>
 

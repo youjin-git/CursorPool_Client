@@ -20,9 +20,9 @@
   import type { UserInfo, CursorUserInfo, CursorUsageInfo } from '@/api/types'
   import { WarningOutlined } from '@vicons/antd'
   import { Window } from '@tauri-apps/api/window'
-  import * as DashboardTourComponent from '../components/DashboardTour.vue'
-  import * as MarkdownRenderComponent from '../components/MarkdownRender.vue'
-  import * as ArticleList from '../components/ArticleList.vue'
+  import DashboardTourComponent from '../components/DashboardTour.vue'
+  import MarkdownRenderComponent from '../components/MarkdownRender.vue'
+  import ArticleList from '../components/ArticleList.vue'
   import { useRouter } from 'vue-router'
   import { useUserStore, useCursorStore, useAppStore } from '@/stores'
 

@@ -687,7 +687,7 @@
   </n-modal>
 </template>
 
-<style scoped lang="scss">
+<style scoped>
   .login-overlay {
     position: fixed;
     top: 0;
