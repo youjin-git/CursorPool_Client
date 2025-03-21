@@ -102,93 +102,28 @@
 </script>
 
 <template>
-  <div
-    class="inbound-selector"
-    :class="{
-      compact: props.compact,
-      'icon-only': props.iconOnly,
-    }"
-  >
+  <div class="flex items-center" :class="{ 'gap-0': props.compact, 'gap-1': !props.compact }">
     <!-- 标签 -->
-    <div v-if="showLabel && !iconOnly" class="selector-label">
+    <div v-if="showLabel && !iconOnly" class="text-sm whitespace-nowrap">
       {{ t('inbound.title') }}
     </div>
 
-    <!-- 紧凑模式 - 下拉选择 -->
+    <!-- 选择器 -->
     <n-select
-      v-if="compact"
       :value="selectedInbound"
       :options="selectOptions"
       :disabled="inboundStore.isLoading"
       :loading="inboundStore.isLoading"
       size="small"
-      :style="{ width: '100px' }"
+      :style="{
+        width: props.compact || iconOnly ? '100px' : '120px',
+      }"
       :placeholder="t('inbound.selector')"
       @update:value="handleSelect"
     />
-
-    <!-- 展开模式 - 带背景的选择器 -->
-    <div v-else class="selector-container">
-      <n-select
-        :value="selectedInbound"
-        :options="selectOptions"
-        :disabled="inboundStore.isLoading"
-        :loading="inboundStore.isLoading"
-        size="small"
-        :style="{
-          width: iconOnly ? 'auto' : '120px',
-        }"
-        :placeholder="t('inbound.selector')"
-        @update:value="handleSelect"
-      />
-    </div>
   </div>
 </template>
 
 <style scoped>
-  .inbound-selector {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .selector-label {
-    font-size: 14px;
-    white-space: nowrap;
-  }
-
-  .selector-container {
-    background-color: var(--n-color-hover, rgba(0, 0, 0, 0.05));
-    padding: 0;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    transition: all 0.2s;
-  }
-
-  .compact {
-    gap: 0;
-  }
-
-  .icon-only .selector-container {
-    padding: 0;
-  }
-
-  /* 暗色主题适配 */
-  :root[data-theme='dark'] .selector-container {
-    background-color: var(--n-color-hover, rgba(255, 255, 255, 0.1));
-  }
-
-  :deep(.n-select .n-base-selection) {
-    background-color: transparent;
-    height: 28px;
-  }
-
-  :deep(.n-base-selection-label) {
-    padding: 0 !important;
-  }
-
-  :deep(.n-base-selection__border) {
-    border: none !important;
-  }
+  /* Remove custom styling to use default NaiveUI appearance */
 </style>

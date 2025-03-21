@@ -34,9 +34,9 @@
 </script>
 
 <template>
-  <div class="language-selector" :class="{ compact: props.compact }">
+  <div class="flex items-center" :class="{ 'gap-0': props.compact, 'gap-1': !props.compact }">
     <!-- 标签 -->
-    <div v-if="showLabel" class="selector-label">语言</div>
+    <div v-if="showLabel" class="text-sm whitespace-nowrap">语言</div>
 
     <!-- 语言选择下拉框 -->
     <n-select
@@ -52,31 +52,5 @@
 </template>
 
 <style scoped>
-  .language-selector {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .selector-label {
-    font-size: 14px;
-    white-space: nowrap;
-  }
-
-  .compact {
-    gap: 0;
-  }
-
-  :deep(.n-select .n-base-selection) {
-    background-color: transparent;
-    height: 28px;
-  }
-
-  :deep(.n-base-selection-label) {
-    padding: 0 !important;
-  }
-
-  :deep(.n-base-selection__border) {
-    border: none !important;
-  }
+  /* Remove custom styling to use default NaiveUI appearance */
 </style>

@@ -60,16 +60,3 @@
     </n-dialog-provider>
   </n-config-provider>
 </template>
-
-<style>
-  body {
-    margin: 0;
-    font-family:
-      'JetBrains Mono',
-      -apple-system,
-      BlinkMacSystemFont,
-      'Segoe UI',
-      system-ui,
-      sans-serif;
-  }
-</style>
