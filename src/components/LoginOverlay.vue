@@ -171,52 +171,6 @@
     ]
   }
 
-  // 邮箱自动完成选项 - 登录
-  const loginEmailOptions = computed(() => {
-    const inputValue = formState.login.username
-
-    // 如果已经是完整的有效邮箱，不显示选项
-    if (isValidEmail(inputValue)) {
-      return []
-    }
-
-    const atIndex = inputValue.lastIndexOf('@')
-
-    // 只有当用户输入@后才显示选项
-    if (atIndex === -1) return []
-
-    const username = inputValue.substring(0, atIndex)
-    if (!username) return []
-
-    return emailProviders.map((provider) => ({
-      label: `${username}@${provider.domain}`,
-      value: `${username}@${provider.domain}`,
-    }))
-  })
-
-  // 邮箱自动完成选项 - 注册
-  const registerEmailOptions = computed(() => {
-    const inputValue = formState.register.email
-
-    // 如果已经是完整的有效邮箱，不显示选项
-    if (isValidEmail(inputValue)) {
-      return []
-    }
-
-    const atIndex = inputValue.lastIndexOf('@')
-
-    // 只有当用户输入@后才显示选项
-    if (atIndex === -1) return []
-
-    const username = inputValue.substring(0, atIndex)
-    if (!username) return []
-
-    return emailProviders.map((provider) => ({
-      label: `${username}@${provider.domain}`,
-      value: `${username}@${provider.domain}`,
-    }))
-  })
-
   // 验证邮箱格式
   function isValidEmail(email: string): boolean {
     if (!emailRegex.test(email)) return false
@@ -242,6 +196,31 @@
     }
     return undefined
   }
+
+  // 邮箱自动完成选项公共逻辑
+  const getEmailOptions = (inputValue: string) => {
+    if (isValidEmail(inputValue)) {
+      return []
+    }
+    const atIndex = inputValue.lastIndexOf('@')
+    if (atIndex === -1) return []
+    const username = inputValue.substring(0, atIndex)
+    if (!username) return []
+    return emailProviders.map((provider) => ({
+      label: `${username}@${provider.domain}`,
+      value: `${username}@${provider.domain}`,
+    }))
+  }
+
+  // 邮箱自动完成选项 - 登录
+  const loginEmailOptions = computed(() => {
+    return getEmailOptions(formState.login.username)
+  })
+
+  // 邮箱自动完成选项 - 注册
+  const registerEmailOptions = computed(() => {
+    return getEmailOptions(formState.register.email)
+  })
 
   // 登录邮箱状态
   const loginEmailStatus = computed(() => checkEmailDomain(formState.login.username))
