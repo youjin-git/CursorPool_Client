@@ -25,6 +25,7 @@
   import ArticleList from '../components/ArticleList.vue'
   import { useRouter } from 'vue-router'
   import { useUserStore, useCursorStore, useAppStore } from '@/stores'
+  import CursorRunningModal from '../components/CursorRunningModal.vue'
 
   interface DeviceInfoState {
     machineCode: string
