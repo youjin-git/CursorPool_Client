@@ -171,7 +171,7 @@
       stageBackground: themeColors.value.highlightBgColor,
       // 高亮元素的 z-index
       stageRadius: 5,
-      onHighlighted: (element: Element | undefined, step: DriveStep) => {
+      onHighlighted: (_: Element | undefined, step: DriveStep) => {
         if (!step) return
 
         // 只在第一步显示跳过按钮

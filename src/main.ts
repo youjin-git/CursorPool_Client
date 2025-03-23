@@ -8,6 +8,8 @@ import 'vfonts/Lato.css'
 // 等宽字体
 import 'vfonts/FiraCode.css'
 import Logger from './utils/logger'
+// Import UnoCSS
+import 'uno.css'
 
 const app = createApp(App)
 const pinia = createPinia()

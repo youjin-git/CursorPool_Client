@@ -30,18 +30,18 @@
 </script>
 
 <template>
-  <div class="update-overlay">
-    <n-card class="update-card" title="应用更新">
-      <div class="update-content">
-        <div v-if="showSpinner" class="loading-spinner">
+  <div class="fixed inset-0 flex-center bg-black/65 backdrop-blur-md z-1000 select-none">
+    <n-card class="w-460px max-w-90% rounded-lg shadow-lg">
+      <div class="py-2 flex flex-col items-center">
+        <div v-if="showSpinner" class="mb-4">
           <n-spin size="large" />
         </div>
 
-        <div class="status-text">
+        <div class="text-base mb-4 text-center">
           {{ statusText }}
         </div>
 
-        <n-space vertical class="progress-container">
+        <n-space vertical class="w-full mb-2">
           <n-progress
             type="line"
             :percentage="updaterStore.progressPercentage"
@@ -52,7 +52,7 @@
           />
         </n-space>
 
-        <div v-if="updaterStore.isDownloading" class="byte-info">
+        <div v-if="updaterStore.isDownloading" class="text-xs text-$n-text-color-3 mt-1">
           {{ Math.round((updaterStore.downloadedBytes / 1024 / 1024) * 100) / 100 }}
           MB /
           {{ Math.round((updaterStore.totalBytes / 1024 / 1024) * 100) / 100 }}
@@ -64,56 +64,6 @@
 </template>
 
 <style scoped>
-  .update-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(8px);
-    z-index: 1000;
-    user-select: none;
-  }
-
-  .update-card {
-    width: 460px;
-    max-width: 90%;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
-  }
-
-  .update-content {
-    padding: 8px 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .loading-spinner {
-    margin-bottom: 16px;
-  }
-
-  .status-text {
-    font-size: 16px;
-    margin-bottom: 16px;
-    text-align: center;
-  }
-
-  .progress-container {
-    width: 100%;
-    margin-bottom: 8px;
-  }
-
-  .byte-info {
-    font-size: 12px;
-    color: var(--n-text-color-3);
-    margin-top: 4px;
-  }
-
   :deep(.n-card-header) {
     text-align: center;
     font-size: 1.5em;

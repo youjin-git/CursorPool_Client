@@ -71,65 +71,23 @@
 </script>
 
 <template>
-  <div class="close-type-selector" :class="{ compact: props.compact }">
+  <div class="flex items-center" :class="{ 'gap-0': props.compact, 'gap-1': !props.compact }">
     <!-- 标签 -->
-    <div v-if="showLabel" class="selector-label">关闭方式</div>
+    <div v-if="showLabel" class="text-sm whitespace-nowrap">关闭方式</div>
 
-    <!-- 展开模式 - 带背景的选择器 -->
-    <div class="selector-container">
-      <n-select
-        v-model:value="selectedCloseType"
-        :options="closeTypeOptions"
-        size="small"
-        :style="{
-          width: props.compact ? '100px' : '120px',
-        }"
-        @update:value="handleChange"
-      />
-    </div>
+    <!-- 选择器 -->
+    <n-select
+      v-model:value="selectedCloseType"
+      :options="closeTypeOptions"
+      size="small"
+      :style="{
+        width: props.compact ? '100px' : '120px',
+      }"
+      @update:value="handleChange"
+    />
   </div>
 </template>
 
 <style scoped>
-  .close-type-selector {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .selector-label {
-    font-size: 14px;
-    white-space: nowrap;
-  }
-
-  .selector-container {
-    background-color: var(--n-color-hover, rgba(0, 0, 0, 0.05));
-    padding: 0;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    transition: all 0.2s;
-  }
-
-  .compact {
-    gap: 0;
-  }
-
-  /* 暗色主题适配 */
-  :root[data-theme='dark'] .selector-container {
-    background-color: var(--n-color-hover, rgba(255, 255, 255, 0.1));
-  }
-
-  :deep(.n-select .n-base-selection) {
-    background-color: transparent;
-    height: 28px;
-  }
-
-  :deep(.n-base-selection-label) {
-    padding: 0 !important;
-  }
-
-  :deep(.n-base-selection__border) {
-    border: none !important;
-  }
+  /* Remove custom styling to use default NaiveUI appearance */
 </style>
