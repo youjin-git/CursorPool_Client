@@ -174,12 +174,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await Logger.info('开始重置机器码')
 
       // 检查 Cursor 是否在运行
-      if (!forceKill) {
-        const isRunning = await checkCursorRunning()
-        if (isRunning) {
-          throw new Error('Cursor进程正在运行, 请先关闭Cursor')
-        }
-      }
+      await ensureCursorNotRunning(forceKill)
 
       await resetMachineId({
         forceKill,
@@ -218,12 +213,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await Logger.info('开始切换账户操作')
 
       // 检查 Cursor 是否在运行
-      if (!forceKill) {
-        const isRunning = await checkCursorRunning()
-        if (isRunning) {
-          throw new Error('Cursor进程正在运行, 请先关闭Cursor')
-        }
-      }
+      await ensureCursorNotRunning(forceKill)
 
       // 如果未提供邮箱和token，则自动获取
       if (!email || !token) {
@@ -270,12 +260,7 @@ export const useCursorStore = defineStore('cursor', () => {
       await Logger.info('开始一键换号操作')
 
       // 检查 Cursor 是否在运行
-      if (!forceKill) {
-        const isRunning = await checkCursorRunning()
-        if (isRunning) {
-          throw new Error('Cursor进程正在运行, 请先关闭Cursor')
-        }
-      }
+      await ensureCursorNotRunning(forceKill)
 
       // 先重置机器码
       try {
@@ -679,6 +664,15 @@ export const useCursorStore = defineStore('cursor', () => {
       params,
     }
     showSelectFileModal.value = true
+  }
+
+  /**
+   * 检查Cursor是否正在运行，如果正在运行且不允许强制关闭则抛出错误
+   */
+  async function ensureCursorNotRunning(forceKill: boolean) {
+    if (!forceKill && (await checkCursorRunning())) {
+      throw new Error('Cursor进程正在运行, 请先关闭Cursor');
+    }
   }
 
   return {
