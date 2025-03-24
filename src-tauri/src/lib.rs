@@ -6,9 +6,9 @@ use database::Database;
 use std::env;
 use std::error::Error as StdError;
 use std::path::PathBuf;
-use tracing::{debug, error, info};
 use tauri::{generate_context, generate_handler, Manager};
-use utils::{init_logger, LogConfig, get_app_log_dir};
+use tracing::{debug, error, info};
+use utils::{get_app_log_dir, init_logger, LogConfig};
 
 pub mod api;
 pub mod auth;
@@ -19,7 +19,9 @@ pub mod tray;
 pub mod utils;
 
 pub fn run() {
-    let mut builder = tauri::Builder::default().plugin(tauri_plugin_process::init());
+    let mut builder = tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_process::init());
 
     #[cfg(desktop)]
     {
@@ -47,7 +49,7 @@ pub fn run() {
             if let Err(e) = config::init_config() {
                 eprintln!("初始化配置失败: {}", e);
             }
-            
+
             // 初始化日志系统
             let log_dir = match get_app_log_dir(app.handle()) {
                 Ok(dir) => dir,
@@ -56,7 +58,7 @@ pub fn run() {
                     PathBuf::from("logs") // 回退到当前目录下的logs文件夹
                 }
             };
-            
+
             // 配置日志系统
             let log_config = LogConfig {
                 log_dir,
@@ -68,22 +70,22 @@ pub fn run() {
                 },
                 json_format: false,
             };
-            
+
             // 初始化日志系统
             if let Err(e) = init_logger(log_config) {
                 eprintln!("初始化日志系统失败: {}", e);
             }
-            
+
             // 记录应用启动信息
             info!("应用启动");
             debug!("调试模式: {}", cfg!(debug_assertions));
-            
+
             // 初始化数据库
             let db = match Database::new(app.handle()) {
                 Ok(db) => {
                     info!("数据库初始化成功");
                     db
-                },
+                }
                 Err(e) => {
                     error!("数据库初始化失败: {}", e);
                     return Err(Box::<dyn StdError>::from(e.to_string()));
@@ -100,10 +102,10 @@ pub fn run() {
                     info!("线路配置初始化成功");
                 }
             });
-            
+
             // 延迟一小段时间，以便线路配置初始化完成
             std::thread::sleep(std::time::Duration::from_millis(100));
-            
+
             let api_client = ApiClient::new(Some(app.handle().clone()));
             app.manage(api_client);
 
@@ -113,7 +115,7 @@ pub fn run() {
                 return Err(Box::<dyn StdError>::from(e.to_string()));
             }
             info!("系统托盘初始化成功");
-            
+
             Ok(())
         })
         .invoke_handler(generate_handler![
@@ -124,7 +126,6 @@ pub fn run() {
             api::send_code,
             api::reset_password,
             api::register,
-
             // 主页
             api::get_user_info,
             api::get_account,
@@ -132,36 +133,29 @@ pub fn run() {
             api::get_public_info,
             api::get_article_list,
             api::mark_article_read,
-
             // 设置
             api::activate,
             api::change_password,
-
             // 数据库
             api::set_user_data,
             api::get_user_data,
             api::del_user_data,
-            
             // 换号
             cursor_reset::commands::reset_machine_id,
             cursor_reset::commands::switch_account,
             cursor_reset::commands::get_machine_ids,
-
             // 权限
             cursor_reset::commands::check_cursor_running,
             cursor_reset::commands::check_admin_privileges,
             cursor_reset::commands::check_is_windows,
-
             // hook
             cursor_reset::commands::is_hook,
             cursor_reset::commands::hook_main_js,
             cursor_reset::commands::restore_hook,
-
             // cursor
             cursor_reset::commands::close_cursor,
             cursor_reset::commands::launch_cursor,
             cursor_reset::commands::find_cursor_path,
-
             // 日志
             cursor_reset::commands::log_error,
             cursor_reset::commands::log_warn,

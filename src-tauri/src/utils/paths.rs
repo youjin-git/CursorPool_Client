@@ -50,10 +50,16 @@ impl AppPaths {
             let default_path = {
                 let local_app_data = std::env::var("LOCALAPPDATA")
                     .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-                let default_path_str = config::CONFIG.read().unwrap().paths.windows.cursor_exe.clone();
+                let default_path_str = config::CONFIG
+                    .read()
+                    .unwrap()
+                    .paths
+                    .windows
+                    .cursor_exe
+                    .clone();
                 PathBuf::from(default_path_str.replace("%LOCALAPPDATA%", &local_app_data))
             };
-            
+
             // 检查默认路径是否存在
             if default_path.exists() {
                 default_path
@@ -61,14 +67,26 @@ impl AppPaths {
                 // 尝试从环境变量PATH中查找
                 match Self::find_cursor_exe_from_env_path() {
                     Ok(path) => path,
-                    Err(_) => default_path // 如果找不到，依然返回默认路径
+                    Err(_) => default_path, // 如果找不到，依然返回默认路径
                 }
             }
         } else if cfg!(target_os = "macos") {
-            let default_path_str = config::CONFIG.read().unwrap().paths.macos.cursor_app.clone();
+            let default_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .macos
+                .cursor_app
+                .clone();
             PathBuf::from(default_path_str)
         } else {
-            let default_path_str = config::CONFIG.read().unwrap().paths.linux.cursor_exe.clone();
+            let default_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .linux
+                .cursor_exe
+                .clone();
             PathBuf::from(default_path_str)
         };
 
@@ -76,15 +94,33 @@ impl AppPaths {
         let cursor_updater = if cfg!(target_os = "windows") {
             let local_app_data = std::env::var("LOCALAPPDATA")
                 .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-            let updater_path_str = config::CONFIG.read().unwrap().paths.windows.cursor_updater.clone();
+            let updater_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .windows
+                .cursor_updater
+                .clone();
             PathBuf::from(updater_path_str.replace("%LOCALAPPDATA%", &local_app_data))
         } else if cfg!(target_os = "macos") {
             let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
-            let updater_path_str = config::CONFIG.read().unwrap().paths.macos.cursor_updater.clone();
+            let updater_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .macos
+                .cursor_updater
+                .clone();
             PathBuf::from(updater_path_str.replace("~", &home))
         } else {
             let home = std::env::var("HOME").map_err(|e| format!("获取 HOME 路径失败: {}", e))?;
-            let updater_path_str = config::CONFIG.read().unwrap().paths.linux.cursor_updater.clone();
+            let updater_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .linux
+                .cursor_updater
+                .clone();
             PathBuf::from(updater_path_str.replace("~", &home))
         };
 
@@ -128,13 +164,16 @@ impl AppPaths {
         // 分割PATH变量并查找cursor.exe
         for dir in path.split(';') {
             let path_buf = PathBuf::from(dir);
-            
+
             // 如果PATH中包含cursor相关路径
             if dir.to_lowercase().contains("cursor") {
-                
                 // 情况1: 如果是"resources/app/bin"这样的路径，向上查找cursor.exe
-                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") && (dir.to_lowercase().ends_with("bin")
-                        || dir.to_lowercase().contains("\\bin") || dir.to_lowercase().contains("/bin")) {
+                if dir.to_lowercase().contains("resources")
+                    && dir.to_lowercase().contains("app")
+                    && (dir.to_lowercase().ends_with("bin")
+                        || dir.to_lowercase().contains("\\bin")
+                        || dir.to_lowercase().contains("/bin"))
+                {
                     // 向上两级查找，cursor.exe通常在bin的上两级目录
                     if let Some(app_dir) = path_buf.parent() {
                         if let Some(resources_dir) = app_dir.parent() {
@@ -147,14 +186,14 @@ impl AppPaths {
                         }
                     }
                 }
-                
+
                 // 情况2: 直接在当前目录查找
                 let cursor_exe_path = path_buf.join("Cursor.exe");
                 if cursor_exe_path.exists() {
                     println!("找到Cursor.exe: {}", cursor_exe_path.display());
                     return Ok(cursor_exe_path);
                 }
-                
+
                 // 情况3: 在父目录查找
                 if let Some(parent) = path_buf.parent() {
                     let cursor_exe_path = parent.join("Cursor.exe");
@@ -174,14 +213,32 @@ impl AppPaths {
         let default_path = if cfg!(target_os = "windows") {
             let local_app_data = std::env::var("LOCALAPPDATA")
                 .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-            let resources_path_str = config::CONFIG.read().unwrap().paths.windows.cursor_resources.clone();
+            let resources_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .windows
+                .cursor_resources
+                .clone();
             PathBuf::from(resources_path_str.replace("%LOCALAPPDATA%", &local_app_data))
         } else if cfg!(target_os = "macos") {
-            let resources_path_str = config::CONFIG.read().unwrap().paths.macos.cursor_resources.clone();
+            let resources_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .macos
+                .cursor_resources
+                .clone();
             PathBuf::from(resources_path_str)
         } else {
             // Linux 路径
-            let resources_path_str = config::CONFIG.read().unwrap().paths.linux.cursor_resources.clone();
+            let resources_path_str = config::CONFIG
+                .read()
+                .unwrap()
+                .paths
+                .linux
+                .cursor_resources
+                .clone();
             PathBuf::from(resources_path_str)
         };
 
@@ -212,8 +269,12 @@ impl AppPaths {
             // 处理已经包含"resources/app/bin"这样路径的情况
             if dir.to_lowercase().contains("cursor") {
                 // 如果路径包含bin目录，尝试查找同级的out目录
-                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") && (dir.to_lowercase().ends_with("bin")
-                        || dir.to_lowercase().contains("\\bin") || dir.to_lowercase().contains("/bin")) {
+                if dir.to_lowercase().contains("resources")
+                    && dir.to_lowercase().contains("app")
+                    && (dir.to_lowercase().ends_with("bin")
+                        || dir.to_lowercase().contains("\\bin")
+                        || dir.to_lowercase().contains("/bin"))
+                {
                     let potential_base = if let Some(parent) = path_buf.parent() {
                         parent
                     } else {
@@ -319,7 +380,9 @@ impl AppPaths {
         // 检查直接选择的是否为main.js
         if selected_path_buf
             .file_name()
-            .map_or(false, |name| name == "main.js") && selected_path_buf.exists() {
+            .map_or(false, |name| name == "main.js")
+            && selected_path_buf.exists()
+        {
             return Ok(selected_path_buf);
         }
 

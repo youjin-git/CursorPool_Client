@@ -44,14 +44,14 @@ impl ApiClient {
     /// 获取基础URL，优先使用inbound配置
     pub fn get_base_url(&self) -> String {
         use crate::api::inbound::get_current_inbound_url;
-        
+
         // 如果有AppHandle，尝试获取当前线路URL
         if let Some(handle) = &self.app_handle {
             if let Some(db) = handle.try_state::<crate::database::Database>() {
                 return get_current_inbound_url(&db);
             }
         }
-        
+
         // 回退到默认URL
         config::get_default_api_url()
     }
@@ -102,7 +102,7 @@ impl ApiClient {
                     if let Err(e) = crate::api::interceptor::clear_auth_token(&db).await {
                         error!(
                             target: "http_client",
-                            "清除认证令牌失败 - URL: {}, 错误: {}", 
+                            "清除认证令牌失败 - URL: {}, 错误: {}",
                             url_str, e
                         );
                     }
@@ -111,7 +111,7 @@ impl ApiClient {
         } else if let Err(e) = save_auth_token(&db, &url_str, &response_text).await {
             error!(
                 target: "http_client",
-                "保存认证令牌失败 - URL: {}, 错误: {}", 
+                "保存认证令牌失败 - URL: {}, 错误: {}",
                 url_str, e
             );
         }
@@ -168,13 +168,13 @@ impl<'a> RequestBuilder<'a> {
     pub async fn send(self) -> Result<Response, reqwest::Error> {
         // 在构建请求前获取内部构建器的调试信息
         let debug_info = format!("{:?}", self.inner);
-        
+
         let request = match self.inner.build() {
             Ok(req) => req,
             Err(e) => {
                 error!(
                     target: "http_client",
-                    "构建HTTP请求失败 - 请求: {}, 错误: {}", 
+                    "构建HTTP请求失败 - 请求: {}, 错误: {}",
                     debug_info, e
                 );
                 return Err(e);

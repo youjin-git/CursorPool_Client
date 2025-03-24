@@ -85,7 +85,8 @@ impl Default for AppConfig {
         Self {
             api: ApiConfig {
                 default_api_url: "https://pool.52ai.org/api".to_string(),
-                config_file_url: "https://cursorpool.oss-cn-guangzhou.aliyuncs.com/config.json".to_string(),
+                config_file_url: "https://cursorpool.oss-cn-guangzhou.aliyuncs.com/config.json"
+                    .to_string(),
                 cursor_user_id: "user_01000000000000000000000000".to_string(),
                 public_endpoints: vec![
                     "/login".to_string(),
@@ -104,12 +105,14 @@ impl Default for AppConfig {
             paths: PathConfig {
                 windows: WindowsPaths {
                     cursor_exe: "%LOCALAPPDATA%\\Programs\\cursor\\Cursor.exe".to_string(),
-                    cursor_resources: "%LOCALAPPDATA%\\Programs\\cursor\\resources\\app\\out\\main.js".to_string(),
+                    cursor_resources:
+                        "%LOCALAPPDATA%\\Programs\\cursor\\resources\\app\\out\\main.js".to_string(),
                     cursor_updater: "%LOCALAPPDATA%\\cursor-updater".to_string(),
                 },
                 macos: MacOSPaths {
                     cursor_app: "/Applications/Cursor.app/Contents/MacOS/Cursor".to_string(),
-                    cursor_resources: "/Applications/Cursor.app/Contents/Resources/app/out/main.js".to_string(),
+                    cursor_resources: "/Applications/Cursor.app/Contents/Resources/app/out/main.js"
+                        .to_string(),
                     cursor_updater: "~/Library/Application Support/cursor-updater".to_string(),
                 },
                 linux: LinuxPaths {
@@ -146,28 +149,58 @@ pub fn init_config() -> Result<(), String> {
 // 辅助函数: 根据操作系统获取当前系统路径配置
 pub fn get_os_paths() -> PathBuf {
     let config = CONFIG.read().unwrap();
-    
+
     if cfg!(target_os = "windows") {
-        PathBuf::from(config.paths.windows.cursor_exe.replace("%LOCALAPPDATA%", &env::var("LOCALAPPDATA").unwrap_or_default()))
+        PathBuf::from(config.paths.windows.cursor_exe.replace(
+            "%LOCALAPPDATA%",
+            &env::var("LOCALAPPDATA").unwrap_or_default(),
+        ))
     } else if cfg!(target_os = "macos") {
-        PathBuf::from(config.paths.macos.cursor_app.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .macos
+                .cursor_app
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     } else {
         // Linux
-        PathBuf::from(config.paths.linux.cursor_exe.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .linux
+                .cursor_exe
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     }
 }
 
 // 获取当前操作系统的资源路径
 pub fn get_os_resources_path() -> PathBuf {
     let config = CONFIG.read().unwrap();
-    
+
     if cfg!(target_os = "windows") {
-        PathBuf::from(config.paths.windows.cursor_resources.replace("%LOCALAPPDATA%", &env::var("LOCALAPPDATA").unwrap_or_default()))
+        PathBuf::from(config.paths.windows.cursor_resources.replace(
+            "%LOCALAPPDATA%",
+            &env::var("LOCALAPPDATA").unwrap_or_default(),
+        ))
     } else if cfg!(target_os = "macos") {
-        PathBuf::from(config.paths.macos.cursor_resources.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .macos
+                .cursor_resources
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     } else {
         // Linux
-        PathBuf::from(config.paths.linux.cursor_resources.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .linux
+                .cursor_resources
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     }
 }
 
@@ -194,24 +227,24 @@ pub fn get_ping_timeout() -> Duration {
 // 检查是否为公共端点
 pub fn is_public_endpoint(url: &str) -> bool {
     let config = CONFIG.read().unwrap();
-    
+
     if url.contains("cursor.com") {
         return true;
     }
-    
+
     for endpoint in &config.api.public_endpoints {
         if url.contains(endpoint) {
             return true;
         }
     }
-    
+
     false
 }
 
 // 获取数据库键
 pub fn get_db_key(key_type: &str) -> String {
     let config = CONFIG.read().unwrap();
-    
+
     match key_type {
         "inbound_config" => config.db_keys.inbound_config_key.clone(),
         "current_inbound" => config.db_keys.current_inbound_key.clone(),
@@ -220,4 +253,4 @@ pub fn get_db_key(key_type: &str) -> String {
         "lang" => config.db_keys.lang_key.clone(),
         _ => "".to_string(),
     }
-} 
+}

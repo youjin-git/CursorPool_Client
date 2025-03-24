@@ -17,11 +17,17 @@ impl ErrorReporter {
         // 记录错误到日志系统
         let severity_str = severity.as_deref().unwrap_or("low");
         match severity_str {
-            "high" => error!(target: "error_report", "严重错误 - 函数: {}, 错误: {}", function_name, error),
-            "medium" => error!(target: "error_report", "中等错误 - 函数: {}, 错误: {}", function_name, error),
-            _ => warn!(target: "error_report", "轻微错误 - 函数: {}, 错误: {}", function_name, error),
+            "high" => {
+                error!(target: "error_report", "严重错误 - 函数: {}, 错误: {}", function_name, error)
+            }
+            "medium" => {
+                error!(target: "error_report", "中等错误 - 函数: {}, 错误: {}", function_name, error)
+            }
+            _ => {
+                warn!(target: "error_report", "轻微错误 - 函数: {}, 错误: {}", function_name, error)
+            }
         }
-        
+
         // 构建错误描述
         let bug_description = format!("函数: {}\n错误: {}", function_name, error);
 

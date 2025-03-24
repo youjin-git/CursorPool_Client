@@ -98,7 +98,7 @@ pub async fn register(
         error!(target: "api", "获取注册响应文本失败 - 错误: {}", e);
         e.to_string()
     })?;
-    
+
     serde_json::from_str(&response_text).map_err(|e| {
         error!(target: "api", "解析注册响应失败 - 错误: {}", e);
         e.to_string()
@@ -135,9 +135,7 @@ pub async fn login(
 
 /// 获取用户信息
 #[tauri::command]
-pub async fn get_user_info(
-    client: State<'_, ApiClient>,
-) -> Result<ApiResponse<UserInfo>, String> {
+pub async fn get_user_info(client: State<'_, ApiClient>) -> Result<ApiResponse<UserInfo>, String> {
     let response = client
         .get(format!("{}/user", client.get_base_url()))
         .send()
@@ -228,11 +226,10 @@ pub async fn get_account(
         e.to_string()
     })?;
 
-    let response: ApiResponse<AccountPoolInfo> =
-        response.json().await.map_err(|e| {
-            error!(target: "api", "解析账户信息响应失败 - 错误: {}", e);
-            e.to_string()
-        })?;
+    let response: ApiResponse<AccountPoolInfo> = response.json().await.map_err(|e| {
+        error!(target: "api", "解析账户信息响应失败 - 错误: {}", e);
+        e.to_string()
+    })?;
 
     // 如果获取成功且有账户信息，将token保存到历史记录
     if response.status == 200 && response.data.is_some() {
@@ -273,7 +270,7 @@ pub async fn get_usage(
     token: String,
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
     let user_id = config::CONFIG.read().unwrap().api.cursor_user_id.clone();
-    
+
     // token可能包含了用户ID部分，需要分割并只使用token部分
     let actual_token = if token.contains("%3A%3A") {
         // 如果token包含分隔符，取第二部分
@@ -282,7 +279,7 @@ pub async fn get_usage(
         // 否则使用原始token
         token
     };
-    
+
     let response = client
         .get("https://www.cursor.com/api/usage")
         .header(
@@ -405,11 +402,10 @@ pub async fn report_bug(
 /// 用户登出
 #[tauri::command]
 pub async fn logout(db: State<'_, Database>) -> Result<ApiResponse<()>, String> {
-    db.delete_item("user.info.token")
-        .map_err(|e| {
-            error!(target: "api", "删除用户token失败 - 错误: {}", e);
-            e.to_string()
-        })?;
+    db.delete_item("user.info.token").map_err(|e| {
+        error!(target: "api", "删除用户token失败 - 错误: {}", e);
+        e.to_string()
+    })?;
 
     Ok(ApiResponse {
         status: 200,
@@ -487,16 +483,14 @@ pub async fn get_article_list(
 ) -> Result<ApiResponse<Vec<Article>>, String> {
     // 获取公告数据
     let result = fetch_article_list(&client).await;
-    
+
     match result {
-        Ok(articles) => {
-            Ok(ApiResponse {
-                status: 200,
-                msg: "获取公告成功".to_string(),
-                data: Some(articles),
-                code: Some("SUCCESS".to_string()),
-            })
-        },
+        Ok(articles) => Ok(ApiResponse {
+            status: 200,
+            msg: "获取公告成功".to_string(),
+            data: Some(articles),
+            code: Some("SUCCESS".to_string()),
+        }),
         Err(e) => {
             // 接口错误时，返回空列表而不是错误
             error!(target: "api", "获取公告列表失败，返回空列表 - 错误: {}", e);
@@ -520,12 +514,12 @@ async fn fetch_article_list(client: &ApiClient) -> Result<Vec<Article>, String> 
             error!(target: "api", "获取公告列表请求失败 - 错误: {}", e);
             e.to_string()
         })?;
-    
+
     let response_json: serde_json::Value = response.json().await.map_err(|e| {
         error!(target: "api", "解析公告列表响应失败 - 错误: {}", e);
         e.to_string()
     })?;
-    
+
     // 检查状态码
     let status = response_json["status"].as_i64().unwrap_or(0);
     if status != 200 {
@@ -533,24 +527,20 @@ async fn fetch_article_list(client: &ApiClient) -> Result<Vec<Article>, String> 
         error!(target: "api", "公告列表状态码错误 - 状态码: {}", status);
         return Err(error_msg);
     }
-    
+
     // 提取所需字段
     let empty_vec = Vec::new();
     let data = response_json["data"].as_array().unwrap_or(&empty_vec);
     let mut articles = Vec::new();
-    
+
     for item in data {
         let id = item["id"].as_i64().unwrap_or(0) as i32;
         let title = item["title"].as_str().unwrap_or("").to_string();
         let content = item["content"].as_str().unwrap_or("").to_string();
-        
-        articles.push(Article {
-            id,
-            title,
-            content,
-        });
+
+        articles.push(Article { id, title, content });
     }
-    
+
     Ok(articles)
 }
 
@@ -562,21 +552,19 @@ pub async fn mark_article_read(
 ) -> Result<ApiResponse<()>, String> {
     // 获取已读ID集合
     let read_ids = match db.get_item("system.articles") {
-        Ok(Some(data)) => {
-            serde_json::from_str::<Vec<i32>>(&data).unwrap_or_default()
-        },
+        Ok(Some(data)) => serde_json::from_str::<Vec<i32>>(&data).unwrap_or_default(),
         Ok(None) => Vec::new(),
         Err(e) => {
             error!(target: "api", "获取已读文章列表失败 - 错误: {}", e);
             Vec::new()
         }
     };
-    
+
     // 检查文章ID是否已在已读列表中
     let mut updated_ids = read_ids.clone();
     if !updated_ids.contains(&article_id) {
         updated_ids.push(article_id);
-        
+
         // 保存更新后的已读ID列表
         let json_data = serde_json::to_string(&updated_ids).map_err(|e| {
             error!(target: "api", "序列化已读文章ID列表失败 - 错误: {}", e);
@@ -587,7 +575,7 @@ pub async fn mark_article_read(
             e.to_string()
         })?;
     }
-    
+
     Ok(ApiResponse {
         status: 200,
         msg: "文章已标记为已读".to_string(),
