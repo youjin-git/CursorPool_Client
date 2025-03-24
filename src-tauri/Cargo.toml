@@ -48,6 +48,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "time"] }
 tracing-appender = "0.2"
 time = { version = "0.3", features = ["formatting", "macros"] }
+tauri-plugin-notification = "2"
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.52", features = [
