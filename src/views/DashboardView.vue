@@ -24,7 +24,7 @@
   import MarkdownRenderComponent from '../components/MarkdownRender.vue'
   import ArticleList from '../components/ArticleList.vue'
   import { useRouter } from 'vue-router'
-  import { useUserStore, useCursorStore, useAppStore } from '@/stores'
+  import { useUserStore, useCursorStore, useAppStore, useNotificationStore } from '@/stores'
   import CursorRunningModal from '../components/CursorRunningModal.vue'
 
   interface DeviceInfoState {
@@ -95,6 +95,7 @@
   const userStore = useUserStore()
   const cursorStore = useCursorStore()
   const appStore = useAppStore()
+  const notificationStore = useNotificationStore()
 
   // 添加路由对象
   const router = useRouter()
@@ -341,6 +342,12 @@
       await cursorStore.switchCursorAccount(undefined, undefined, force_kill)
       message.success(i18n.value.dashboard.accountChangeSuccess)
 
+      // 发送通知
+      await notificationStore.notify({
+        title: 'Cursor Pool',
+        body: i18n.value.dashboard.accountChangeSuccess,
+      })
+
       await fetchUserInfo()
       updateLocalViewState()
     } catch (error) {
@@ -356,6 +363,12 @@
     try {
       await cursorStore.quickChange(undefined, undefined, force_kill)
       message.success(i18n.value.dashboard.changeSuccess)
+
+      // 发送通知
+      await notificationStore.notify({
+        title: 'Cursor Pool',
+        body: i18n.value.dashboard.changeSuccess,
+      })
 
       await fetchUserInfo()
 
@@ -514,6 +527,9 @@
   onMounted(async () => {
     try {
       loading.value = true
+
+      // 检查通知权限
+      await notificationStore.checkPermission()
 
       // 初始化按钮显示状态
       await appStore.initButtonSettings()

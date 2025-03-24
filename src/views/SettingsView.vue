@@ -18,6 +18,7 @@
   import InboundSelector from '../components/InboundSelector.vue'
   import CloseTypeSelector from '../components/CloseTypeSelector.vue'
   import CursorRunningModal from '../components/CursorRunningModal.vue'
+  import NotificationPermissionSetting from '../components/NotificationPermissionSetting.vue'
   import { changePassword, activate, checkCursorRunning, applyHook, restoreHook } from '@/api'
   import { addHistoryRecord } from '../utils/history'
   import { version } from '../../package.json'
@@ -298,42 +299,48 @@
       <n-space vertical :size="16">
         <!-- Hook 控制部分 -->
         <div>
-          <div class="section-header">
-            {{ i18n.systemControl.hookStatus }}
-          </div>
-          <n-space justify="space-between" align="center">
-            <span>
-              <template v-if="controlStatus.isChecking">
-                <n-spin size="small" />
-              </template>
-              <template v-else>
-                {{
-                  controlStatus.isHooked
-                    ? i18n.systemControl.hookApplied
-                    : i18n.systemControl.hookNotApplied
-                }}
-              </template>
-            </span>
-            <n-space>
-              <n-button
-                type="warning"
-                :loading="applyHookLoading || controlStatus.isChecking"
-                :disabled="controlStatus.isHooked"
-                style="width: 120px"
-                @click="handleControlAction('applyHook')"
-              >
-                {{ i18n.systemControl.applyHook }}
-              </n-button>
-              <n-button
-                type="primary"
-                :loading="restoreHookLoading || controlStatus.isChecking"
-                :disabled="!controlStatus.isHooked"
-                style="width: 120px"
-                @click="handleControlAction('restoreHook')"
-              >
-                {{ i18n.systemControl.restoreHook }}
-              </n-button>
+          <n-space vertical :size="8">
+            <!-- 客户端注入状态 -->
+            <n-space justify="space-between" align="center">
+              <span>
+                <small style="margin-right: 8px; color: var(--n-text-color-3)"
+                  >客户端注入状态:</small
+                >
+                <template v-if="controlStatus.isChecking">
+                  <n-spin size="small" />
+                </template>
+                <template v-else>
+                  {{
+                    controlStatus.isHooked
+                      ? i18n.systemControl.hookApplied
+                      : i18n.systemControl.hookNotApplied
+                  }}
+                </template>
+              </span>
+              <n-space>
+                <n-button
+                  type="warning"
+                  :loading="applyHookLoading || controlStatus.isChecking"
+                  :disabled="controlStatus.isHooked"
+                  style="width: 120px"
+                  @click="handleControlAction('applyHook')"
+                >
+                  {{ i18n.systemControl.applyHook }}
+                </n-button>
+                <n-button
+                  type="primary"
+                  :loading="restoreHookLoading || controlStatus.isChecking"
+                  :disabled="!controlStatus.isHooked"
+                  style="width: 120px"
+                  @click="handleControlAction('restoreHook')"
+                >
+                  {{ i18n.systemControl.restoreHook }}
+                </n-button>
+              </n-space>
             </n-space>
+
+            <!-- 系统通知权限 -->
+            <notification-permission-setting />
           </n-space>
         </div>
 
