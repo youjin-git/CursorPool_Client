@@ -1,6 +1,5 @@
 use crate::api::client::ApiClient;
 use crate::database::Database;
-use crate::utils::file_utils::safe_write;
 use crate::utils::hook::Hook;
 use crate::utils::id_generator::generate_new_ids;
 use crate::utils::paths::AppPaths;
@@ -200,7 +199,6 @@ pub async fn reset_machine_id(
         return Err(err);
     }
 
-    // 使用 safe_write 代替 fs::write
     let storage_content_str = match serde_json::to_string_pretty(&storage_content) {
         Ok(s) => s,
         Err(e) => {
@@ -218,7 +216,7 @@ pub async fn reset_machine_id(
         }
     };
 
-    if let Err(e) = safe_write(&paths.storage, &storage_content_str) {
+    if let Err(e) = fs::write(&paths.storage, &storage_content_str) {
         let err = format!("写入 storage.json 失败: {}", e);
         error!(target: "reset", "{}", err);
         ErrorReporter::report_error(
