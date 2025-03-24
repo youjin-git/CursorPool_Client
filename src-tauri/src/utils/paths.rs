@@ -133,19 +133,15 @@ impl AppPaths {
             if dir.to_lowercase().contains("cursor") {
                 
                 // 情况1: 如果是"resources/app/bin"这样的路径，向上查找cursor.exe
-                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") {
-                    if dir.to_lowercase().ends_with("bin")
-                        || dir.to_lowercase().contains("\\bin")
-                        || dir.to_lowercase().contains("/bin")
-                    {
-                        // 向上两级查找，cursor.exe通常在bin的上两级目录
-                        if let Some(app_dir) = path_buf.parent() {
-                            if let Some(resources_dir) = app_dir.parent() {
-                                if let Some(cursor_dir) = resources_dir.parent() {
-                                    let cursor_exe_path = cursor_dir.join("Cursor.exe");
-                                    if cursor_exe_path.exists() {
-                                        return Ok(cursor_exe_path);
-                                    }
+                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") && (dir.to_lowercase().ends_with("bin")
+                        || dir.to_lowercase().contains("\\bin") || dir.to_lowercase().contains("/bin")) {
+                    // 向上两级查找，cursor.exe通常在bin的上两级目录
+                    if let Some(app_dir) = path_buf.parent() {
+                        if let Some(resources_dir) = app_dir.parent() {
+                            if let Some(cursor_dir) = resources_dir.parent() {
+                                let cursor_exe_path = cursor_dir.join("Cursor.exe");
+                                if cursor_exe_path.exists() {
+                                    return Ok(cursor_exe_path);
                                 }
                             }
                         }
@@ -216,22 +212,18 @@ impl AppPaths {
             // 处理已经包含"resources/app/bin"这样路径的情况
             if dir.to_lowercase().contains("cursor") {
                 // 如果路径包含bin目录，尝试查找同级的out目录
-                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") {
-                    if dir.to_lowercase().ends_with("bin")
-                        || dir.to_lowercase().contains("\\bin")
-                        || dir.to_lowercase().contains("/bin")
-                    {
-                        let potential_base = if let Some(parent) = path_buf.parent() {
-                            parent
-                        } else {
-                            continue;
-                        };
+                if dir.to_lowercase().contains("resources") && dir.to_lowercase().contains("app") && (dir.to_lowercase().ends_with("bin")
+                        || dir.to_lowercase().contains("\\bin") || dir.to_lowercase().contains("/bin")) {
+                    let potential_base = if let Some(parent) = path_buf.parent() {
+                        parent
+                    } else {
+                        continue;
+                    };
 
-                        // 尝试构建main.js路径（同级out目录）
-                        let main_js_path = potential_base.join("out").join("main.js");
-                        if main_js_path.exists() {
-                            return Ok(main_js_path);
-                        }
+                    // 尝试构建main.js路径（同级out目录）
+                    let main_js_path = potential_base.join("out").join("main.js");
+                    if main_js_path.exists() {
+                        return Ok(main_js_path);
                     }
                 }
 
@@ -327,11 +319,8 @@ impl AppPaths {
         // 检查直接选择的是否为main.js
         if selected_path_buf
             .file_name()
-            .map_or(false, |name| name == "main.js")
-        {
-            if selected_path_buf.exists() {
-                return Ok(selected_path_buf);
-            }
+            .map_or(false, |name| name == "main.js") && selected_path_buf.exists() {
+            return Ok(selected_path_buf);
         }
 
         // 检查是否为目录路径

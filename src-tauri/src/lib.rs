@@ -49,7 +49,7 @@ pub fn run() {
             }
             
             // 初始化日志系统
-            let log_dir = match get_app_log_dir(&app.handle()) {
+            let log_dir = match get_app_log_dir(app.handle()) {
                 Ok(dir) => dir,
                 Err(e) => {
                     eprintln!("初始化日志目录失败: {}", e);
@@ -79,7 +79,7 @@ pub fn run() {
             debug!("调试模式: {}", cfg!(debug_assertions));
             
             // 初始化数据库
-            let db = match Database::new(&app.handle()) {
+            let db = match Database::new(app.handle()) {
                 Ok(db) => {
                     info!("数据库初始化成功");
                     db

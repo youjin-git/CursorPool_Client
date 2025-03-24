@@ -4,6 +4,7 @@ use crate::utils::paths::AppPaths;
 use crate::utils::ErrorReporter;
 use lazy_static::lazy_static;
 use regex::Regex;
+use std::fmt;
 use std::fs;
 use std::path::PathBuf;
 use tauri::State;
@@ -31,11 +32,11 @@ pub enum HookError {
     Other(String),
 }
 
-impl ToString for HookError {
-    fn to_string(&self) -> String {
+impl fmt::Display for HookError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            HookError::MainJsNotFound(msg) => format!("MAIN_JS_NOT_FOUND:{}", msg),
-            HookError::Other(msg) => msg.clone(),
+            HookError::MainJsNotFound(msg) => write!(f, "MAIN_JS_NOT_FOUND:{}", msg),
+            HookError::Other(msg) => write!(f, "{}", msg),
         }
     }
 }

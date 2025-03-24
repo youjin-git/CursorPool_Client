@@ -110,10 +110,7 @@ pub async fn save_cursor_token_to_history(
     // 1. 获取当前历史记录
     let accounts = match db.get_item("user.history.accounts") {
         Ok(Some(data)) => {
-            match serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
-                Ok(accounts) => accounts,
-                Err(_) => Vec::new(),
-            }
+            serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data).unwrap_or_default()
         }
         _ => Vec::new(),
     };

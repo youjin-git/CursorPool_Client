@@ -63,7 +63,7 @@ impl ApiClient {
 
         if is_auth_required_url(&url) {
             for interceptor in &self.interceptors {
-                if let Err(_) = interceptor.intercept(&mut request) {
+                if interceptor.intercept(&mut request).is_err() {
                     continue;
                 }
             }
@@ -108,14 +108,12 @@ impl ApiClient {
                     }
                 }
             }
-        } else {
-            if let Err(e) = save_auth_token(&db, &url_str, &response_text).await {
-                error!(
-                    target: "http_client",
-                    "保存认证令牌失败 - URL: {}, 错误: {}", 
-                    url_str, e
-                );
-            }
+        } else if let Err(e) = save_auth_token(&db, &url_str, &response_text).await {
+            error!(
+                target: "http_client",
+                "保存认证令牌失败 - URL: {}, 错误: {}", 
+                url_str, e
+            );
         }
 
         Ok(Response::from(
