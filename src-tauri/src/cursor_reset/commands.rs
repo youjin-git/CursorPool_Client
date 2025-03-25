@@ -9,6 +9,7 @@ use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::fs;
 use tauri::State;
+use tauri::Manager;
 use tracing::error;
 
 /// 终止 Cursor 进程
@@ -844,4 +845,15 @@ pub fn log_warn(message: String, file: Option<String>, line: Option<u32>) {
 #[tauri::command]
 pub fn log_info(message: String) {
     tracing::info!(target: "frontend", "{}", message);
+}
+
+#[tauri::command]
+pub fn open_devtools(app_handle: tauri::AppHandle) {
+    if let Some(window) = app_handle.get_webview_window("main") {
+        if !window.is_devtools_open() {
+            window.open_devtools();
+        } else {
+            window.close_devtools();
+        }
+    }
 }
