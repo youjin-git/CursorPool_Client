@@ -72,7 +72,7 @@
       icon: renderIcon(HomeSharp),
     },
     {
-      label: '历史账户',
+      label: messages[currentLang.value].menu.historyAccount,
       key: 'accounts',
       icon: renderIcon(ArrowUndo),
     },

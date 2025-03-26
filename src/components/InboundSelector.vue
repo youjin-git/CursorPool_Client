@@ -33,11 +33,29 @@
 
   // 计算属性
   const selectOptions = computed<SelectOption[]>(() => {
-    return inboundStore.inboundList.map((item, index) => ({
-      label: item.name,
-      value: index,
-      key: index,
-    }))
+    return inboundStore.inboundList.map((item, index) => {
+      const DOMESTIC_ROUTE = 'domestic'
+      const FOREIGN_ROUTE = 'foreign'
+      const DEFAULT_ROUTE = 'defaultInbound'
+
+      let routeType: string | null = null
+
+      if (item.name === '国内线路' || item.name.includes('国内')) {
+        routeType = DOMESTIC_ROUTE
+      } else if (item.name === '国外线路' || item.name.includes('国外')) {
+        routeType = FOREIGN_ROUTE
+      } else if (item.name === '默认线路' || item.name.includes('默认')) {
+        routeType = DEFAULT_ROUTE
+      }
+
+      const label = routeType ? t(`inbound.${routeType}`) : item.name
+
+      return {
+        label,
+        value: index,
+        key: index,
+      }
+    })
   })
 
   // 选择线路
@@ -56,7 +74,7 @@
 
       message.success(
         t('inbound.switchSuccess', {
-          name: inboundStore.inboundList[index].name,
+          name: selectOptions.value[index].label,
         }),
       )
       // 提示用户重启应用

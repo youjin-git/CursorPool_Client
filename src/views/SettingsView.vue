@@ -14,7 +14,6 @@
     NTag,
   } from 'naive-ui'
   import { useI18n } from '../locales'
-  import { messages } from '../locales/messages'
   import LanguageSwitch from '../components/LanguageSwitch.vue'
   import InboundSelector from '../components/InboundSelector.vue'
   import CloseTypeSelector from '../components/CloseTypeSelector.vue'
@@ -29,7 +28,7 @@
   import { useAppStore } from '../stores/app'
 
   const message = useMessage()
-  const { currentLang, i18n } = useI18n()
+  const { t } = useI18n()
   const userStore = useUserStore()
   const cursorStore = useCursorStore()
   const router = useRouter()
@@ -67,16 +66,16 @@
   const passwordChangeLoading = ref(false)
 
   // 添加按钮模式选项
-  const buttonModeOptions = [
+  const buttonModeOptions = computed(() => [
     {
-      label: '简单模式',
+      label: t('settings.simpleMode'),
       value: 'simple',
     },
     {
-      label: '高级模式',
+      label: t('settings.advancedMode'),
       value: 'advanced',
     },
-  ]
+  ])
 
   // 计算属性用于转换值
   const buttonMode = computed({
@@ -88,15 +87,15 @@
 
   const handleActivate = async () => {
     if (!formValue.value.activationCode) {
-      message.error('请输入激活码')
+      message.error(t('message.pleaseInputActivationCode'))
       return
     }
 
     activateLoading.value = true
     try {
       await activate(formValue.value.activationCode)
-      message.success('激活成功')
-      addHistoryRecord('激活码兑换', '成功兑换激活码')
+      message.success(t('message.activationSuccess'))
+      addHistoryRecord(t('settings.activation'), t('message.activationSuccess'))
       formValue.value.activationCode = ''
 
       // 设置刷新标记，确保dashboard页面刷新数据
@@ -105,7 +104,7 @@
       // 激活成功后跳转到 dashboard 页面
       router.push('/dashboard')
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '激活失败')
+      message.error(error instanceof Error ? error.message : t('message.activationFailed'))
     } finally {
       activateLoading.value = false
     }
@@ -117,19 +116,19 @@
       !formValue.value.newPassword ||
       !formValue.value.confirmPassword
     ) {
-      message.error('请填写完整密码信息')
+      message.error(t('message.pleaseInputPassword'))
       return
     }
 
     if (formValue.value.newPassword !== formValue.value.confirmPassword) {
-      message.error('两次输入的新密码不一致')
+      message.error(t('message.passwordNotMatch'))
       return
     }
 
     passwordChangeLoading.value = true
     try {
       await changePassword(formValue.value.currentPassword, formValue.value.newPassword)
-      message.success('密码修改成功')
+      message.success(t('message.passwordChangeSuccess'))
 
       formValue.value.currentPassword = ''
       formValue.value.newPassword = ''
@@ -137,7 +136,7 @@
 
       await handleLogout()
     } catch (error) {
-      message.error(error instanceof Error ? error.message : '密码修改失败')
+      message.error(error instanceof Error ? error.message : t('message.passwordChangeFailed'))
     } finally {
       passwordChangeLoading.value = false
     }
@@ -146,9 +145,9 @@
   const handleLogout = async () => {
     try {
       await userStore.logout()
-      addHistoryRecord('用户操作', '用户登出')
+      addHistoryRecord(t('history.userOperation'), t('common.logout'))
     } catch (error) {
-      message.error('登出失败')
+      message.error(t('common.logoutFailed'))
     }
   }
 
@@ -181,21 +180,21 @@
         switch (action) {
           case 'applyHook':
             await applyHook(force_kill)
-            successMessage = messages[currentLang.value].systemControl.messages.applyHookSuccess
-            historyAction = messages[currentLang.value].systemControl.history.applyHook
+            successMessage = t('systemControl.messages.applyHookSuccess')
+            historyAction = t('systemControl.history.applyHook')
             controlStatus.value.isHooked = true
             break
           case 'restoreHook':
             await restoreHook(force_kill)
-            successMessage = messages[currentLang.value].systemControl.messages.restoreHookSuccess
-            historyAction = messages[currentLang.value].systemControl.history.restoreHook
+            successMessage = t('systemControl.messages.restoreHookSuccess')
+            historyAction = t('systemControl.history.restoreHook')
             controlStatus.value.isHooked = false
             break
         }
 
         message.success(successMessage)
         showControlRunningModal.value = false
-        addHistoryRecord('系统控制', historyAction)
+        addHistoryRecord(t('systemControl.title'), historyAction)
 
         // 操作完成后重新检查状态
         await checkControlStatus()
@@ -285,9 +284,11 @@
   const handleButtonVisibilityChange = async (value: string) => {
     try {
       await appStore.setButtonVisibility(value === 'advanced')
-      message.success(value === 'advanced' ? '已切换到高级模式' : '已切换到简单模式')
+      message.success(
+        value === 'advanced' ? t('settings.switchedToAdvanced') : t('settings.switchedToSimple'),
+      )
     } catch (error) {
-      message.error('设置失败')
+      message.error(t('settings.settingsFailed'))
     }
   }
 </script>
@@ -297,18 +298,22 @@
     <!-- 系统控制 -->
     <n-card>
       <template #header>
-        <div class="text-xl font-medium">系统控制</div>
+        <div class="text-xl font-medium">{{ t('systemControl.title') }}</div>
       </template>
       <n-space vertical :size="16">
         <div class="flex items-center justify-between">
           <div>
-            客户端状态:
+            {{ t('systemControl.clientStatus') }}:
             <template v-if="controlStatus.isChecking">
               <n-spin size="small" />
             </template>
             <template v-else>
               <n-tag :type="controlStatus.isHooked ? 'success' : 'warning'" size="small" round>
-                {{ controlStatus.isHooked ? '已注入客户端' : '未注入客户端' }}
+                {{
+                  controlStatus.isHooked
+                    ? t('systemControl.hookApplied')
+                    : t('systemControl.hookNotApplied')
+                }}
               </n-tag>
             </template>
           </div>
@@ -319,7 +324,7 @@
               :disabled="controlStatus.isHooked"
               @click="handleControlAction('applyHook')"
             >
-              注入客户端
+              {{ t('systemControl.applyHook') }}
             </n-button>
             <n-button
               type="primary"
@@ -327,7 +332,7 @@
               :disabled="!controlStatus.isHooked"
               @click="handleControlAction('restoreHook')"
             >
-              还原客户端
+              {{ t('systemControl.restoreHook') }}
             </n-button>
           </div>
         </div>
@@ -337,30 +342,30 @@
     <!-- 全局偏好设置 -->
     <n-card>
       <template #header>
-        <div class="text-xl font-medium">全局偏好设置</div>
+        <div class="text-xl font-medium">{{ t('settings.globalPreferences') }}</div>
       </template>
       <div class="p-5">
         <div class="grid grid-cols-2 gap-x-8 gap-y-6">
           <div class="flex items-center">
-            <div class="text-base w-20">线路</div>
+            <div class="text-base w-20">{{ t('inbound.title') }}</div>
             <div class="flex-1">
               <inbound-selector :show-label="false" class="settings-selector" />
             </div>
           </div>
           <div class="flex items-center">
-            <div class="text-base w-20">关闭方式</div>
+            <div class="text-base w-20">{{ t('settings.closeMethod') }}</div>
             <div class="flex-1">
               <close-type-selector :show-label="false" class="settings-selector" />
             </div>
           </div>
           <div class="flex items-center">
-            <div class="text-base w-20">语言</div>
+            <div class="text-base w-20">{{ t('language.title') }}</div>
             <div class="flex-1">
               <language-switch :show-label="false" class="settings-selector" />
             </div>
           </div>
           <div class="flex items-center">
-            <div class="text-base w-20">操作模式</div>
+            <div class="text-base w-20">{{ t('settings.operationMode') }}</div>
             <div class="flex-1">
               <n-select
                 v-model:value="buttonMode"
@@ -378,20 +383,20 @@
     <!-- 激活码兑换 -->
     <n-card>
       <template #header>
-        <div class="text-xl font-medium">激活码兑换</div>
+        <div class="text-xl font-medium">{{ t('settings.activation') }}</div>
       </template>
       <n-space vertical :size="16">
         <div class="flex items-center justify-between">
-          <div style="width: 80px">激活码</div>
+          <div style="width: 80px">{{ t('settings.activationCode') }}</div>
           <div class="flex-1">
             <n-input-group>
               <n-input
                 v-model:value="formValue.activationCode"
-                placeholder="请输入激活码"
+                :placeholder="t('message.pleaseInputActivationCode')"
                 class="flex-1"
               />
               <n-button type="primary" :loading="activateLoading" @click="handleActivate">
-                激活
+                {{ t('settings.activate') }}
               </n-button>
             </n-input-group>
           </div>
@@ -402,7 +407,7 @@
     <!-- 密码修改 -->
     <n-card>
       <template #header>
-        <div class="text-xl font-medium">{{ messages[currentLang].settings.changePassword }}</div>
+        <div class="text-xl font-medium">{{ t('settings.changePassword') }}</div>
       </template>
       <n-space vertical :size="16">
         <n-form
@@ -411,36 +416,36 @@
           label-width="100"
           require-mark-placement="right-hanging"
         >
-          <n-form-item :label="messages[currentLang].settings.currentPassword">
+          <n-form-item :label="t('settings.currentPassword')">
             <n-input
               v-model:value="formValue.currentPassword"
               type="password"
               show-password-on="click"
-              :placeholder="messages[currentLang].settings.currentPassword"
+              :placeholder="t('settings.currentPassword')"
               maxlength="20"
               minlength="6"
               :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
             />
           </n-form-item>
 
-          <n-form-item :label="messages[currentLang].settings.newPassword">
+          <n-form-item :label="t('settings.newPassword')">
             <n-input
               v-model:value="formValue.newPassword"
               type="password"
               show-password-on="click"
-              :placeholder="messages[currentLang].settings.newPassword"
+              :placeholder="t('settings.newPassword')"
               maxlength="20"
               minlength="6"
               :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
             />
           </n-form-item>
 
-          <n-form-item :label="messages[currentLang].settings.confirmPassword">
+          <n-form-item :label="t('settings.confirmPassword')">
             <n-input
               v-model:value="formValue.confirmPassword"
               type="password"
               show-password-on="click"
-              :placeholder="messages[currentLang].settings.confirmPassword"
+              :placeholder="t('settings.confirmPassword')"
               maxlength="20"
               minlength="6"
               :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
@@ -454,10 +459,10 @@
                 :loading="passwordChangeLoading"
                 @click="handleChangePassword"
               >
-                {{ messages[currentLang].settings.changePassword }}
+                {{ t('settings.changePassword') }}
               </n-button>
               <n-button type="error" @click="handleLogout">
-                {{ i18n.common.logout }}
+                {{ t('common.logout') }}
               </n-button>
             </n-space>
           </div>
@@ -468,12 +473,12 @@
     <!-- 关于 -->
     <n-card>
       <template #header>
-        <div class="text-xl font-medium">{{ messages[currentLang].settings.about }}</div>
+        <div class="text-xl font-medium">{{ t('settings.about') }}</div>
       </template>
       <n-space vertical :size="12">
-        <p>{{ i18n.about.appName }} v{{ version }}</p>
+        <p>{{ t('about.appName') }} v{{ version }}</p>
         <p>
-          {{ i18n.about.copyright }} ©
+          {{ t('about.copyright') }} ©
           {{ new Date().getFullYear() }}
           <n-button text tag="a" href="https://github.com/Sanyela" target="_blank">
             Sanyela
@@ -481,16 +486,16 @@
           &
           <n-button text tag="a" href="https://github.com/Cloxl" target="_blank">Cloxl</n-button>
         </p>
-        <p>{{ i18n.about.license }}</p>
+        <p>{{ t('about.license') }}</p>
       </n-space>
     </n-card>
 
     <!-- 模态框 -->
     <cursor-running-modal
       v-model:show="showControlRunningModal"
-      :title="i18n.common.cursorRunning"
-      :content="i18n.common.cursorRunningMessage"
-      :confirm-button-text="i18n.common.forceClose"
+      :title="t('common.cursorRunning')"
+      :content="t('common.cursorRunningMessage')"
+      :confirm-button-text="t('common.forceClose')"
       @confirm="handleControlForceKill"
     />
 
