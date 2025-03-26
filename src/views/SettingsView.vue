@@ -11,6 +11,7 @@
     useMessage,
     NSpin,
     NSelect,
+    NTag,
   } from 'naive-ui'
   import { useI18n } from '../locales'
   import { messages } from '../locales/messages'
@@ -18,7 +19,6 @@
   import InboundSelector from '../components/InboundSelector.vue'
   import CloseTypeSelector from '../components/CloseTypeSelector.vue'
   import CursorRunningModal from '../components/CursorRunningModal.vue'
-  import NotificationPermissionSetting from '../components/NotificationPermissionSetting.vue'
   import { changePassword, activate, checkCursorRunning, applyHook, restoreHook } from '@/api'
   import { addHistoryRecord } from '../utils/history'
   import { version } from '../../package.json'
@@ -294,212 +294,182 @@
 
 <template>
   <n-space vertical :size="24">
-    <!-- 系统设置卡片 -->
-    <n-card :title="i18n.systemControl ? i18n.systemControl.title : '系统设置'">
+    <!-- 系统控制 -->
+    <n-card>
+      <template #header>
+        <div class="text-xl font-medium">系统控制</div>
+      </template>
       <n-space vertical :size="16">
-        <!-- Hook 控制部分 -->
-        <div>
-          <n-space vertical :size="8">
-            <!-- 客户端注入状态 -->
-            <n-space justify="space-between" align="center">
-              <span>
-                <small style="margin-right: 8px; color: var(--n-text-color-3)"
-                  >客户端注入状态:</small
-                >
-                <template v-if="controlStatus.isChecking">
-                  <n-spin size="small" />
-                </template>
-                <template v-else>
-                  {{
-                    controlStatus.isHooked
-                      ? i18n.systemControl.hookApplied
-                      : i18n.systemControl.hookNotApplied
-                  }}
-                </template>
-              </span>
-              <n-space>
-                <n-button
-                  type="warning"
-                  :loading="applyHookLoading || controlStatus.isChecking"
-                  :disabled="controlStatus.isHooked"
-                  style="width: 120px"
-                  @click="handleControlAction('applyHook')"
-                >
-                  {{ i18n.systemControl.applyHook }}
-                </n-button>
-                <n-button
-                  type="primary"
-                  :loading="restoreHookLoading || controlStatus.isChecking"
-                  :disabled="!controlStatus.isHooked"
-                  style="width: 120px"
-                  @click="handleControlAction('restoreHook')"
-                >
-                  {{ i18n.systemControl.restoreHook }}
-                </n-button>
-              </n-space>
-            </n-space>
-
-            <!-- 系统通知权限 -->
-            <notification-permission-setting />
-          </n-space>
-        </div>
-
-        <!-- 全局偏好设置 -->
-        <div class="section-divider"></div>
-        <div>
-          <div class="section-header">全局偏好设置</div>
-          <div class="preferences-list">
-            <!-- 线路选择 -->
-            <div class="preference-row">
-              <div class="preference-label">
-                {{ i18n.inbound ? i18n.inbound.title : '线路' }}
-              </div>
-              <div class="preference-control">
-                <inbound-selector :show-label="false" />
-              </div>
-            </div>
-
-            <!-- 语言选择 -->
-            <div class="preference-row">
-              <div class="preference-label">语言</div>
-              <div class="preference-control">
-                <language-switch :show-label="false" />
-              </div>
-            </div>
-
-            <!-- 关闭方式选择 -->
-            <div class="preference-row">
-              <div class="preference-label">关闭方式</div>
-              <div class="preference-control">
-                <close-type-selector :show-label="false" />
-              </div>
-            </div>
-
-            <!-- 添加按钮显示控制 -->
-            <div class="preference-row">
-              <div class="preference-label">操作模式</div>
-              <div class="preference-control">
-                <n-select
-                  v-model:value="buttonMode"
-                  :options="buttonModeOptions"
-                  size="small"
-                  :style="{
-                    width: '120px',
-                  }"
-                  @update:value="handleButtonVisibilityChange"
-                />
-              </div>
-            </div>
+        <div class="flex items-center justify-between">
+          <div>
+            客户端状态:
+            <template v-if="controlStatus.isChecking">
+              <n-spin size="small" />
+            </template>
+            <template v-else>
+              <n-tag :type="controlStatus.isHooked ? 'success' : 'warning'" size="small" round>
+                {{ controlStatus.isHooked ? '已注入客户端' : '未注入客户端' }}
+              </n-tag>
+            </template>
           </div>
-        </div>
-      </n-space>
-    </n-card>
-
-    <!-- 用户设置卡片 -->
-    <n-card :title="messages[currentLang].settings.activation">
-      <n-space vertical :size="16">
-        <!-- 激活码部分 -->
-        <div>
-          <n-form
-            :model="formValue"
-            label-placement="left"
-            label-width="120"
-            require-mark-placement="right-hanging"
-            class="activation-form"
-          >
-            <n-form-item
-              :label="messages[currentLang].settings.activationCode"
-              path="activationCode"
+          <div class="flex gap-2">
+            <n-button
+              type="warning"
+              :loading="applyHookLoading"
+              :disabled="controlStatus.isHooked"
+              @click="handleControlAction('applyHook')"
             >
-              <n-input-group style="width: 360px">
-                <n-input
-                  v-model:value="formValue.activationCode"
-                  :placeholder="messages[currentLang].settings.activationCode"
-                  size="large"
-                />
-                <n-button
-                  type="primary"
-                  :loading="activateLoading"
-                  size="large"
-                  @click="handleActivate"
-                >
-                  {{ messages[currentLang].settings.activate }}
-                </n-button>
-              </n-input-group>
-            </n-form-item>
-          </n-form>
-        </div>
-
-        <!-- 密码修改部分 -->
-        <div class="section-divider"></div>
-        <div>
-          <div class="section-header">
-            {{ messages[currentLang].settings.changePassword }}
+              注入客户端
+            </n-button>
+            <n-button
+              type="primary"
+              :loading="restoreHookLoading"
+              :disabled="!controlStatus.isHooked"
+              @click="handleControlAction('restoreHook')"
+            >
+              还原客户端
+            </n-button>
           </div>
-          <n-form
-            :model="formValue"
-            label-placement="left"
-            label-width="100"
-            require-mark-placement="right-hanging"
-            class="password-form"
-          >
-            <n-form-item :label="messages[currentLang].settings.currentPassword">
-              <n-input
-                v-model:value="formValue.currentPassword"
-                type="password"
-                show-password-on="click"
-                :placeholder="messages[currentLang].settings.currentPassword"
-                maxlength="20"
-                minlength="6"
-                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
-              />
-            </n-form-item>
-
-            <n-form-item :label="messages[currentLang].settings.newPassword">
-              <n-input
-                v-model:value="formValue.newPassword"
-                type="password"
-                show-password-on="click"
-                :placeholder="messages[currentLang].settings.newPassword"
-                maxlength="20"
-                minlength="6"
-                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
-              />
-            </n-form-item>
-
-            <n-form-item :label="messages[currentLang].settings.confirmPassword">
-              <n-input
-                v-model:value="formValue.confirmPassword"
-                type="password"
-                show-password-on="click"
-                :placeholder="messages[currentLang].settings.confirmPassword"
-                maxlength="20"
-                minlength="6"
-                :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
-              />
-            </n-form-item>
-
-            <div style="margin-top: 12px">
-              <n-space>
-                <n-button
-                  type="primary"
-                  :loading="passwordChangeLoading"
-                  @click="handleChangePassword"
-                >
-                  {{ messages[currentLang].settings.changePassword }}
-                </n-button>
-                <n-button type="error" @click="handleLogout">
-                  {{ i18n.common.logout }}
-                </n-button>
-              </n-space>
-            </div>
-          </n-form>
         </div>
       </n-space>
     </n-card>
 
-    <!-- 关于信息卡片 -->
-    <n-card :title="messages[currentLang].settings.about">
+    <!-- 全局偏好设置 -->
+    <n-card>
+      <template #header>
+        <div class="text-xl font-medium">全局偏好设置</div>
+      </template>
+      <div class="p-5">
+        <div class="grid grid-cols-2 gap-x-8 gap-y-6">
+          <div class="flex items-center">
+            <div class="text-base w-20">线路</div>
+            <div class="flex-1">
+              <inbound-selector :show-label="false" class="settings-selector" />
+            </div>
+          </div>
+          <div class="flex items-center">
+            <div class="text-base w-20">关闭方式</div>
+            <div class="flex-1">
+              <close-type-selector :show-label="false" class="settings-selector" />
+            </div>
+          </div>
+          <div class="flex items-center">
+            <div class="text-base w-20">语言</div>
+            <div class="flex-1">
+              <language-switch :show-label="false" class="settings-selector" />
+            </div>
+          </div>
+          <div class="flex items-center">
+            <div class="text-base w-20">操作模式</div>
+            <div class="flex-1">
+              <n-select
+                v-model:value="buttonMode"
+                :options="buttonModeOptions"
+                size="small"
+                class="w-full"
+                @update:value="handleButtonVisibilityChange"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </n-card>
+
+    <!-- 激活码兑换 -->
+    <n-card>
+      <template #header>
+        <div class="text-xl font-medium">激活码兑换</div>
+      </template>
+      <n-space vertical :size="16">
+        <div class="flex items-center justify-between">
+          <div style="width: 80px">激活码</div>
+          <div class="flex-1">
+            <n-input-group>
+              <n-input
+                v-model:value="formValue.activationCode"
+                placeholder="请输入激活码"
+                class="flex-1"
+              />
+              <n-button type="primary" :loading="activateLoading" @click="handleActivate">
+                激活
+              </n-button>
+            </n-input-group>
+          </div>
+        </div>
+      </n-space>
+    </n-card>
+
+    <!-- 密码修改 -->
+    <n-card>
+      <template #header>
+        <div class="text-xl font-medium">{{ messages[currentLang].settings.changePassword }}</div>
+      </template>
+      <n-space vertical :size="16">
+        <n-form
+          :model="formValue"
+          label-placement="left"
+          label-width="100"
+          require-mark-placement="right-hanging"
+        >
+          <n-form-item :label="messages[currentLang].settings.currentPassword">
+            <n-input
+              v-model:value="formValue.currentPassword"
+              type="password"
+              show-password-on="click"
+              :placeholder="messages[currentLang].settings.currentPassword"
+              maxlength="20"
+              minlength="6"
+              :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+            />
+          </n-form-item>
+
+          <n-form-item :label="messages[currentLang].settings.newPassword">
+            <n-input
+              v-model:value="formValue.newPassword"
+              type="password"
+              show-password-on="click"
+              :placeholder="messages[currentLang].settings.newPassword"
+              maxlength="20"
+              minlength="6"
+              :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+            />
+          </n-form-item>
+
+          <n-form-item :label="messages[currentLang].settings.confirmPassword">
+            <n-input
+              v-model:value="formValue.confirmPassword"
+              type="password"
+              show-password-on="click"
+              :placeholder="messages[currentLang].settings.confirmPassword"
+              maxlength="20"
+              minlength="6"
+              :allow-input="(value) => /^[a-zA-Z0-9]*$/.test(value)"
+            />
+          </n-form-item>
+
+          <div style="margin-top: 12px">
+            <n-space>
+              <n-button
+                type="primary"
+                :loading="passwordChangeLoading"
+                @click="handleChangePassword"
+              >
+                {{ messages[currentLang].settings.changePassword }}
+              </n-button>
+              <n-button type="error" @click="handleLogout">
+                {{ i18n.common.logout }}
+              </n-button>
+            </n-space>
+          </div>
+        </n-form>
+      </n-space>
+    </n-card>
+
+    <!-- 关于 -->
+    <n-card>
+      <template #header>
+        <div class="text-xl font-medium">{{ messages[currentLang].settings.about }}</div>
+      </template>
       <n-space vertical :size="12">
         <p>{{ i18n.about.appName }} v{{ version }}</p>
         <p>
@@ -515,6 +485,7 @@
       </n-space>
     </n-card>
 
+    <!-- 模态框 -->
     <cursor-running-modal
       v-model:show="showControlRunningModal"
       :title="i18n.common.cursorRunning"
@@ -523,105 +494,21 @@
       @confirm="handleControlForceKill"
     />
 
-    <!-- 添加文件选择模态框组件 -->
+    <!-- 文件选择模态框 -->
     <file-select-modal />
   </n-space>
 </template>
 
 <style scoped>
-  .section-divider {
-    height: 1px;
-    background-color: var(--n-border-color);
-    margin: 12px 0;
+  /* 使用naive-ui变量和unocss类保持一致的样式 */
+
+  /* 覆盖自定义组件内部的固定宽度样式 */
+  .settings-selector :deep(.n-select) {
+    width: 100% !important;
   }
 
-  .section-header {
-    font-size: 16px;
-    font-weight: 500;
-    color: var(--n-title-text-color);
-    margin-bottom: 12px;
-  }
-
-  .preferences-container {
-    display: flex;
-    justify-content: space-between;
-    width: 100%;
-  }
-
-  .preference-group {
-    display: flex;
-    flex-direction: column;
-    width: 48%;
-  }
-
-  .preference-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 12px;
-  }
-
-  .preference-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--n-text-color);
-    width: 80px;
-  }
-
-  .preference-control {
-    flex: 1;
-  }
-
-  @media (max-width: 600px) {
-    .preferences-container {
-      flex-direction: column;
-      gap: 16px;
-    }
-
-    .preference-group {
-      width: 100%;
-    }
-  }
-
-  .hook-status-row {
-    display: flex;
-    align-items: center;
-    width: 100%;
-  }
-
-  .hook-status-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--n-text-color);
-    margin-right: 8px;
-  }
-
-  .hook-status-value {
-    flex: 1;
-  }
-
-  .hook-status-actions {
-    margin-left: auto;
-  }
-
-  /* 激活码表单样式 */
-  .activation-form :deep(.n-form-item-label) {
-    text-align: left;
-  }
-
-  /* 确保标签文本左对齐 */
-  .activation-form :deep(.n-form-item-label__text) {
-    text-align: left;
-    justify-content: flex-start;
-  }
-
-  /* 密码表单样式 */
-  .password-form :deep(.n-form-item-label) {
-    text-align: left;
-  }
-
-  /* 确保标签文本左对齐 */
-  .password-form :deep(.n-form-item-label__text) {
-    text-align: left;
-    justify-content: flex-start;
+  /* 确保所有选择器内部的下拉菜单宽度是响应式的 */
+  .settings-selector :deep(.n-base-selection) {
+    width: 100% !important;
   }
 </style>
