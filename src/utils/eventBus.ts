@@ -43,7 +43,7 @@ export async function initEventListeners() {
     // 显示系统通知
     notificationStore.notify({
       title: '账户使用量警告',
-      body: `当前账户${payload.data?.account || ''}高级模型剩余使用量仅剩${payload.data?.remaining_percentage || ''}%，建议切换账户。`,
+      body: `当前账户${payload.data?.account || ''}高级模型剩余使用量仅剩 ${payload.data?.remaining_percentage || 0}%，建议切换账户。`,
       id: 1,
     })
   })
