@@ -73,7 +73,7 @@ impl CursorVersion {
             if let Some(pos) = notes.find(pattern) {
                 let start = pos + pattern.len();
                 let end = notes[start..]
-                    .find(|c: char| !c.is_digit(10) && c != '.')
+                    .find(|c: char| !c.is_ascii_digit() && c != '.')
                     .map_or(notes.len(), |p| start + p);
 
                 if start < end {

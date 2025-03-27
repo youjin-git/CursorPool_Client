@@ -1,7 +1,7 @@
 {
   "name": "cursor-pool",
   "private": true,
-  "version": "1.7.9",
+  "version": "1.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,11 +9,16 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "generate-icons": "tauricon",
-    "version": "node scripts/version.js"
+    "lint:fix": "eslint --ext .js,.ts,.vue src --fix",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "prepare": "husky",
+    "lint-staged": "lint-staged"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.2.0",
     "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-notification": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "@tauri-apps/plugin-os": "^2.2.0",
     "@tauri-apps/plugin-positioner": "^2.2.0",
@@ -34,15 +39,35 @@
     "vue-router": "^4.2.5"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.0",
+    "@commitlint/config-conventional": "^19.8.0",
     "@tauri-apps/cli": "^2",
     "@tauri-apps/tauricon": "^1.0.3",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^22.13.2",
+    "@unocss/preset-attributify": "0.58.0",
+    "@unocss/preset-icons": "0.58.0",
+    "@unocss/preset-uno": "0.58.0",
+    "@unocss/transformer-directives": "0.58.0",
     "@vicons/antd": "^0.13.0",
     "@vicons/ionicons5": "^0.12.0",
     "@vitejs/plugin-vue": "^5.2.1",
+    "@vue/eslint-config-prettier": "^8.0.0",
+    "@vue/eslint-config-typescript": "^12.0.0",
+    "eslint": "^8.56.0",
+    "eslint-plugin-vue": "^9.21.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.5.0",
+    "prettier": "^3.2.5",
     "typescript": "~5.6.2",
+    "unocss": "0.58.0",
     "vite": "^6.0.3",
     "vue-tsc": "^2.1.10"
+  },
+  "lint-staged": {
+    "*.{js,ts,vue}": [
+      "eslint --fix",
+      "prettier --write"
+    ]
   }
 }

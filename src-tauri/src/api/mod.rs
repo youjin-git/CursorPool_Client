@@ -1,8 +1,8 @@
 pub mod client;
 pub mod endpoints;
+pub mod inbound;
 pub mod interceptor;
 pub mod types;
-pub mod inbound;
 
 pub use client::ApiClient;
 pub use endpoints::*;

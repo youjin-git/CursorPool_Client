@@ -78,8 +78,7 @@ pub async fn save_auth_token(
         let data = api_response.data.unwrap();
         if let Some(token) = data.token {
             let token_key = config::get_db_key("token");
-            db.set_item(&token_key, &token)
-                .map_err(|e| e.to_string())?;
+            db.set_item(&token_key, &token).map_err(|e| e.to_string())?;
         }
     }
 
@@ -87,9 +86,7 @@ pub async fn save_auth_token(
 }
 
 /// 清除认证令牌
-pub async fn clear_auth_token(
-    db: &tauri::State<'_, Database>,
-) -> Result<(), String> {
+pub async fn clear_auth_token(db: &tauri::State<'_, Database>) -> Result<(), String> {
     let token_key = config::get_db_key("token");
     db.delete_item(&token_key).map_err(|e| e.to_string())
 }
@@ -110,10 +107,8 @@ pub async fn save_cursor_token_to_history(
     // 1. 获取当前历史记录
     let accounts = match db.get_item("user.history.accounts") {
         Ok(Some(data)) => {
-            match serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
-                Ok(accounts) => accounts,
-                Err(_) => Vec::new(),
-            }
+            serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data)
+                .unwrap_or_default()
         }
         _ => Vec::new(),
     };

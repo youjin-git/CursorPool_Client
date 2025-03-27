@@ -30,28 +30,32 @@ impl Database {
         })?;
 
         // 初始化表结构
-        connection.execute(
-            "CREATE TABLE IF NOT EXISTS item (
+        connection
+            .execute(
+                "CREATE TABLE IF NOT EXISTS item (
                 key TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             )",
-            [],
-        ).map_err(|e| {
-            error!(target: "database", "创建item表失败: {}", e);
-            e
-        })?;
+                [],
+            )
+            .map_err(|e| {
+                error!(target: "database", "创建item表失败: {}", e);
+                e
+            })?;
 
-        connection.execute(
-            "CREATE TABLE IF NOT EXISTS account (
+        connection
+            .execute(
+                "CREATE TABLE IF NOT EXISTS account (
                 account TEXT PRIMARY KEY,
                 userId TEXT NOT NULL,
                 cursorToken TEXT NOT NULL
             )",
-            [],
-        ).map_err(|e| {
-            error!(target: "database", "创建account表失败: {}", e);
-            e
-        })?;
+                [],
+            )
+            .map_err(|e| {
+                error!(target: "database", "创建account表失败: {}", e);
+                e
+            })?;
 
         Ok(Self {
             connection: Arc::new(Mutex::new(connection)),
@@ -65,7 +69,8 @@ impl Database {
         conn.execute(
             "INSERT OR REPLACE INTO item (key, value) VALUES (?, ?)",
             params![key, value],
-        ).map_err(|e| {
+        )
+        .map_err(|e| {
             error!(target: "database", "设置数据项失败 - 键: {}, 错误: {}", key, e);
             e
         })?;
@@ -74,11 +79,13 @@ impl Database {
 
     pub fn get_item(&self, key: &str) -> SqliteResult<Option<String>> {
         let conn = self.connection.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT value FROM item WHERE key = ?").map_err(|e| {
-            error!(target: "database", "准备查询语句失败 - 键: {}, 错误: {}", key, e);
-            e
-        })?;
-        
+        let mut stmt = conn
+            .prepare("SELECT value FROM item WHERE key = ?")
+            .map_err(|e| {
+                error!(target: "database", "准备查询语句失败 - 键: {}, 错误: {}", key, e);
+                e
+            })?;
+
         let mut rows = stmt.query(params![key]).map_err(|e| {
             error!(target: "database", "执行查询失败 - 键: {}, 错误: {}", key, e);
             e
@@ -98,10 +105,11 @@ impl Database {
 
     pub fn delete_item(&self, key: &str) -> SqliteResult<()> {
         let conn = self.connection.lock().unwrap();
-        conn.execute("DELETE FROM item WHERE key = ?", params![key]).map_err(|e| {
-            error!(target: "database", "删除数据项失败 - 键: {}, 错误: {}", key, e);
-            e
-        })?;
+        conn.execute("DELETE FROM item WHERE key = ?", params![key])
+            .map_err(|e| {
+                error!(target: "database", "删除数据项失败 - 键: {}, 错误: {}", key, e);
+                e
+            })?;
         Ok(())
     }
 
@@ -111,11 +119,13 @@ impl Database {
             error!(target: "database", "准备获取所有数据项查询失败: {}", e);
             e
         })?;
-        
-        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?))).map_err(|e| {
-            error!(target: "database", "执行获取所有数据项查询失败: {}", e);
-            e
-        })?;
+
+        let rows = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .map_err(|e| {
+                error!(target: "database", "执行获取所有数据项查询失败: {}", e);
+                e
+            })?;
 
         let mut items = Vec::new();
         for item in rows {
@@ -143,7 +153,8 @@ impl Database {
         conn.execute(
             "INSERT OR REPLACE INTO account (account, userId, cursorToken) VALUES (?, ?, ?)",
             params![account, user_id, cursor_token],
-        ).map_err(|e| {
+        )
+        .map_err(|e| {
             error!(target: "database", "添加账户失败 - 账户: {}, 错误: {}", account, e);
             e
         })?;
@@ -152,11 +163,13 @@ impl Database {
 
     pub fn get_account(&self, account: &str) -> SqliteResult<Option<(String, String, String)>> {
         let conn = self.connection.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT account, userId, cursorToken FROM account WHERE account = ?").map_err(|e| {
-            error!(target: "database", "准备查询账户语句失败 - 账户: {}, 错误: {}", account, e);
-            e
-        })?;
-        
+        let mut stmt = conn
+            .prepare("SELECT account, userId, cursorToken FROM account WHERE account = ?")
+            .map_err(|e| {
+                error!(target: "database", "准备查询账户语句失败 - 账户: {}, 错误: {}", account, e);
+                e
+            })?;
+
         let mut rows = stmt.query(params![account]).map_err(|e| {
             error!(target: "database", "执行查询账户失败 - 账户: {}, 错误: {}", account, e);
             e
@@ -169,31 +182,36 @@ impl Database {
             Some(row) => {
                 let res = (row.get(0)?, row.get(1)?, row.get(2)?);
                 Ok(Some(res))
-            },
+            }
             None => Ok(None),
         }
     }
 
     pub fn delete_account(&self, account: &str) -> SqliteResult<()> {
         let conn = self.connection.lock().unwrap();
-        conn.execute("DELETE FROM account WHERE account = ?", params![account]).map_err(|e| {
-            error!(target: "database", "删除账户失败 - 账户: {}, 错误: {}", account, e);
-            e
-        })?;
+        conn.execute("DELETE FROM account WHERE account = ?", params![account])
+            .map_err(|e| {
+                error!(target: "database", "删除账户失败 - 账户: {}, 错误: {}", account, e);
+                e
+            })?;
         Ok(())
     }
 
     pub fn get_all_accounts(&self) -> SqliteResult<Vec<(String, String, String)>> {
         let conn = self.connection.lock().unwrap();
-        let mut stmt = conn.prepare("SELECT account, userId, cursorToken FROM account").map_err(|e| {
-            error!(target: "database", "准备获取所有账户查询失败: {}", e);
-            e
-        })?;
-        
-        let rows = stmt.query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?))).map_err(|e| {
-            error!(target: "database", "执行获取所有账户查询失败: {}", e);
-            e
-        })?;
+        let mut stmt = conn
+            .prepare("SELECT account, userId, cursorToken FROM account")
+            .map_err(|e| {
+                error!(target: "database", "准备获取所有账户查询失败: {}", e);
+                e
+            })?;
+
+        let rows = stmt
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
+            .map_err(|e| {
+                error!(target: "database", "执行获取所有账户查询失败: {}", e);
+                e
+            })?;
 
         let mut accounts = Vec::new();
         for account in rows {
@@ -214,7 +232,8 @@ impl Database {
         conn.execute(
             "UPDATE account SET cursorToken = ? WHERE account = ?",
             params![cursor_token, account],
-        ).map_err(|e| {
+        )
+        .map_err(|e| {
             error!(target: "database", "更新账户令牌失败 - 账户: {}, 错误: {}", account, e);
             e
         })?;

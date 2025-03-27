@@ -50,6 +50,7 @@
           "args": true
         }
       ]
-    }
+    },
+    "notification:default"
   ]
 }

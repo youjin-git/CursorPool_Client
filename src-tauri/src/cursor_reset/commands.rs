@@ -1,6 +1,5 @@
 use crate::api::client::ApiClient;
 use crate::database::Database;
-use crate::utils::file_utils::safe_write;
 use crate::utils::hook::Hook;
 use crate::utils::id_generator::generate_new_ids;
 use crate::utils::paths::AppPaths;
@@ -10,6 +9,7 @@ use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::fs;
 use tauri::State;
+use tauri::Manager;
 use tracing::error;
 
 /// 终止 Cursor 进程
@@ -200,7 +200,6 @@ pub async fn reset_machine_id(
         return Err(err);
     }
 
-    // 使用 safe_write 代替 fs::write
     let storage_content_str = match serde_json::to_string_pretty(&storage_content) {
         Ok(s) => s,
         Err(e) => {
@@ -218,7 +217,7 @@ pub async fn reset_machine_id(
         }
     };
 
-    if let Err(e) = safe_write(&paths.storage, &storage_content_str) {
+    if let Err(e) = fs::write(&paths.storage, &storage_content_str) {
         let err = format!("写入 storage.json 失败: {}", e);
         error!(target: "reset", "{}", err);
         ErrorReporter::report_error(
@@ -295,16 +294,18 @@ pub async fn switch_account(
             return Err(e);
         }
     };
-    
+
     // 获取当前账户信息
     let mut current_email = String::new();
     let mut current_token = String::new();
     let mut machine_id = String::new();
-    
+
     if paths.db.exists() {
         if let Ok(conn) = Connection::open(&paths.db) {
             // 读取当前机器码
-            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'telemetry.devDeviceId'") {
+            if let Ok(mut stmt) =
+                conn.prepare("SELECT value FROM ItemTable WHERE key = 'telemetry.devDeviceId'")
+            {
                 if let Ok(mut rows) = stmt.query([]) {
                     if let Ok(Some(row)) = rows.next() {
                         if let Ok(device_id) = row.get::<_, String>(0) {
@@ -313,9 +314,11 @@ pub async fn switch_account(
                     }
                 }
             }
-            
+
             // 读取当前邮箱
-            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/cachedEmail'") {
+            if let Ok(mut stmt) =
+                conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/cachedEmail'")
+            {
                 if let Ok(mut rows) = stmt.query([]) {
                     if let Ok(Some(row)) = rows.next() {
                         if let Ok(email) = row.get::<_, String>(0) {
@@ -324,9 +327,11 @@ pub async fn switch_account(
                     }
                 }
             }
-            
+
             // 读取当前token
-            if let Ok(mut stmt) = conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/refreshToken'") {
+            if let Ok(mut stmt) =
+                conn.prepare("SELECT value FROM ItemTable WHERE key = 'cursorAuth/refreshToken'")
+            {
                 if let Ok(mut rows) = stmt.query([]) {
                     if let Ok(Some(row)) = rows.next() {
                         if let Ok(token) = row.get::<_, String>(0) {
@@ -341,7 +346,7 @@ pub async fn switch_account(
     } else {
         error!(target: "account", "数据库文件不存在");
     }
-    
+
     // 检查当前账户是否已在历史记录中
     let account_exists_in_history = if !current_email.is_empty() {
         match db.get_item("user.history.accounts") {
@@ -353,11 +358,11 @@ pub async fn switch_account(
                         false
                     }
                 }
-            },
+            }
             Ok(None) => {
                 error!(target: "account", "历史账户记录为空");
                 false
-            },
+            }
             Err(e) => {
                 error!(target: "account", "获取历史账户记录失败: {}", e);
                 false
@@ -366,12 +371,21 @@ pub async fn switch_account(
     } else {
         false
     };
-    
+
     // 如果当前有账户信息且不在历史记录中，才保存
-    if !current_email.is_empty() && !current_token.is_empty() && !machine_id.is_empty() && !account_exists_in_history {
+    if !current_email.is_empty()
+        && !current_token.is_empty()
+        && !machine_id.is_empty()
+        && !account_exists_in_history
+    {
         if let Err(e) = crate::api::interceptor::save_cursor_token_to_history(
-            &db, &current_email, &current_token, &machine_id
-        ).await {
+            &db,
+            &current_email,
+            &current_token,
+            &machine_id,
+        )
+        .await
+        {
             error!(target: "account", "保存当前Cursor账户到历史记录失败: {}", e);
         } else {
             error!(target: "account", "成功保存当前账户 {} 到历史记录", current_email);
@@ -420,22 +434,27 @@ pub async fn switch_account(
                     false
                 }
             }
-        },
+        }
         Ok(None) => {
             error!(target: "account", "历史账户记录为空");
             false
-        },
+        }
         Err(e) => {
             error!(target: "account", "获取历史账户记录失败: {}", e);
             false
         }
     };
-    
+
     // 如果新账户不在历史记录中，才添加
     if !new_account_exists_in_history {
         if let Err(e) = crate::api::interceptor::save_cursor_token_to_history(
-            &db, &email, &processed_token, &machine_id
-        ).await {
+            &db,
+            &email,
+            &processed_token,
+            &machine_id,
+        )
+        .await
+        {
             error!(target: "account", "保存新Cursor账户到历史记录失败: {}", e);
         } else {
             error!(target: "account", "成功保存新账户 {} 到历史记录", email);
@@ -443,22 +462,24 @@ pub async fn switch_account(
     } else {
         // 如果账户已存在但token可能更新了，更新历史记录
         if let Ok(Some(data)) = db.get_item("user.history.accounts") {
-            if let Ok(mut accounts) = serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data) {
+            if let Ok(mut accounts) =
+                serde_json::from_str::<Vec<crate::api::types::HistoryAccountRecord>>(&data)
+            {
                 let now = std::time::SystemTime::now()
                     .duration_since(std::time::UNIX_EPOCH)
                     .unwrap_or_default()
                     .as_millis() as i64;
-                
+
                 // 查找并更新已有账户
                 for account in &mut accounts {
                     if account.email == email {
                         // 更新token和最后使用时间
-                        account.token = processed_token.clone();  // 使用处理后的token
+                        account.token = processed_token.clone(); // 使用处理后的token
                         account.last_used = now;
                         break;
                     }
                 }
-                
+
                 // 保存更新后的记录
                 if let Ok(json_data) = serde_json::to_string(&accounts) {
                     if let Err(e) = db.set_item("user.history.accounts", &json_data) {
@@ -563,7 +584,7 @@ fn update_database(
     updates: &[(impl AsRef<str>, impl AsRef<str>)],
 ) -> Result<(), String> {
     error!(target: "database", "开始更新数据库: {}", db_path.display());
-    
+
     let conn = match Connection::open(db_path) {
         Ok(c) => c,
         Err(e) => {
@@ -622,7 +643,7 @@ pub async fn is_hook(db: State<'_, Database>) -> Result<bool, String> {
             return Err(e);
         }
     };
-    
+
     let content = match fs::read_to_string(&paths.main_js) {
         Ok(c) => c,
         Err(e) => {
@@ -824,4 +845,15 @@ pub fn log_warn(message: String, file: Option<String>, line: Option<u32>) {
 #[tauri::command]
 pub fn log_info(message: String) {
     tracing::info!(target: "frontend", "{}", message);
+}
+
+#[tauri::command]
+pub fn open_devtools(app_handle: tauri::AppHandle) {
+    if let Some(window) = app_handle.get_webview_window("main") {
+        if !window.is_devtools_open() {
+            window.open_devtools();
+        } else {
+            window.close_devtools();
+        }
+    }
 }

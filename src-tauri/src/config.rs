@@ -60,6 +60,10 @@ pub struct DbKeyConfig {
     pub cursor_main_js_path_key: String,
     pub token_key: String,
     pub lang_key: String,
+    // 任务调度相关键
+    pub dashboard_refresh_interval_key: String,
+    pub account_limit_check_interval_key: String,
+    pub account_usage_threshold_key: String,
 }
 
 // 超时配置
@@ -71,6 +75,17 @@ pub struct TimeoutConfig {
     pub request_timeout_secs: u64,
 }
 
+// 任务调度配置
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SchedulerConfig {
+    // 仪表盘刷新间隔(秒)
+    pub dashboard_refresh_interval: u64,
+    // 账户限制检查间隔(秒)
+    pub account_limit_check_interval: u64,
+    // 账户使用量警告阈值(百分比，0-1之间)
+    pub account_usage_threshold: f64,
+}
+
 // 全局应用配置
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AppConfig {
@@ -78,6 +93,7 @@ pub struct AppConfig {
     pub paths: PathConfig,
     pub db_keys: DbKeyConfig,
     pub timeouts: TimeoutConfig,
+    pub scheduler: SchedulerConfig,
 }
 
 impl Default for AppConfig {
@@ -85,7 +101,8 @@ impl Default for AppConfig {
         Self {
             api: ApiConfig {
                 default_api_url: "https://pool.52ai.org/api".to_string(),
-                config_file_url: "https://cursorpool.oss-cn-guangzhou.aliyuncs.com/config.json".to_string(),
+                config_file_url: "https://cursorpool.oss-cn-guangzhou.aliyuncs.com/config.json"
+                    .to_string(),
                 cursor_user_id: "user_01000000000000000000000000".to_string(),
                 public_endpoints: vec![
                     "/login".to_string(),
@@ -104,12 +121,14 @@ impl Default for AppConfig {
             paths: PathConfig {
                 windows: WindowsPaths {
                     cursor_exe: "%LOCALAPPDATA%\\Programs\\cursor\\Cursor.exe".to_string(),
-                    cursor_resources: "%LOCALAPPDATA%\\Programs\\cursor\\resources\\app\\out\\main.js".to_string(),
+                    cursor_resources:
+                        "%LOCALAPPDATA%\\Programs\\cursor\\resources\\app\\out\\main.js".to_string(),
                     cursor_updater: "%LOCALAPPDATA%\\cursor-updater".to_string(),
                 },
                 macos: MacOSPaths {
                     cursor_app: "/Applications/Cursor.app/Contents/MacOS/Cursor".to_string(),
-                    cursor_resources: "/Applications/Cursor.app/Contents/Resources/app/out/main.js".to_string(),
+                    cursor_resources: "/Applications/Cursor.app/Contents/Resources/app/out/main.js"
+                        .to_string(),
                     cursor_updater: "~/Library/Application Support/cursor-updater".to_string(),
                 },
                 linux: LinuxPaths {
@@ -124,10 +143,18 @@ impl Default for AppConfig {
                 cursor_main_js_path_key: "system.cursor.path.mainJs".to_string(),
                 token_key: "user.info.token".to_string(),
                 lang_key: "user.info.lang".to_string(),
+                dashboard_refresh_interval_key: "system.scheduler.dashboard_refresh_interval".to_string(),
+                account_limit_check_interval_key: "system.scheduler.account_limit_check_interval".to_string(),
+                account_usage_threshold_key: "system.scheduler.account_usage_threshold".to_string(),
             },
             timeouts: TimeoutConfig {
                 ping_timeout_ms: 5000,
                 request_timeout_secs: 10,
+            },
+            scheduler: SchedulerConfig {
+                dashboard_refresh_interval: 300, // 5分钟
+                account_limit_check_interval: 600, // 10分钟
+                account_usage_threshold: 0.1, // 10%
             },
         }
     }
@@ -146,28 +173,58 @@ pub fn init_config() -> Result<(), String> {
 // 辅助函数: 根据操作系统获取当前系统路径配置
 pub fn get_os_paths() -> PathBuf {
     let config = CONFIG.read().unwrap();
-    
+
     if cfg!(target_os = "windows") {
-        PathBuf::from(config.paths.windows.cursor_exe.replace("%LOCALAPPDATA%", &env::var("LOCALAPPDATA").unwrap_or_default()))
+        PathBuf::from(config.paths.windows.cursor_exe.replace(
+            "%LOCALAPPDATA%",
+            &env::var("LOCALAPPDATA").unwrap_or_default(),
+        ))
     } else if cfg!(target_os = "macos") {
-        PathBuf::from(config.paths.macos.cursor_app.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .macos
+                .cursor_app
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     } else {
         // Linux
-        PathBuf::from(config.paths.linux.cursor_exe.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .linux
+                .cursor_exe
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     }
 }
 
 // 获取当前操作系统的资源路径
 pub fn get_os_resources_path() -> PathBuf {
     let config = CONFIG.read().unwrap();
-    
+
     if cfg!(target_os = "windows") {
-        PathBuf::from(config.paths.windows.cursor_resources.replace("%LOCALAPPDATA%", &env::var("LOCALAPPDATA").unwrap_or_default()))
+        PathBuf::from(config.paths.windows.cursor_resources.replace(
+            "%LOCALAPPDATA%",
+            &env::var("LOCALAPPDATA").unwrap_or_default(),
+        ))
     } else if cfg!(target_os = "macos") {
-        PathBuf::from(config.paths.macos.cursor_resources.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .macos
+                .cursor_resources
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     } else {
         // Linux
-        PathBuf::from(config.paths.linux.cursor_resources.replace("~", &env::var("HOME").unwrap_or_default()))
+        PathBuf::from(
+            config
+                .paths
+                .linux
+                .cursor_resources
+                .replace("~", &env::var("HOME").unwrap_or_default()),
+        )
     }
 }
 
@@ -194,30 +251,42 @@ pub fn get_ping_timeout() -> Duration {
 // 检查是否为公共端点
 pub fn is_public_endpoint(url: &str) -> bool {
     let config = CONFIG.read().unwrap();
-    
+
     if url.contains("cursor.com") {
         return true;
     }
-    
+
     for endpoint in &config.api.public_endpoints {
         if url.contains(endpoint) {
             return true;
         }
     }
-    
+
     false
 }
 
+// 获取调度器配置
+pub fn get_scheduler_config() -> SchedulerConfig {
+    CONFIG.read().unwrap().scheduler.clone()
+}
+
+// 获取账户使用量警告阈值
+pub fn get_account_usage_threshold() -> f64 {
+    CONFIG.read().unwrap().scheduler.account_usage_threshold
+}
+
 // 获取数据库键
-pub fn get_db_key(key_type: &str) -> String {
+pub fn get_db_key(key_name: &str) -> String {
     let config = CONFIG.read().unwrap();
-    
-    match key_type {
+    match key_name {
+        "dashboard_refresh_interval" => config.db_keys.dashboard_refresh_interval_key.clone(),
+        "account_limit_check_interval" => config.db_keys.account_limit_check_interval_key.clone(),
+        "account_usage_threshold" => config.db_keys.account_usage_threshold_key.clone(),
         "inbound_config" => config.db_keys.inbound_config_key.clone(),
         "current_inbound" => config.db_keys.current_inbound_key.clone(),
         "cursor_main_js_path" => config.db_keys.cursor_main_js_path_key.clone(),
         "token" => config.db_keys.token_key.clone(),
         "lang" => config.db_keys.lang_key.clone(),
-        _ => "".to_string(),
+        _ => panic!("Unknown key name: {}", key_name),
     }
-} 
+}
