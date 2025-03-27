@@ -281,15 +281,6 @@ export const useCursorStore = defineStore('cursor', () => {
         throw error
       }
 
-      // 添加历史记录
-      await saveHistoryRecord({
-        id: Date.now(),
-        type_name: '一键切换',
-        detail: `切换到账户: ${email} 并重置机器码 扣除50积分`,
-        timestamp: new Date().toISOString(),
-        operator: '用户',
-      })
-
       // 刷新数据
       await fetchMachineIds()
       await fetchCursorUsage()
