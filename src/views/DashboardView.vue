@@ -24,7 +24,13 @@
   import MarkdownRenderComponent from '../components/MarkdownRender.vue'
   import ArticleList from '../components/ArticleList.vue'
   import { useRouter } from 'vue-router'
-  import { useUserStore, useCursorStore, useAppStore, useNotificationStore } from '@/stores'
+  import {
+    useUserStore,
+    useCursorStore,
+    useAppStore,
+    useNotificationStore,
+    useArticleStore,
+  } from '@/stores'
   import CursorRunningModal from '../components/CursorRunningModal.vue'
 
   interface DeviceInfoState {
@@ -96,6 +102,7 @@
   const cursorStore = useCursorStore()
   const appStore = useAppStore()
   const notificationStore = useNotificationStore()
+  const articleStore = useArticleStore()
 
   // 添加路由对象
   const router = useRouter()
@@ -640,7 +647,19 @@
 
   // 开始引导
   const startTour = () => {
-    shouldShowTour.value = true
+    // 检查是否有公告正在显示
+    if (articleStore.hasUnreadArticles) {
+      // 添加一个事件监听，当公告全部已读时再显示引导
+      const checkInterval = setInterval(() => {
+        if (!articleStore.hasUnreadArticles) {
+          shouldShowTour.value = true
+          clearInterval(checkInterval)
+        }
+      }, 1000)
+    } else {
+      // 没有公告，直接显示引导
+      shouldShowTour.value = true
+    }
   }
 
   // 处理引导完成
