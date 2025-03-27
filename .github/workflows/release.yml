@@ -214,16 +214,22 @@ jobs:
           prerelease: false
           args: --target ${{ matrix.target }} --config src-tauri/tauri.windows.conf.json
           includeUpdaterJson: true
+          withAllChangesets: true
 
       - name: Rename Artifacts
         shell: pwsh
         run: |
+          # 查找并显示原始文件
+          Write-Host "Original files:"
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi" | ForEach-Object { Write-Host $_.FullName }
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe" | ForEach-Object { Write-Host $_.FullName }
+          
           # 重命名MSI文件
           $msiFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi"
           foreach ($file in $msiFiles) {
-            $newName = $file.Name -replace ".msi$", "_fixed-webview2.msi"
+            $newName = $file.Name -replace "\.msi$", "_fixed-webview2.msi"
             $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Move-Item -Path $file.FullName -Destination $newPath
+            Copy-Item -Path $file.FullName -Destination $newPath -Force
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
@@ -232,7 +238,7 @@ jobs:
           foreach ($file in $exeFiles) {
             $newName = $file.Name -replace "-setup\.exe$", "_fixed-webview2-setup.exe"
             $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Move-Item -Path $file.FullName -Destination $newPath
+            Copy-Item -Path $file.FullName -Destination $newPath -Force
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
@@ -242,13 +248,32 @@ jobs:
             if ($file.Name -match "-setup\.exe\.sig$") {
               $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed-webview2-setup.exe.sig"
               $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Move-Item -Path $file.FullName -Destination $newPath
+              Copy-Item -Path $file.FullName -Destination $newPath -Force
               Write-Host "Renamed: $($file.Name) -> $newName"
             } 
             elseif ($file.Name -match "\.msi\.sig$") {
               $newName = $file.Name -replace "\.msi\.sig$", "_fixed-webview2.msi.sig"
               $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Move-Item -Path $file.FullName -Destination $newPath
+              Copy-Item -Path $file.FullName -Destination $newPath -Force
               Write-Host "Renamed: $($file.Name) -> $newName"
             }
           }
+          
+          # 删除原始文件以避免重复上传
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
+            Write-Host "Removing original file: $($_.FullName)"
+            Remove-Item -Path $_.FullName -Force 
+          }
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
+            Write-Host "Removing original file: $($_.FullName)"
+            Remove-Item -Path $_.FullName -Force 
+          }
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\*\*.sig" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
+            Write-Host "Removing original file: $($_.FullName)"
+            Remove-Item -Path $_.FullName -Force 
+          }
+          
+          # 显示最终文件
+          Write-Host "Final files:"
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*" | ForEach-Object { Write-Host $_.FullName }
+          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*" | ForEach-Object { Write-Host $_.FullName }
