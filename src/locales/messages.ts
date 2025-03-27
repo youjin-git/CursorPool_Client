@@ -141,11 +141,17 @@ export const messages = {
       clientStatus: '客户端状态',
       clientVerified: '已验证',
       clientUnverified: '未验证',
+      systemNotification: '系统通知',
+      authorized: '已授权',
+      unauthorized: '未授权',
+      requestPermission: '请求权限',
       messages: {
         applyHookSuccess: '注入客户端成功',
         restoreHookSuccess: '恢复客户端成功',
         cursorRunning: 'Cursor进程正在运行, 请先关闭Cursor',
         forceKillConfirm: '我已保存, 强制关闭',
+        permissionGranted: '通知权限已授予',
+        permissionDenied: '通知权限被拒绝，请在系统设置中手动启用',
       },
       history: {
         applyHook: '注入客户端',
@@ -225,6 +231,10 @@ export const messages = {
       clearHighUsageSuccess: '成功清理 {count} 个高使用量账户',
       clearHighUsageFailed: '清理高使用量账户失败',
       loadFailed: '加载历史账户失败',
+    },
+    notification: {
+      testTitle: '通知测试',
+      testBody: '恭喜！通知功能已成功启用。',
     },
   },
   'en-US': {
@@ -376,6 +386,10 @@ export const messages = {
       clientStatus: 'Client Status',
       clientVerified: 'Verified',
       clientUnverified: 'Unverified',
+      systemNotification: 'System Notification',
+      authorized: 'Authorized',
+      unauthorized: 'Unauthorized',
+      requestPermission: 'Request Permission',
       messages: {
         disableUpdateSuccess: 'Auto update disabled successfully',
         restoreUpdateSuccess: 'Auto update restored successfully',
@@ -383,6 +397,9 @@ export const messages = {
         restoreHookSuccess: 'Hook restored successfully',
         cursorRunning: 'Cursor is running, please save your work before continuing!',
         forceKillConfirm: 'I have saved, force close',
+        permissionGranted: 'Notification permission granted',
+        permissionDenied:
+          'Permission denied, please enable notifications manually in system settings',
       },
       history: {
         disableUpdate: 'Desactivar actualización automática',
@@ -466,6 +483,10 @@ export const messages = {
       clearHighUsageSuccess: 'Successfully cleared {count} high usage accounts',
       clearHighUsageFailed: 'Failed to clear high usage accounts',
       loadFailed: 'Failed to load account history',
+    },
+    notification: {
+      testTitle: 'Notification Test',
+      testBody: 'Congratulations! Notification function has been successfully enabled.',
     },
   },
   'ja-JP': {
@@ -611,6 +632,10 @@ export const messages = {
       clientStatus: 'クライアント状態',
       clientVerified: '検証済み',
       clientUnverified: '未検証',
+      systemNotification: 'システム通知',
+      authorized: '承認済み',
+      unauthorized: '未承認',
+      requestPermission: '権限をリクエスト',
       messages: {
         disableUpdateSuccess: '自動更新を無効化しました',
         restoreUpdateSuccess: '自動更新を復元しました',
@@ -618,6 +643,8 @@ export const messages = {
         restoreHookSuccess: 'フックを復元しました',
         cursorRunning: 'Cursorが実行中です。続行する前に作業を保存してください！',
         forceKillConfirm: '保存しました、強制終了します',
+        permissionGranted: '通知の権限が付与されました',
+        permissionDenied: '権限が拒否されました。システム設定で手動で通知を有効にしてください',
       },
       history: {
         disableUpdate: '自動更新を無効化',
@@ -693,6 +720,10 @@ export const messages = {
       clearHighUsageSuccess: '{count}個の高使用量アカウントをクリアしました',
       clearHighUsageFailed: '高使用量アカウントのクリアに失敗しました',
       loadFailed: 'アカウント履歴の読み込みに失敗しました',
+    },
+    notification: {
+      testTitle: '通知テスト',
+      testBody: 'おめでとうございます！通知機能が正常に有効になりました。',
     },
   },
   'fr-FR': {
@@ -843,6 +874,10 @@ export const messages = {
       clientStatus: 'État du client',
       clientVerified: 'Vérifié',
       clientUnverified: 'Non vérifié',
+      systemNotification: 'Notification système',
+      authorized: 'Autorisé',
+      unauthorized: 'Non autorisé',
+      requestPermission: 'Demander une autorisation',
       messages: {
         disableUpdateSuccess: 'Auto update disabled successfully',
         restoreUpdateSuccess: 'Auto update restored successfully',
@@ -850,6 +885,9 @@ export const messages = {
         restoreHookSuccess: 'Hook restaurado con éxito',
         cursorRunning: 'Cursor en ejecución, por favor guarde su trabajo antes de continuar!',
         forceKillConfirm: 'He guardado, forzar cierre',
+        permissionGranted: 'Autorisation de notification accordée',
+        permissionDenied:
+          'Permission refusée, veuillez activer les notifications manuellement dans les paramètres système',
       },
       history: {
         disableUpdate: 'Desactivar actualización automática',
@@ -926,6 +964,10 @@ export const messages = {
       clearHighUsageSuccess: 'Effacé avec succès {count} comptes à haute utilisation',
       clearHighUsageFailed: "Échec de l'effacement des comptes à haute utilisation",
       loadFailed: "Échec du chargement de l'historique des comptes",
+    },
+    notification: {
+      testTitle: 'Test de Notification',
+      testBody: 'Félicitations ! La fonction de notification a été activée avec succès.',
     },
   },
   'de-DE': {
@@ -1071,6 +1113,10 @@ export const messages = {
       clientStatus: 'Client-Status',
       clientVerified: 'Verifiziert',
       clientUnverified: 'Nicht verifiziert',
+      systemNotification: 'Systembenachrichtigung',
+      authorized: 'Autorisiert',
+      unauthorized: 'Nicht autorisiert',
+      requestPermission: 'Berechtigung anfordern',
       messages: {
         disableUpdateSuccess: 'Automatische Updates erfolgreich deaktiviert',
         restoreUpdateSuccess: 'Automatische Updates erfolgreich wiederhergestellt',
@@ -1078,6 +1124,9 @@ export const messages = {
         restoreHookSuccess: 'Hook restaurado con éxito',
         cursorRunning: 'Cursor en ejecución, por favor guarde su trabajo antes de continuar!',
         forceKillConfirm: 'He guardado, forzar cierre',
+        permissionGranted: 'Benachrichtigungsberechtigung erteilt',
+        permissionDenied:
+          'Berechtigung verweigert, bitte aktivieren Sie Benachrichtigungen manuell in den Systemeinstellungen',
       },
       history: {
         disableUpdate: 'Desactivar actualización automática',
@@ -1154,6 +1203,10 @@ export const messages = {
       clearHighUsageSuccess: '{count} Konten mit hoher Nutzung erfolgreich gelöscht',
       clearHighUsageFailed: 'Löschen von Konten mit hoher Nutzung fehlgeschlagen',
       loadFailed: 'Laden des Kontoverlaufs fehlgeschlagen',
+    },
+    notification: {
+      testTitle: 'Benachrichtigungstest',
+      testBody: 'Glückwunsch! Die Benachrichtigungsfunktion wurde erfolgreich aktiviert.',
     },
   },
   'ko-KR': {
@@ -1299,6 +1352,10 @@ export const messages = {
       clientStatus: '클라이언트 상태',
       clientVerified: '검증됨',
       clientUnverified: '미검증',
+      systemNotification: '시스템 알림',
+      authorized: '권한 있음',
+      unauthorized: '권한 없음',
+      requestPermission: '권한 요청',
       messages: {
         disableUpdateSuccess: '자동 업데이트가 비활성화되었습니다',
         restoreUpdateSuccess: '자동 업데이트가 복원되었습니다',
@@ -1306,6 +1363,8 @@ export const messages = {
         restoreHookSuccess: '훅이 복원되었습니다',
         cursorRunning: 'Cursor가 실행 중입니다. 계속하기 전에 작업을 저장하세요!',
         forceKillConfirm: '저장했습니다, 강제 종료',
+        permissionGranted: '알림 권한이 부여되었습니다',
+        permissionDenied: '권한이 거부되었습니다. 시스템 설정에서 수동으로 알림을 활성화하세요',
       },
       history: {
         disableUpdate: '자동 업데이트 비활성화',
@@ -1380,6 +1439,10 @@ export const messages = {
       clearHighUsageSuccess: '{count}개의 높은 사용량 계정 정리 성공',
       clearHighUsageFailed: '높은 사용량 계정 정리 실패',
       loadFailed: '계정 기록 로드 실패',
+    },
+    notification: {
+      testTitle: '알림 테스트',
+      testBody: '축하합니다! 알림 기능이 성공적으로 활성화되었습니다.',
     },
   },
   'ru-RU': {
@@ -1525,6 +1588,10 @@ export const messages = {
       clientStatus: 'Этап клиента',
       clientVerified: 'Проверено',
       clientUnverified: 'Не проверено',
+      systemNotification: 'Системное уведомление',
+      authorized: 'Авторизовано',
+      unauthorized: 'Не авторизовано',
+      requestPermission: 'Запросить разрешение',
       messages: {
         disableUpdateSuccess: 'Автоматическое обновление успешно отключено',
         restoreUpdateSuccess: 'Автоматическое обновление успешно восстановлено',
@@ -1532,6 +1599,9 @@ export const messages = {
         restoreHookSuccess: 'Hook restaurado con éxito',
         cursorRunning: 'Cursor en ejecución, por favor guarde su trabajo antes de continuar!',
         forceKillConfirm: 'He guardado, forzar cierre',
+        permissionGranted: 'Разрешение на уведомления предоставлено',
+        permissionDenied:
+          'Разрешение отклонено, пожалуйста, включите уведомления вручную в настройках системы',
       },
       history: {
         disableUpdate: 'Desactivar actualización automática',
@@ -1608,6 +1678,10 @@ export const messages = {
       clearHighUsageSuccess: 'Успешно очищено {count} аккаунтов с высоким использованием',
       clearHighUsageFailed: 'Не удалось очистить аккаунты с высоким использованием',
       loadFailed: 'Не удалось загрузить историю аккаунтов',
+    },
+    notification: {
+      testTitle: 'Тест уведомления',
+      testBody: 'Поздравляем! Функция уведомлений успешно включена.',
     },
   },
   'es-AR': {
@@ -1753,6 +1827,10 @@ export const messages = {
       clientStatus: 'État du client',
       clientVerified: 'Vérifié',
       clientUnverified: 'Non vérifié',
+      systemNotification: 'Notificación del sistema',
+      authorized: 'Autorisé',
+      unauthorized: 'Non autorisé',
+      requestPermission: 'Demander une autorisation',
       messages: {
         disableUpdateSuccess: 'Actualización automática desactivada con éxito',
         restoreUpdateSuccess: 'Actualización automática restaurada con éxito',
@@ -1760,6 +1838,9 @@ export const messages = {
         restoreHookSuccess: 'Hook restaurado con éxito',
         cursorRunning: 'Cursor en ejecución, por favor guarde su trabajo antes de continuar!',
         forceKillConfirm: 'He guardado, forzar cierre',
+        permissionGranted: 'Permiso de notificación concedido',
+        permissionDenied:
+          'Permiso denegado, active las notificaciones manualmente en la configuración del sistema',
       },
       history: {
         disableUpdate: 'Desactivar actualización automática',
@@ -1836,6 +1917,10 @@ export const messages = {
       clearHighUsageSuccess: 'Limpiadas exitosamente {count} cuentas de alto uso',
       clearHighUsageFailed: 'Fallo al limpiar cuentas de alto uso',
       loadFailed: 'Fallo al cargar historial de cuentas',
+    },
+    notification: {
+      testTitle: 'Prueba de Notificación',
+      testBody: '¡Felicidades! La función de notificación se ha habilitado con éxito.',
     },
   },
 } as const

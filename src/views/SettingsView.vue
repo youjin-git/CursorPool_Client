@@ -18,6 +18,7 @@
   import InboundSelector from '../components/InboundSelector.vue'
   import CloseTypeSelector from '../components/CloseTypeSelector.vue'
   import CursorRunningModal from '../components/CursorRunningModal.vue'
+  import NotificationPermissionSetting from '../components/NotificationPermissionSetting.vue'
   import { changePassword, activate, checkCursorRunning, applyHook, restoreHook } from '@/api'
   import { addHistoryRecord } from '../utils/history'
   import { version } from '../../package.json'
@@ -336,6 +337,9 @@
             </n-button>
           </div>
         </div>
+
+        <!-- 系统通知状态 -->
+        <notification-permission-setting />
       </n-space>
     </n-card>
 
