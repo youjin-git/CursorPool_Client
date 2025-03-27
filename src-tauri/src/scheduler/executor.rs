@@ -158,7 +158,6 @@ impl SchedulerState {
             
             loop {
                 interval.tick().await;
-                info!("执行仪表盘刷新任务");
                 
                 // 通知前端刷新仪表盘
                 if let Some(window) = app_handle.as_ref().get_webview_window("main") {
@@ -218,8 +217,6 @@ impl SchedulerState {
             
             loop {
                 interval.tick().await;
-                info!("执行账户使用限制检查任务");
-                
                 // 执行账户检查
                 if let Err(e) = tasks::check_account_limit(&app_handle).await {
                     error!("检查账户使用限制失败: {}", e);

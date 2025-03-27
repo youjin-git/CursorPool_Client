@@ -4,13 +4,11 @@ use crate::cursor_reset::commands;
 use crate::utils::ErrorReporter;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
-use tracing::{error, info};
+use tracing::error;
 use crate::database::Database;
 
 /// 检查账户使用限制
 pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
-    info!("检查账户使用限制");
-    
     // 获取当前机器码和用户信息
     let machine_info = match commands::get_machine_ids() {
         Ok(info) => info,
@@ -122,15 +120,11 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
             }
         }
     }
-    
-    info!("账户使用限制检查完成");
     Ok(())
 }
 
 /// 发送通知到前端
 async fn send_notification(app_handle: &AppHandle, account: &str, remaining_percentage: i64) -> Result<(), String> {
-    info!("发送账户使用量警告事件");
-    
     // 只向前端发送账户数据和剩余使用量百分比
     if let Some(window) = app_handle.get_webview_window("main") {
         if let Err(e) = window.emit("account-usage-warning", 
@@ -145,8 +139,6 @@ async fn send_notification(app_handle: &AppHandle, account: &str, remaining_perc
             error!("{}", err_msg);
             return Err(err_msg);
         }
-        
-        info!("通知事件发送成功");
         Ok(())
     } else {
         let err_msg = "无法获取应用窗口，通知发送失败".to_string();
