@@ -24,10 +24,25 @@ export const useNotificationStore = defineStore('notification', () => {
   // 检查通知权限
   const checkPermission = async (): Promise<boolean> => {
     try {
-      permissionGranted.value = await isPermissionGranted()
-      return permissionGranted.value
+      // 先检查是否已有权限
+      let granted = await isPermissionGranted()
+
+      // 如果没有权限，直接请求
+      if (!granted) {
+        isRequesting.value = true
+        try {
+          const permission = await requestPermission()
+          granted = permission === 'granted'
+        } finally {
+          isRequesting.value = false
+        }
+      }
+
+      // 更新状态并返回
+      permissionGranted.value = granted
+      return granted
     } catch (error) {
-      console.error('检查通知权限失败:', error)
+      console.error('检查/请求通知权限失败:', error)
       permissionGranted.value = false
       return false
     }
@@ -61,7 +76,7 @@ export const useNotificationStore = defineStore('notification', () => {
     try {
       // 确保权限已授予
       if (!permissionGranted.value) {
-        const granted = await requestNotificationPermission()
+        const granted = await checkPermission()
         if (!granted) return false
       }
 

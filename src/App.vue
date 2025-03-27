@@ -5,13 +5,7 @@
   import { useI18n, initLanguage } from './locales'
   import { locales } from './locales'
   import { computed, onMounted, onUnmounted } from 'vue'
-  import {
-    useHistoryStore,
-    useUpdaterStore,
-    useInboundStore,
-    useAppCloseStore,
-    useNotificationStore,
-  } from './stores'
+  import { useHistoryStore, useUpdaterStore, useInboundStore, useAppCloseStore } from './stores'
   import UpdateOverlay from './components/UpdateOverlay.vue'
   import CloseConfirmModal from './components/CloseConfirmModal.vue'
   import { Window } from '@tauri-apps/api/window'
@@ -24,7 +18,6 @@
   const updaterStore = useUpdaterStore()
   const inboundStore = useInboundStore()
   const appCloseStore = useAppCloseStore()
-  const notificationStore = useNotificationStore()
 
   const locale = computed(() => locales[currentLang.value].locale)
   const dateLocale = computed(() => locales[currentLang.value].dateLocale)
