@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: '版本号 (不含v前缀)'
+        description: 'Version number (without v prefix)'
         required: true
         type: string
   workflow_run:
@@ -105,10 +105,10 @@ jobs:
               release_id
             });
             
-            // 创建资产列表，排除fixed-webview2版本和sig文件
+            // Create asset list, exclude fixed-webview2 versions and sig files
             const standardAssets = assets.data
               .filter(asset => 
-                !asset.name.includes('_fixed-webview2') && 
+                !asset.name.includes('_fixed_webview2') && 
                 !asset.name.endsWith('.sig') &&
                 !asset.name.includes('darwin-universal')
               )
@@ -129,17 +129,17 @@ jobs:
           echo "Assets: $assets"
           echo "Version: $version"
           
-          # 创建临时目录
+          # Create temporary directory
           mkdir -p updater-tmp
           cd updater-tmp
           
-          # 创建资产清单JSON
+          # Create asset manifest JSON
           echo "$assets" > assets.json
           
-          # 生成更新文件
+          # Generate update files
           cargo tauri migrate
           
-          # 使用版本号而不是'latest'以区分不同版本的更新文件
+          # Use version number instead of 'latest' to distinguish different versions of update files
           cargo tauri updater --version $version
 
       - name: Upload updater files to release
@@ -150,11 +150,11 @@ jobs:
             const { owner, repo } = context.repo;
             const release_id = ${{ needs.check-release.outputs.release_id }};
             
-            // 查找生成的更新文件
+            // Find generated update files
             const updaterDir = 'updater-tmp';
             const files = fs.readdirSync(updaterDir).filter(f => f.endsWith('.json'));
             
-            // 读取基础更新文件内容
+            // Read basic update file content
             let content = {};
             if (files.length > 0) {
               const mainUpdaterFile = files.find(f => f !== 'latest.json') || files[0];
@@ -162,25 +162,25 @@ jobs:
               content = JSON.parse(updaterContent);
             }
             
-            // 创建最终的更新文件 - 标准版本
+            // Create final update file - standard version
             const finalContent = {
               version: '${{ needs.check-release.outputs.version }}'.replace('v', ''),
-              notes: '',
+              notes: 'See release notes on GitHub',
               pub_date: new Date().toISOString(),
               platforms: content.platforms || {}
             };
             
-            // 保存到最终JSON文件
+            // Save to final JSON file
             const updaterJson = JSON.stringify(finalContent, null, 2);
-            fs.writeFileSync('standard-updater.json', updaterJson);
+            fs.writeFileSync('latest.json', updaterJson);
             
-            // 上传到GitHub Release
+            // Upload to GitHub Release
             await github.rest.repos.uploadReleaseAsset({
               owner,
               repo,
               release_id,
-              name: 'standard-updater.json',
-              data: fs.readFileSync('standard-updater.json')
+              name: 'latest.json',
+              data: fs.readFileSync('latest.json')
             });
             
             console.log('Standard updater file uploaded to release');
@@ -219,10 +219,10 @@ jobs:
               release_id
             });
             
-            // 创建资产列表，仅包含fixed-webview2版本并排除sig文件
+            // Create asset list, only include fixed-webview2 versions and exclude sig files
             const webview2Assets = assets.data
               .filter(asset => 
-                asset.name.includes('_fixed-webview2') && 
+                asset.name.includes('_fixed_webview2') && 
                 !asset.name.endsWith('.sig')
               )
               .map(asset => ({
@@ -242,17 +242,17 @@ jobs:
           echo "WebView2 Assets: $assets"
           echo "Version: $version"
           
-          # 创建临时目录
+          # Create temporary directory
           mkdir -p updater-webview2-tmp
           cd updater-webview2-tmp
           
-          # 创建资产清单JSON
+          # Create asset manifest JSON
           echo "$assets" > assets.json
           
-          # 生成更新文件
+          # Generate update files
           cargo tauri migrate
           
-          # 使用版本号而不是'latest'以区分不同版本的更新文件
+          # Use version number instead of 'latest' to distinguish different versions of update files
           cargo tauri updater --version $version
 
       - name: Upload WebView2 updater files to release
@@ -263,11 +263,11 @@ jobs:
             const { owner, repo } = context.repo;
             const release_id = ${{ needs.check-release.outputs.release_id }};
             
-            // 查找生成的更新文件
+            // Find generated update files
             const updaterDir = 'updater-webview2-tmp';
             const files = fs.readdirSync(updaterDir).filter(f => f.endsWith('.json'));
             
-            // 读取基础更新文件内容
+            // Read basic update file content
             let content = {};
             if (files.length > 0) {
               const mainUpdaterFile = files.find(f => f !== 'latest.json') || files[0];
@@ -275,25 +275,25 @@ jobs:
               content = JSON.parse(updaterContent);
             }
             
-            // 创建最终的更新文件 - WebView2固定版本
+            // Create final update file - WebView2 fixed version
             const finalContent = {
               version: '${{ needs.check-release.outputs.version }}'.replace('v', ''),
-              notes: '',
+              notes: 'See release notes on GitHub',
               pub_date: new Date().toISOString(),
               platforms: content.platforms || {}
             };
             
-            // 保存到最终JSON文件
+            // Save to final JSON file
             const updaterJson = JSON.stringify(finalContent, null, 2);
-            fs.writeFileSync('webview2-fixed-updater.json', updaterJson);
+            fs.writeFileSync('latest_fixed_webview2.json', updaterJson);
             
-            // 上传到GitHub Release
+            // Upload to GitHub Release
             await github.rest.repos.uploadReleaseAsset({
               owner,
               repo,
               release_id,
-              name: 'webview2-fixed-updater.json',
-              data: fs.readFileSync('webview2-fixed-updater.json')
+              name: 'latest_fixed_webview2.json',
+              data: fs.readFileSync('latest_fixed_webview2.json')
             });
             
             console.log('WebView2 fixed updater file uploaded to release'); 

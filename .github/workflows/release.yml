@@ -161,7 +161,7 @@ jobs:
       - name: Prepare WebView2 Fixed Runtime
         shell: pwsh
         run: |
-          # 创建WebView2配置文件
+          # Create WebView2 configuration file
           $webviewConfigContent = @"
           {
             "bundle": {
@@ -175,13 +175,13 @@ jobs:
           }
           "@
           
-          # 保存配置文件
+          # Save configuration file
           New-Item -Path "src-tauri" -Name "tauri.windows.conf.json" -ItemType "file" -Value $webviewConfigContent -Force
           
-          # 下载WebView2运行时
+          # Download WebView2 runtime
           mkdir -p src-tauri/webview2-runtime/${{ matrix.arch }}
           
-          # 根据架构选择不同的下载链接
+          # Choose download link based on architecture
           if ("${{ matrix.arch }}" -eq "x64") {
             Invoke-WebRequest -Uri "https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/949b4951-7f54-4504-8a73-ccad659afdb1/Microsoft.WebView2.FixedVersionRuntime.134.0.3124.72.x64.cab" -OutFile "webview2-runtime.cab"
           } else {
@@ -190,90 +190,79 @@ jobs:
           
           cmd /c "expand webview2-runtime.cab -F:* .\src-tauri\webview2-runtime\${{ matrix.arch }}\"
           
-          # 验证文件是否存在
+          # Verify files existence
           if (Test-Path -Path "src-tauri/webview2-runtime/${{ matrix.arch }}") {
-            Write-Host "WebView2 运行时目录已创建"
+            Write-Host "WebView2 Runtime directory created successfully"
             Get-ChildItem -Path "src-tauri/webview2-runtime/${{ matrix.arch }}" | Select-Object -First 5
           }
           
           if (Test-Path -Path "src-tauri/tauri.windows.conf.json") {
-            Write-Host "Windows配置文件已创建:"
+            Write-Host "Windows configuration file created:"
             Get-Content -Path "src-tauri/tauri.windows.conf.json"
           }
 
+      # Build only, without uploading
       - name: Build Tauri App
+        id: build
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with: 
-          tagName: ${{ steps.get_version.outputs.version }}
-          releaseName: ${{ steps.get_version.outputs.version }}
-          releaseDraft: false
-          prerelease: false
           args: --target ${{ matrix.target }} --config src-tauri/tauri.windows.conf.json
-          includeUpdaterJson: true
-          withAllChangesets: true
+          # Skip uploading files to GitHub
+          includeUpdaterJson: false
+          # Skip upload to GitHub Release
+          dontUpload: true
 
-      - name: Rename Artifacts
+      - name: Rename Files
+        id: rename
         shell: pwsh
         run: |
-          # 查找并显示原始文件
-          Write-Host "Original files:"
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi" | ForEach-Object { Write-Host $_.FullName }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe" | ForEach-Object { Write-Host $_.FullName }
-          
-          # 重命名MSI文件
+          # Rename MSI files
           $msiFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi"
           foreach ($file in $msiFiles) {
-            $newName = $file.Name -replace "\.msi$", "_fixed-webview2.msi"
+            $newName = $file.Name -replace "\.msi$", "_fixed_webview2.msi"
             $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Copy-Item -Path $file.FullName -Destination $newPath -Force
+            Rename-Item -Path $file.FullName -Destination $newPath
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
-          # 重命名NSIS安装程序
+          # Rename NSIS installer
           $exeFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe"
           foreach ($file in $exeFiles) {
-            $newName = $file.Name -replace "-setup\.exe$", "_fixed-webview2-setup.exe"
+            $newName = $file.Name -replace "-setup\.exe$", "_fixed_webview2-setup.exe"
             $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Copy-Item -Path $file.FullName -Destination $newPath -Force
+            Rename-Item -Path $file.FullName -Destination $newPath
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
-          # 重命名签名文件
+          # Rename signature files
           $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\*\*.sig"
           foreach ($file in $sigFiles) {
             if ($file.Name -match "-setup\.exe\.sig$") {
-              $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed-webview2-setup.exe.sig"
+              $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed_webview2-setup.exe.sig"
               $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Copy-Item -Path $file.FullName -Destination $newPath -Force
+              Rename-Item -Path $file.FullName -Destination $newPath
               Write-Host "Renamed: $($file.Name) -> $newName"
             } 
             elseif ($file.Name -match "\.msi\.sig$") {
-              $newName = $file.Name -replace "\.msi\.sig$", "_fixed-webview2.msi.sig"
+              $newName = $file.Name -replace "\.msi\.sig$", "_fixed_webview2.msi.sig"
               $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Copy-Item -Path $file.FullName -Destination $newPath -Force
+              Rename-Item -Path $file.FullName -Destination $newPath
               Write-Host "Renamed: $($file.Name) -> $newName"
             }
           }
-          
-          # 删除原始文件以避免重复上传
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
-            Write-Host "Removing original file: $($_.FullName)"
-            Remove-Item -Path $_.FullName -Force 
-          }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
-            Write-Host "Removing original file: $($_.FullName)"
-            Remove-Item -Path $_.FullName -Force 
-          }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\*\*.sig" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
-            Write-Host "Removing original file: $($_.FullName)"
-            Remove-Item -Path $_.FullName -Force 
-          }
-          
-          # 显示最终文件
-          Write-Host "Final files:"
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*" | ForEach-Object { Write-Host $_.FullName }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*" | ForEach-Object { Write-Host $_.FullName }
+
+      - name: Upload WebView2 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.get_version.outputs.version }}
+          name: ${{ steps.get_version.outputs.version }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*_fixed_webview2.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*_fixed_webview2.msi.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*_fixed_webview2-setup.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*_fixed_webview2-setup.exe.sig
