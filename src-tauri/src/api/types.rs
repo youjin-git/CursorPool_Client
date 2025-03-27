@@ -52,6 +52,10 @@ pub struct UserInfo {
     #[serde(default)]
     #[serde(skip_serializing_if = "String::is_empty")]
     pub code_level: String,
+    // 激活码状态
+    #[serde(rename = "code_status")]
+    #[serde(default)]
+    pub code_status: i32,
 }
 
 // 账户信息

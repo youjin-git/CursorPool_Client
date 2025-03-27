@@ -746,6 +746,38 @@
       }
     },
   )
+
+  // 获取会员状态文本
+  const getMemberStatusText = (codeStatus: number, expireTime: string) => {
+    // 如果状态是1(已使用)，显示剩余时间
+    if (codeStatus === 1) {
+      return formatTimeRemaining(expireTime)
+    }
+
+    // 不同状态对应的文本
+    const statusMap: Record<number, string> = {
+      0: i18n.value.dashboard.codeUnused,
+      2: i18n.value.dashboard.codeExpired,
+      3: i18n.value.dashboard.codeRefunded,
+      4: i18n.value.dashboard.codeEnded,
+    }
+
+    // 返回状态对应的文本，如果没有对应的状态，返回未知
+    return statusMap[codeStatus] || i18n.value.common.statusUnknown
+  }
+
+  // 获取会员状态标签类型
+  const getMemberStatusTagType = (codeStatus: number) => {
+    const typeMap: Record<number, 'default' | 'info' | 'success' | 'warning' | 'error'> = {
+      0: 'info', // 未使用
+      1: 'success', // 已使用(正常)
+      2: 'error', // 已过期
+      3: 'warning', // 已退款
+      4: 'error', // 已结束
+    }
+
+    return typeMap[codeStatus] || 'default'
+  }
 </script>
 
 <template>
@@ -779,15 +811,17 @@
                     {{ getMemberLevelName(deviceInfo.userInfo?.level || 1) }}
                   </n-tag>
                   <n-tag
-                    v-if="deviceInfo.userInfo?.expireTime"
-                    type="success"
+                    v-if="deviceInfo.userInfo?.code_status !== undefined"
+                    :type="getMemberStatusTagType(deviceInfo.userInfo.code_status)"
                     size="tiny"
                     style="transform: scale(0.9)"
                   >
-                    {{ formatTimeRemaining(deviceInfo.userInfo.expireTime) }}
-                  </n-tag>
-                  <n-tag v-else type="error" size="tiny" style="transform: scale(0.9)">
-                    {{ i18n.dashboard.serverNotConnected }}
+                    {{
+                      getMemberStatusText(
+                        deviceInfo.userInfo.code_status,
+                        deviceInfo.userInfo?.expireTime || '',
+                      )
+                    }}
                   </n-tag>
                 </n-space>
               </n-space>

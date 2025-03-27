@@ -36,6 +36,10 @@ export const messages = {
       notLoggedIn: '未登录',
       unlimited: '无限制',
       serverNotConnected: '未连接服务器',
+      codeUnused: '未使用',
+      codeExpired: '已过期',
+      codeRefunded: '已退款',
+      codeEnded: '已结束',
       memberLevel: {
         1: '码农',
         2: '程序员',
@@ -193,6 +197,7 @@ export const messages = {
       timeDays: '天',
       timeHours: '小时',
       timeMinutes: '分钟',
+      statusUnknown: '未知状态',
     },
     inbound: {
       title: '线路',
@@ -274,6 +279,10 @@ export const messages = {
       notLoggedIn: 'Not Logged In',
       unlimited: 'Unlimited',
       serverNotConnected: 'Server Not Connected',
+      codeUnused: 'Unused',
+      codeExpired: 'Expired',
+      codeRefunded: 'Refunded',
+      codeEnded: 'Ended',
       memberLevel: {
         1: 'Coder',
         2: 'Programmer',
@@ -444,6 +453,7 @@ export const messages = {
       timeDays: 'days',
       timeHours: 'hours',
       timeMinutes: 'minutes',
+      statusUnknown: 'Unknown Status',
     },
     inbound: {
       title: 'Route',
@@ -526,6 +536,10 @@ export const messages = {
       notLoggedIn: '未ログイン',
       unlimited: '無制限',
       serverNotConnected: '未接続',
+      codeUnused: '未使用',
+      codeExpired: '已过期',
+      codeRefunded: '已退款',
+      codeEnded: '已结束',
       memberLevel: {
         1: 'コーダー',
         2: 'プログラマー',
@@ -682,6 +696,7 @@ export const messages = {
       timeDays: '日',
       timeHours: '時間',
       timeMinutes: '分',
+      statusUnknown: '不明',
     },
     inbound: {
       title: 'ルート',
@@ -763,6 +778,10 @@ export const messages = {
       notLoggedIn: 'Non connecté',
       unlimited: 'Illimité',
       serverNotConnected: 'Non connecté',
+      codeUnused: 'Non utilisé',
+      codeExpired: 'Expiré',
+      codeRefunded: 'Remboursé',
+      codeEnded: 'Terminé',
       memberLevel: {
         1: 'Codeur',
         2: 'Programmeur',
@@ -925,6 +944,7 @@ export const messages = {
       timeDays: 'jours',
       timeHours: 'heures',
       timeMinutes: 'minutes',
+      statusUnknown: 'État inconnu',
     },
     inbound: {
       title: 'Route',
@@ -951,7 +971,7 @@ export const messages = {
       switchButton: 'Changer',
       deleteButton: 'Supprimer',
       refreshAll: 'Actualiser tout',
-      clearHighUsage: 'Effacer haute utilisation',
+      clearHighUsage: 'Limpiar cuentas de alto uso',
       switchSuccess: 'Compte changé avec succès',
       switchFailed: 'Échec du changement de compte',
       deleteSuccess: 'Suppression réussie',
@@ -1007,6 +1027,10 @@ export const messages = {
       notLoggedIn: 'Nicht angemeldet',
       unlimited: 'Unbegrenzt',
       serverNotConnected: 'Nicht verbunden',
+      codeUnused: 'Nicht verwendet',
+      codeExpired: 'Abgelaufen',
+      codeRefunded: 'Erstattet',
+      codeEnded: 'Beendet',
       memberLevel: {
         1: 'Coder',
         2: 'Programmierer',
@@ -1164,6 +1188,7 @@ export const messages = {
       timeDays: 'Tage',
       timeHours: 'Stunden',
       timeMinutes: 'Minuten',
+      statusUnknown: 'Unbekannt',
     },
     inbound: {
       title: 'Route',
@@ -1246,6 +1271,10 @@ export const messages = {
       notLoggedIn: '로그인하지 않음',
       unlimited: '무제한',
       serverNotConnected: '서버 연결되지 않음',
+      codeUnused: '미사용',
+      codeExpired: '만료됨',
+      codeRefunded: '환불됨',
+      codeEnded: '종료됨',
       memberLevel: {
         1: '코더',
         2: '프로그래머',
@@ -1401,6 +1430,7 @@ export const messages = {
       timeDays: '일',
       timeHours: '시간',
       timeMinutes: '분',
+      statusUnknown: '알 수 없음',
     },
     inbound: {
       title: '라우트',
@@ -1482,6 +1512,10 @@ export const messages = {
       notLoggedIn: 'Не авторизован',
       unlimited: 'Неограниченный',
       serverNotConnected: 'Не подключено',
+      codeUnused: 'Не используется',
+      codeExpired: 'Истек срок',
+      codeRefunded: 'Возвращен',
+      codeEnded: 'Завершен',
       memberLevel: {
         1: 'Кодер',
         2: 'Программист',
@@ -1639,6 +1673,7 @@ export const messages = {
       timeDays: 'дн.',
       timeHours: 'ч.',
       timeMinutes: 'мин.',
+      statusUnknown: 'Неизвестно',
     },
     inbound: {
       title: 'Маршрут',
@@ -1721,6 +1756,10 @@ export const messages = {
       notLoggedIn: 'No conectado',
       unlimited: 'Ilimitado',
       serverNotConnected: 'No conectado',
+      codeUnused: 'No utilizado',
+      codeExpired: 'Vencido',
+      codeRefunded: 'Reembolsado',
+      codeEnded: 'Finalizado',
       memberLevel: {
         1: 'Código',
         2: 'Programador',
@@ -1878,6 +1917,7 @@ export const messages = {
       timeDays: 'días',
       timeHours: 'horas',
       timeMinutes: 'minutos',
+      statusUnknown: 'Estado desconocido',
     },
     inbound: {
       title: 'Ruta',

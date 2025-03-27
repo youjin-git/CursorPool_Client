@@ -15,6 +15,7 @@ export interface UserInfo {
   isExpired: boolean
   username: string
   code_level?: string
+  code_status?: number // 激活码状态: 0未使用 1已使用 2已过期 3已退款 4已结束
 }
 
 // 账户信息
