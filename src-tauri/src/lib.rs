@@ -15,6 +15,7 @@ pub mod auth;
 pub mod config;
 pub mod cursor_reset;
 pub mod database;
+pub mod scheduler;
 pub mod tray;
 pub mod utils;
 
@@ -115,6 +116,19 @@ pub fn run() {
                 return Err(Box::<dyn StdError>::from(e.to_string()));
             }
             info!("系统托盘初始化成功");
+            
+            // 初始化任务调度器
+            let scheduler = scheduler::Scheduler::new(app.handle().clone());
+            app.manage(scheduler.clone());
+            
+            // 在单独的任务中启动调度器，避免阻塞主线程
+            tauri::async_runtime::spawn(async move {
+                if let Err(e) = scheduler.start().await {
+                    error!("启动任务调度器失败: {}", e);
+                } else {
+                    info!("任务调度器启动成功");
+                }
+            });
 
             Ok(())
         })

@@ -11,6 +11,7 @@ interface NotificationOptions {
   title: string
   body?: string
   icon?: string
+  id?: number
 }
 
 export const useNotificationStore = defineStore('notification', () => {
@@ -65,7 +66,7 @@ export const useNotificationStore = defineStore('notification', () => {
       }
 
       // 发送通知
-      await sendNotification(options)
+      sendNotification(options)
       return true
     } catch (error) {
       console.error('发送通知失败:', error)
