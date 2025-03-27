@@ -65,9 +65,9 @@ pub fn run() {
                 log_dir,
                 console_output: true,
                 log_level: if cfg!(debug_assertions) {
-                    "debug".to_string()
+                    "debug,hyper=off".to_string()
                 } else {
-                    "info".to_string()
+                    "info,hyper=off".to_string()
                 },
                 json_format: false,
             };
