@@ -193,28 +193,20 @@ jobs:
           # Verify files existence
           if (Test-Path -Path "src-tauri/webview2-runtime/${{ matrix.arch }}") {
             Write-Host "WebView2 Runtime directory created successfully"
-            Get-ChildItem -Path "src-tauri/webview2-runtime/${{ matrix.arch }}" | Select-Object -First 5
-          }
-          
-          if (Test-Path -Path "src-tauri/tauri.windows.conf.json") {
-            Write-Host "Windows configuration file created:"
-            Get-Content -Path "src-tauri/tauri.windows.conf.json"
           }
 
-      # Build only, without uploading
-      - name: Build Tauri App
+      # Build with tauri action but without uploading artifacts
+      - name: Build Tauri App 
         id: build
         uses: tauri-apps/tauri-action@v0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_OPTIONS: "--max_old_space_size=4096"
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        with: 
+        with:
+          tauriScript: pnpm
           args: --target ${{ matrix.target }} --config src-tauri/tauri.windows.conf.json
-          # Skip uploading files to GitHub
           includeUpdaterJson: false
-          # Skip upload to GitHub Release
-          dontUpload: true
 
       - name: Rename Files
         id: rename
@@ -239,20 +231,20 @@ jobs:
           }
 
           # Rename signature files
-          $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\*\*.sig"
+          $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe.sig"
           foreach ($file in $sigFiles) {
-            if ($file.Name -match "-setup\.exe\.sig$") {
-              $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed_webview2-setup.exe.sig"
-              $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Rename-Item -Path $file.FullName -Destination $newPath
-              Write-Host "Renamed: $($file.Name) -> $newName"
-            } 
-            elseif ($file.Name -match "\.msi\.sig$") {
-              $newName = $file.Name -replace "\.msi\.sig$", "_fixed_webview2.msi.sig"
-              $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Rename-Item -Path $file.FullName -Destination $newPath
-              Write-Host "Renamed: $($file.Name) -> $newName"
-            }
+            $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed_webview2-setup.exe.sig"
+            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
+            Rename-Item -Path $file.FullName -Destination $newPath
+            Write-Host "Renamed: $($file.Name) -> $newName"
+          }
+          
+          $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi.sig"
+          foreach ($file in $sigFiles) {
+            $newName = $file.Name -replace "\.msi\.sig$", "_fixed_webview2.msi.sig"
+            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
+            Rename-Item -Path $file.FullName -Destination $newPath
+            Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
       - name: Upload WebView2 Release

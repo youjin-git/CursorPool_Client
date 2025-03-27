@@ -1,81 +1,62 @@
-name: Generate Updater Files
+name: Updater
+run-name: Updater for ${{ github.event.workflow_run.head_branch }}
 
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version number (without v prefix)'
-        required: true
-        type: string
   workflow_run:
-    workflows: [Release]
+    workflows: ["Release"]
     types:
       - completed
+    branches:
+      - "**"
 
 permissions:
   contents: write
 
 jobs:
   check-release:
+    if: github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    name: Check Release Status
     outputs:
-      version: ${{ steps.get-version.outputs.version }}
       release_id: ${{ steps.get-release.outputs.release_id }}
+      version: ${{ steps.get-release.outputs.version }}
     steps:
-      - name: Get version from input
-        id: get-version-input
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "version=v${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
-
-      - uses: actions/checkout@v4
-        if: github.event_name == 'workflow_run'
-
-      - name: Get version from package.json
-        id: get-version-package
-        if: github.event_name == 'workflow_run'
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=v$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Set final version
-        id: get-version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "version=${{ steps.get-version-input.outputs.version }}" >> $GITHUB_OUTPUT
-          else
-            echo "version=${{ steps.get-version-package.outputs.version }}" >> $GITHUB_OUTPUT
-          fi
-          echo "Using version: ${{ steps.get-version.outputs.version }}"
-
-      - name: Get GitHub Release
+      - name: Get latest release
         id: get-release
         uses: actions/github-script@v7
         with:
           script: |
             const { owner, repo } = context.repo;
-            const version = '${{ steps.get-version.outputs.version }}';
             
             try {
-              const release = await github.rest.repos.getReleaseByTag({
+              const releases = await github.rest.repos.listReleases({
                 owner,
                 repo,
-                tag: version
+                per_page: 1,
               });
               
-              console.log(`Found release: ${release.data.id} for tag ${version}`);
-              return { release_id: release.data.id.toString() };
+              if (releases.data.length === 0) {
+                console.log("No releases found");
+                return { release_id: '', version: '' };
+              }
+              
+              const latestRelease = releases.data[0];
+              console.log(`Latest release: ${latestRelease.tag_name}`);
+              
+              return { 
+                release_id: latestRelease.id.toString(),
+                version: latestRelease.tag_name
+              };
             } catch (error) {
-              console.log(`No release found for tag ${version}`);
-              return { release_id: '' };
+              console.error("Error fetching releases:", error);
+              return { release_id: '', version: '' };
             }
-
-  generate-standard-updater:
+  
+  generate-updater:
     needs: check-release
     if: needs.check-release.outputs.release_id != ''
     runs-on: ubuntu-latest
-    name: Generate Standard Updater Files
+    name: Generate Updater Files
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -108,7 +89,7 @@ jobs:
             // Create asset list, exclude fixed-webview2 versions and sig files
             const standardAssets = assets.data
               .filter(asset => 
-                !asset.name.includes('_fixed_webview2') && 
+                !asset.name.includes('_fixed-webview2') && 
                 !asset.name.endsWith('.sig') &&
                 !asset.name.includes('darwin-universal')
               )
@@ -162,7 +143,7 @@ jobs:
               content = JSON.parse(updaterContent);
             }
             
-            // Create final update file - standard version
+            // Create final update file
             const finalContent = {
               version: '${{ needs.check-release.outputs.version }}'.replace('v', ''),
               notes: 'See release notes on GitHub',
@@ -184,7 +165,7 @@ jobs:
             });
             
             console.log('Standard updater file uploaded to release');
-
+  
   generate-webview2-updater:
     needs: check-release
     if: needs.check-release.outputs.release_id != ''
@@ -222,7 +203,7 @@ jobs:
             // Create asset list, only include fixed-webview2 versions and exclude sig files
             const webview2Assets = assets.data
               .filter(asset => 
-                asset.name.includes('_fixed_webview2') && 
+                asset.name.includes('_fixed-webview2') && 
                 !asset.name.endsWith('.sig')
               )
               .map(asset => ({
