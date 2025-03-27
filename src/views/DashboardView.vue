@@ -41,6 +41,7 @@
     cursorInfo: {
       userInfo: CursorUserInfo | null
       usage: CursorUsageInfo | null
+      errorType: string | null
     }
     hookStatus: boolean | null
   }
@@ -88,6 +89,7 @@
     cursorInfo: {
       userInfo: null,
       usage: null,
+      errorType: null,
     },
     hookStatus: null,
   })
@@ -117,6 +119,7 @@
       cursorInfo: {
         userInfo: cursorStore.cursorInfo.userInfo,
         usage: cursorStore.cursorInfo.usage,
+        errorType: cursorStore.cursorInfo.errorType,
       },
       hookStatus: cursorStore.hookStatus,
     }
@@ -778,6 +781,23 @@
 
     return typeMap[codeStatus] || 'default'
   }
+
+  // 添加获取错误消息的函数
+  const getCursorErrorMessage = (errorType: string | null) => {
+    if (!errorType) return i18n.value.dashboard.cannotGetUsage
+
+    switch (errorType) {
+      case 'cursor_db_error':
+        return i18n.value.dashboard.cursorDbError
+      case 'cursor_network_error':
+        return i18n.value.dashboard.cursorNetworkError
+      case 'cursor_data_error':
+        return i18n.value.dashboard.cursorDataError
+      case 'cursor_unknown_error':
+      default:
+        return i18n.value.dashboard.cursorUnknownError
+    }
+  }
 </script>
 
 <template>
@@ -945,7 +965,7 @@
                   />
                   <span>/{{ deviceInfo.cursorInfo.usage['gpt-4']?.maxRequestUsage || 0 }}</span>
                 </n-space>
-                <span v-else>{{ i18n.dashboard.cannotGetUsage }}</span>
+                <span v-else>{{ getCursorErrorMessage(deviceInfo.cursorInfo.errorType) }}</span>
               </n-space>
               <n-progress
                 type="line"
@@ -973,7 +993,7 @@
                   </span>
                   <span v-else>/{{ i18n.dashboard.unlimited }}</span>
                 </n-space>
-                <span v-else>{{ i18n.dashboard.cannotGetUsage }}</span>
+                <span v-else>{{ getCursorErrorMessage(deviceInfo.cursorInfo.errorType) }}</span>
               </n-space>
               <n-progress
                 type="line"

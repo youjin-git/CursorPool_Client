@@ -271,6 +271,12 @@ pub async fn get_usage(
 ) -> Result<ApiResponse<CursorUsageInfo>, String> {
     let user_id = config::CONFIG.read().unwrap().api.cursor_user_id.clone();
 
+    // 如果token为空，返回数据库错误
+    if token.is_empty() {
+        error!(target: "api", "Cursor token为空，可能是数据库问题");
+        return Err("cursor_db_error".to_string());
+    }
+
     // token可能包含了用户ID部分，需要分割并只使用token部分
     let actual_token = if token.contains("%3A%3A") {
         // 如果token包含分隔符，取第二部分
@@ -290,12 +296,14 @@ pub async fn get_usage(
         .await
         .map_err(|e| {
             error!(target: "api", "获取Cursor使用情况请求失败 - 错误: {}", e);
-            e.to_string()
+            // 网络相关错误
+            "cursor_network_error".to_string()
         })?;
 
     let response_text = response.text().await.map_err(|e| {
         error!(target: "api", "获取Cursor使用情况响应文本失败 - 错误: {}", e);
-        e.to_string()
+        // 网络相关错误
+        "cursor_network_error".to_string()
     })?;
 
     match serde_json::from_str::<CursorUsageInfo>(&response_text) {
@@ -307,7 +315,8 @@ pub async fn get_usage(
         }),
         Err(e) => {
             error!(target: "api", "解析Cursor使用情况失败 - 响应: {}, 错误: {}", response_text, e);
-            Err(format!("Failed to parse Cursor usage info: {}", e))
+            // 数据格式错误 
+            Err("cursor_data_error".to_string())
         }
     }
 }

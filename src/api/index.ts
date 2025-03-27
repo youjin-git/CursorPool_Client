@@ -159,7 +159,18 @@ export async function getUsage(token: string): Promise<UsageInfo> {
     })
     return handleApiResponse(response)
   } catch (error) {
-    throw new ApiError(error instanceof Error ? error.message : '获取使用情况失败')
+    // 检查错误类型
+    const errorMsg = error instanceof Error ? error.message : String(error)
+
+    if (errorMsg === 'cursor_db_error') {
+      throw new ApiError('cursor_db_error')
+    } else if (errorMsg === 'cursor_network_error') {
+      throw new ApiError('cursor_network_error')
+    } else if (errorMsg === 'cursor_data_error') {
+      throw new ApiError('cursor_data_error')
+    } else {
+      throw new ApiError('cursor_unknown_error')
+    }
   }
 }
 

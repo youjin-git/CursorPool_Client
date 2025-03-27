@@ -29,9 +29,11 @@ export const useCursorStore = defineStore('cursor', () => {
   const cursorInfo = ref<{
     userInfo: any | null
     usage: UsageInfo | null
+    errorType: string | null
   }>({
     userInfo: null,
     usage: null,
+    errorType: null,
   })
   const isLoading = ref(false)
   const hookStatus = ref<boolean | null>(null)
@@ -134,6 +136,12 @@ export const useCursorStore = defineStore('cursor', () => {
 
       if (!cursorToken.value) {
         console.error('未找到 Cursor Token')
+        // 设置错误类型为数据库错误
+        cursorInfo.value = {
+          userInfo: null,
+          usage: null,
+          errorType: 'cursor_db_error',
+        }
         return
       }
 
@@ -150,9 +158,19 @@ export const useCursorStore = defineStore('cursor', () => {
           picture: null,
         },
         usage: usageData,
+        errorType: null,
       }
     } catch (error) {
       console.error('获取 Cursor 使用量失败:', error)
+
+      // 设置适当的错误类型
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      cursorInfo.value = {
+        userInfo: cursorInfo.value?.userInfo,
+        usage: null,
+        errorType: errorMsg,
+      }
+
       throw error
     } finally {
       isLoading.value = false
