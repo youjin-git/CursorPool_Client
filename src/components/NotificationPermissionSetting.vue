@@ -1,10 +1,12 @@
 <script setup lang="ts">
   import { computed, onMounted } from 'vue'
   import { useNotificationStore } from '@/stores'
-  import { NSpace, NButton, useMessage } from 'naive-ui'
+  import { NSpace, NButton, useMessage, NTag } from 'naive-ui'
+  import { useI18n } from '../locales'
 
   const notificationStore = useNotificationStore()
   const message = useMessage()
+  const { t } = useI18n()
 
   // 检查权限状态
   const hasPermission = computed(() => notificationStore.permissionGranted === true)
@@ -14,15 +16,15 @@
   const requestPermission = async () => {
     const granted = await notificationStore.requestNotificationPermission()
     if (granted) {
-      message.success('通知权限已授予')
+      message.success(t('systemControl.messages.permissionGranted'))
 
       // 发送一个测试通知
       await notificationStore.notify({
-        title: '通知测试',
-        body: '恭喜！通知功能已成功启用。',
+        title: t('notification.testTitle'),
+        body: t('notification.testBody'),
       })
     } else {
-      message.error('通知权限被拒绝，请在系统设置中手动启用')
+      message.error(t('systemControl.messages.permissionDenied'))
     }
   }
 
@@ -35,17 +37,21 @@
 <template>
   <n-space justify="space-between" align="center">
     <span>
-      <small style="margin-right: 8px; color: var(--n-text-color-3)">系统通知:</small>
-      {{ hasPermission ? '已授权' : '未授权' }}
+      <small style="margin-right: 8px; color: var(--n-text-color-3)"
+        >{{ t('systemControl.systemNotification') }}:</small
+      >
+      <n-tag :type="hasPermission ? 'success' : 'error'" size="small" round>
+        {{ hasPermission ? t('systemControl.authorized') : t('systemControl.unauthorized') }}
+      </n-tag>
     </span>
     <n-button
-      type="primary"
+      type="info"
       :loading="isRequesting"
       :disabled="hasPermission"
       style="width: 120px"
       @click="requestPermission"
     >
-      请求权限
+      {{ t('systemControl.requestPermission') }}
     </n-button>
   </n-space>
 </template>

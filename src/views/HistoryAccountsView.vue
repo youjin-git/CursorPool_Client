@@ -13,7 +13,7 @@
   const message = useMessage()
   const historyStore = useHistoryStore()
   const cursorStore = useCursorStore()
-  const { i18n } = useI18n()
+  const { t } = useI18n()
 
   // 模态框状态
   const showCursorRunningModal = ref(false)
@@ -43,11 +43,11 @@
 
   const columns: DataTableColumns<HistoryAccount> = [
     {
-      title: '邮箱',
+      title: t('historyAccount.email'),
       key: 'email',
     },
     {
-      title: '机器码',
+      title: t('historyAccount.machineCode'),
       key: 'machineCode',
       render(row) {
         const code = row.machineCode
@@ -55,7 +55,7 @@
       },
     },
     {
-      title: '高级模型使用量',
+      title: t('historyAccount.advancedModelUsage'),
       key: 'gpt4Count',
       width: 150,
       render(row) {
@@ -73,7 +73,7 @@
       },
     },
     {
-      title: '操作',
+      title: t('historyAccount.actions'),
       key: 'actions',
       render(row) {
         return h(NSpace, null, {
@@ -86,7 +86,7 @@
                 onClick: () => handleSwitch(row),
               },
               {
-                default: () => '切换',
+                default: () => t('historyAccount.switchButton'),
               },
             ),
             h(
@@ -98,7 +98,7 @@
                 onClick: () => handleRemove(row),
               },
               {
-                default: () => '删除',
+                default: () => t('historyAccount.deleteButton'),
               },
             ),
           ],
@@ -118,16 +118,16 @@
       }
 
       if (result.status === 'hook_failed') {
-        message.error('注入失败，请手动注入后再试')
+        message.error(t('historyAccount.hookFailed'))
         return
       }
 
       if (result.status === 'success') {
-        message.success('切换账户成功')
+        message.success(t('historyAccount.switchSuccess'))
         window.location.reload()
       }
     } catch (error) {
-      message.error('切换账户失败')
+      message.error(t('historyAccount.switchFailed'))
       console.error('切换账户失败:', error)
     }
   }
@@ -135,24 +135,24 @@
   async function handleRemove(account: HistoryAccount) {
     try {
       await historyStore.removeHistoryAccountItem(account.email)
-      message.success('删除成功')
+      message.success(t('historyAccount.deleteSuccess'))
     } catch (error) {
-      message.error('删除失败')
+      message.error(t('historyAccount.deleteFailed'))
       console.error('删除账户失败:', error)
     }
   }
 
   async function handleClearHighUsageAccounts() {
     if (historyStore.highUsageAccounts.length === 0) {
-      message.info('没有高使用量账户需要清理')
+      message.info(t('historyAccount.noHighUsageAccounts'))
       return
     }
 
     try {
       const result = await historyStore.clearHighUsageAccounts()
-      message.success(`成功清理 ${result.success} 个高使用量账户`)
+      message.success(t('historyAccount.clearHighUsageSuccess', { count: result.success }))
     } catch (error) {
-      message.error('清理高使用量账户失败')
+      message.error(t('historyAccount.clearHighUsageFailed'))
       console.error('清理高使用量账户失败:', error)
     }
   }
@@ -162,12 +162,17 @@
       const result = await historyStore.refreshAccountsUsage()
 
       if (result.success === result.total) {
-        message.success('所有账户刷新成功')
+        message.success(t('historyAccount.refreshSuccess'))
       } else {
-        message.warning(`成功刷新 ${result.success}/${result.total} 个账户`)
+        message.warning(
+          t('historyAccount.refreshPartial', {
+            success: result.success,
+            total: result.total,
+          }),
+        )
       }
     } catch (error) {
-      message.error('刷新使用情况失败')
+      message.error(t('historyAccount.refreshFailed'))
       console.error('刷新使用情况失败:', error)
     }
   }
@@ -183,16 +188,16 @@
       const result = await cursorStore.forceCloseAndSwitch(account)
 
       if (result.status === 'hook_failed') {
-        message.error('注入失败，请手动注入后再试')
+        message.error(t('historyAccount.hookFailed'))
         return
       }
 
       if (result.status === 'success') {
-        message.success('切换账户成功')
+        message.success(t('historyAccount.switchSuccess'))
         window.location.reload()
       }
     } catch (error) {
-      message.error('切换账户失败')
+      message.error(t('historyAccount.switchFailed'))
       console.error('切换账户失败:', error)
     } finally {
       pendingAccount.value = null
@@ -204,7 +209,7 @@
       await historyStore.fetchHistoryAccounts(false)
     } catch (error) {
       console.error('加载历史账户失败:', error)
-      message.error('加载历史账户失败')
+      message.error(t('historyAccount.loadFailed'))
     }
 
     window.addEventListener('force_kill_cursor', async (e: Event) => {
@@ -218,11 +223,11 @@
 
 <template>
   <n-space vertical :size="24">
-    <n-card title="历史账户">
+    <n-card :title="t('historyAccount.title')">
       <template #header-extra>
         <n-space>
           <n-button :loading="historyStore.loadingAccounts" type="primary" @click="refreshUsage">
-            刷新所有账户
+            {{ t('historyAccount.refreshAll') }}
           </n-button>
           <n-button
             :loading="historyStore.clearingHighUsage"
@@ -230,7 +235,7 @@
             :disabled="historyStore.highUsageAccounts.length === 0"
             @click="handleClearHighUsageAccounts"
           >
-            清理高使用量账户 ({{ historyStore.highUsageAccounts.length }})
+            {{ t('historyAccount.clearHighUsage') }} ({{ historyStore.highUsageAccounts.length }})
           </n-button>
         </n-space>
       </template>
@@ -248,9 +253,9 @@
 
   <cursor-running-modal
     v-model:show="showCursorRunningModal"
-    :title="i18n.common.cursorRunning"
-    :content="i18n.common.cursorRunningMessage"
-    :confirm-button-text="i18n.common.forceClose"
+    :title="t('common.cursorRunning')"
+    :content="t('common.cursorRunningMessage')"
+    :confirm-button-text="t('common.forceClose')"
     @confirm="handleForceKill"
   />
 </template>

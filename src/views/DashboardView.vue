@@ -47,14 +47,14 @@
 
   // 计算并格式化剩余时间
   const formatTimeRemaining = (expireTimeStr: string) => {
-    if (!expireTimeStr) return '未知'
+    if (!expireTimeStr) return i18n.value.common.timeUnknown
 
     // 解析过期时间
     const expireTime = new Date(expireTimeStr.replace(/-/g, '/'))
     const now = new Date()
 
     // 如果已过期，返回已过期提示
-    if (expireTime <= now) return '已过期'
+    if (expireTime <= now) return i18n.value.common.timeExpired
 
     // 计算剩余毫秒数
     const remainingMs = expireTime.getTime() - now.getTime()
@@ -66,11 +66,11 @@
 
     // 只显示最大的时间单位，精简信息量
     if (days > 0) {
-      return `${days}天`
+      return `${days}${i18n.value.common.timeDays}`
     } else if (hours > 0) {
-      return `${hours}小时`
+      return `${hours}${i18n.value.common.timeHours}`
     } else {
-      return `${minutes}分钟`
+      return `${minutes}${i18n.value.common.timeMinutes}`
     }
   }
 
@@ -149,6 +149,11 @@
       name: i18n.value.dashboard.memberLevel[5],
       type: 'error',
     },
+  }
+
+  const getMemberLevelName = (level: number) => {
+    const validLevel = level >= 1 && level <= 5 ? level : 1
+    return i18n.value.dashboard.memberLevel[validLevel as 1 | 2 | 3 | 4 | 5]
   }
 
   // 普通账户使用量百分比
@@ -752,10 +757,7 @@
                     size="tiny"
                     style="transform: scale(0.9)"
                   >
-                    {{
-                      deviceInfo.userInfo?.code_level ||
-                      levelMap[deviceInfo.userInfo?.level || 1].name
-                    }}
+                    {{ getMemberLevelName(deviceInfo.userInfo?.level || 1) }}
                   </n-tag>
                   <n-tag
                     v-if="deviceInfo.userInfo?.expireTime"

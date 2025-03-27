@@ -1,9 +1,11 @@
 <script setup lang="ts">
-  import { ref, onMounted } from 'vue'
+  import { ref, onMounted, computed } from 'vue'
   import { NSelect, useMessage } from 'naive-ui'
   import { getUserData, setUserData, delUserData } from '@/api'
+  import { useI18n } from '../locales'
 
   const message = useMessage()
+  const { t } = useI18n()
 
   const props = defineProps({
     // 是否在紧凑布局中使用
@@ -19,20 +21,20 @@
   })
 
   // 关闭方式选项
-  const closeTypeOptions = [
+  const closeTypeOptions = computed(() => [
     {
-      label: '每次询问',
+      label: t('closeType.ask'),
       value: 'ask',
     },
     {
-      label: '最小化',
+      label: t('closeType.minimize'),
       value: 'minimize',
     },
     {
-      label: '退出程序',
+      label: t('closeType.exit'),
       value: 'exit',
     },
-  ]
+  ])
 
   // 当前选中的关闭方式
   const selectedCloseType = ref('ask')
@@ -65,7 +67,7 @@
       }
     } catch (error) {
       console.error('保存关闭类型设置失败:', error)
-      message.error('保存设置失败')
+      message.error(t('settings.settingsFailed'))
     }
   }
 </script>
@@ -73,7 +75,7 @@
 <template>
   <div class="flex items-center" :class="{ 'gap-0': props.compact, 'gap-1': !props.compact }">
     <!-- 标签 -->
-    <div v-if="showLabel" class="text-sm whitespace-nowrap">关闭方式</div>
+    <div v-if="showLabel" class="text-sm whitespace-nowrap">{{ t('settings.closeMethod') }}</div>
 
     <!-- 选择器 -->
     <n-select
