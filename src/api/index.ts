@@ -663,3 +663,10 @@ export async function markArticleRead(articleId: number): Promise<void> {
     console.error('Failed to mark article as read:', error)
   }
 }
+
+/**
+ * 打开开发者工具
+ */
+export const openDevTools = () => {
+  return invoke('open_devtools')
+}

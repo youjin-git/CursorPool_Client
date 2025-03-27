@@ -9,6 +9,7 @@
   import UpdateOverlay from './components/UpdateOverlay.vue'
   import CloseConfirmModal from './components/CloseConfirmModal.vue'
   import { Window } from '@tauri-apps/api/window'
+  import { initializeDevToolsProtection } from './utils/devtools'
 
   const { currentTheme } = useTheme()
   const { currentLang } = useI18n()
@@ -40,6 +41,9 @@
       event.preventDefault()
       appCloseStore.handleCloseRequest()
     })
+
+    // 初始化开发者工具
+    initializeDevToolsProtection()
   })
 </script>
 

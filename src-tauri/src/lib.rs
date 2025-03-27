@@ -160,6 +160,8 @@ pub fn run() {
             cursor_reset::commands::log_error,
             cursor_reset::commands::log_warn,
             cursor_reset::commands::log_info,
+            // devtools
+            cursor_reset::commands::open_devtools,
         ])
         .run(generate_context!())
         .expect("error while running tauri application")
