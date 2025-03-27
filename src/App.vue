@@ -4,12 +4,13 @@
   import { themeOverrides } from './styles/theme'
   import { useI18n, initLanguage } from './locales'
   import { locales } from './locales'
-  import { computed, onMounted } from 'vue'
+  import { computed, onMounted, onUnmounted } from 'vue'
   import { useHistoryStore, useUpdaterStore, useInboundStore, useAppCloseStore } from './stores'
   import UpdateOverlay from './components/UpdateOverlay.vue'
   import CloseConfirmModal from './components/CloseConfirmModal.vue'
   import { Window } from '@tauri-apps/api/window'
   import { initializeDevToolsProtection } from './utils/devtools'
+  import { initEventListeners, destroyEventListeners } from './utils/eventBus'
 
   const { currentTheme } = useTheme()
   const { currentLang } = useI18n()
@@ -44,6 +45,15 @@
 
     // 初始化开发者工具
     initializeDevToolsProtection()
+
+    // 初始化事件监听器
+    await initEventListeners()
+  })
+
+  // 应用卸载时清理
+  onUnmounted(() => {
+    // 销毁所有事件监听器
+    destroyEventListeners()
   })
 </script>
 
