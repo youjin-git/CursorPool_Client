@@ -4,7 +4,7 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
-use tracing::error;
+use tracing::{error, info, warn};
 
 // 线路配置数据结构
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -108,8 +108,8 @@ async fn find_fastest_inbound(config: &InboundConfig) -> usize {
 
         // 打印测试结果
         match latency {
-            Some(duration) => println!("线路 [{}] {} 延迟: {:?}", index, item.name, duration),
-            None => println!("线路 [{}] {} 不可用", index, item.name),
+            Some(duration) => info!(target: "inbound", "线路 [{}] {} 延迟: {:?}", index, item.name, duration),
+            None => info!(target: "inbound", "线路 [{}] {} 不可用", index, item.name),
         }
     }
 
@@ -120,7 +120,7 @@ async fn find_fastest_inbound(config: &InboundConfig) -> usize {
         .collect();
 
     if available_items.is_empty() {
-        println!("所有线路均不可用，使用第一个线路");
+        warn!(target: "inbound", "所有线路均不可用，使用第一个线路");
         return 0;
     }
 
@@ -130,7 +130,8 @@ async fn find_fastest_inbound(config: &InboundConfig) -> usize {
         .min_by_key(|item| item.latency.unwrap())
         .unwrap();
 
-    println!(
+    info!(
+        target: "inbound",
         "选择延迟最低的线路 [{}] {}: {:?}",
         fastest.index,
         fastest.item.name,
@@ -161,21 +162,20 @@ pub async fn init_inbound_config(app_handle: &AppHandle) -> Result<(), String> {
                     format!("保存线路配置失败: {}", e)
                 })?;
 
-            // 根据延迟自动选择最佳线路
+            // 每次启动都执行测速选择最佳线路
             let current_inbound_key = config::get_db_key("current_inbound");
-            if let Ok(None) = db.get_item(&current_inbound_key) {
-                // 如果没有设置当前线路，则执行测速选择最佳线路
-                let best_index = find_fastest_inbound(&config).await;
-                db.set_item(&current_inbound_key, &best_index.to_string())
-                    .map_err(|e| {
-                        error!(target: "inbound", "设置当前线路失败: {}", e);
-                        format!("设置当前线路失败: {}", e)
-                    })?;
-            }
+            info!(target: "inbound", "开始测速选择最佳线路...");
+            let best_index = find_fastest_inbound(&config).await;
+            db.set_item(&current_inbound_key, &best_index.to_string())
+                .map_err(|e| {
+                    error!(target: "inbound", "设置当前线路失败: {}", e);
+                    format!("设置当前线路失败: {}", e)
+                })?;
+            info!(target: "inbound", "已选择最佳线路，索引: {}", best_index);
         }
         Err(e) => {
             error!(target: "inbound", "获取远程线路配置失败: {}", e);
-            println!("获取远程线路配置失败: {}，将使用默认线路", e);
+            warn!(target: "inbound", "获取远程线路配置失败: {}，将使用默认线路", e);
 
             // 检查数据库中是否已有配置
             let inbound_config_key = config::get_db_key("inbound_config");
@@ -210,7 +210,7 @@ pub async fn init_inbound_config(app_handle: &AppHandle) -> Result<(), String> {
                     format!("设置当前线路失败: {}", e)
                 })?;
 
-                println!("已创建默认线路配置");
+                info!(target: "inbound", "已创建默认线路配置");
             }
         }
     }

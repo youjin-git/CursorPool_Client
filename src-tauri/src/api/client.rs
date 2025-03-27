@@ -58,9 +58,10 @@ impl ApiClient {
 
     /// 发送 HTTP 请求
     pub async fn send(&self, mut request: Request) -> Result<Response, reqwest::Error> {
-        let url: String = request.url().to_string();
-        let method = request.method().to_string();
-
+        let url = request.url().to_string();
+        let method = request.method().clone();
+        
+        // 在请求前添加拦截器处理（如果需要认证）
         if is_auth_required_url(&url) {
             for interceptor in &self.interceptors {
                 if interceptor.intercept(&mut request).is_err() {
@@ -69,15 +70,59 @@ impl ApiClient {
             }
         }
 
-        let response = self.client.execute(request).await.map_err(|e| {
-            error!(
-                target: "http_client",
-                "HTTP请求失败 - 方法: {}, URL: {}, 错误: {}",
-                method, url, e
-            );
-            e
-        })?;
-
+        // 第一次尝试
+        let result = self.client.execute(request.try_clone().unwrap()).await;
+        
+        // 如果第一次请求成功，直接返回
+        if let Ok(response) = result {
+            return self.process_response(response, &method.to_string(), &url).await;
+        }
+        
+        // 记录第一次请求失败
+        let err = result.unwrap_err();
+        error!(
+            target: "http_client",
+            "第一次请求失败 - 方法: {}, URL: {}, 错误: {}",
+            method, url, err
+        );
+        
+        // 第二次尝试
+        let result = self.client.execute(request.try_clone().unwrap()).await;
+        
+        // 如果第二次请求成功，直接返回
+        if let Ok(response) = result {
+            return self.process_response(response, &method.to_string(), &url).await;
+        }
+        
+        // 记录第二次请求失败
+        let err = result.unwrap_err();
+        error!(
+            target: "http_client",
+            "第二次请求失败 - 方法: {}, URL: {}, 错误: {}",
+            method, url, err
+        );
+        
+        // 第三次尝试
+        let result = self.client.execute(request).await;
+        
+        // 无论第三次请求成功与否，处理并返回
+        match result {
+            Ok(response) => {
+                self.process_response(response, &method.to_string(), &url).await
+            },
+            Err(e) => {
+                error!(
+                    target: "http_client",
+                    "第三次请求失败 - 方法: {}, URL: {}, 错误: {}",
+                    method, url, e
+                );
+                Err(e)
+            }
+        }
+    }
+    
+    /// 处理响应
+    async fn process_response(&self, response: Response, method: &str, url: &str) -> Result<Response, reqwest::Error> {
         if self.app_handle.is_none() {
             return Ok(response);
         }
@@ -85,34 +130,33 @@ impl ApiClient {
         let handle = self.app_handle.as_ref().unwrap();
         let db = handle.state::<Database>();
         let status = response.status();
-        let url_str = url.clone();
-
+        
         let response_text = response.text().await.map_err(|e| {
             error!(
                 target: "http_client",
                 "读取响应文本失败 - 方法: {}, URL: {}, 状态码: {}, 错误: {}",
-                method, url_str, status, e
+                method, url, status, e
             );
             e
         })?;
 
-        if url_str.contains("/user/updatePassword") {
+        if url.contains("/user/updatePassword") {
             if let Ok(response_json) = serde_json::from_str::<serde_json::Value>(&response_text) {
                 if response_json["status"] == 200 {
                     if let Err(e) = crate::api::interceptor::clear_auth_token(&db).await {
                         error!(
                             target: "http_client",
                             "清除认证令牌失败 - URL: {}, 错误: {}",
-                            url_str, e
+                            url, e
                         );
                     }
                 }
             }
-        } else if let Err(e) = save_auth_token(&db, &url_str, &response_text).await {
+        } else if let Err(e) = save_auth_token(&db, url, &response_text).await {
             error!(
                 target: "http_client",
                 "保存认证令牌失败 - URL: {}, 错误: {}",
-                url_str, e
+                url, e
             );
         }
 
