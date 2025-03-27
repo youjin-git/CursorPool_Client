@@ -213,67 +213,68 @@ jobs:
           releaseDraft: false
           prerelease: false
           args: --target ${{ matrix.target }} --config src-tauri/tauri.windows.conf.json
-          includeUpdaterJson: true
-          withAllChangesets: true
+          includeUpdaterJson: false
+          # 不包含更新JSON，避免覆盖标准版本的更新元数据
 
-      - name: Rename Artifacts
+      - name: Rename and Upload Artifacts
         shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # 查找并显示原始文件
           Write-Host "Original files:"
           Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi" | ForEach-Object { Write-Host $_.FullName }
           Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe" | ForEach-Object { Write-Host $_.FullName }
           
-          # 重命名MSI文件
+          # 创建临时目录用于存放重命名后的文件
+          $uploadDir = ".\webview2-upload"
+          New-Item -ItemType Directory -Path $uploadDir -Force
+          
+          # 重命名MSI文件并复制到上传目录
           $msiFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi"
           foreach ($file in $msiFiles) {
             $newName = $file.Name -replace "\.msi$", "_fixed-webview2.msi"
-            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
+            $newPath = Join-Path -Path $uploadDir -ChildPath $newName
             Copy-Item -Path $file.FullName -Destination $newPath -Force
-            Write-Host "Renamed: $($file.Name) -> $newName"
+            Write-Host "Prepared: $($file.Name) -> $newName"
+            
+            # 同时处理签名文件
+            $sigFile = "$($file.FullName).sig"
+            if (Test-Path $sigFile) {
+              $newSigName = $newName + ".sig"
+              $newSigPath = Join-Path -Path $uploadDir -ChildPath $newSigName
+              Copy-Item -Path $sigFile -Destination $newSigPath -Force
+              Write-Host "Prepared: $($file.Name).sig -> $newSigName"
+            }
           }
 
-          # 重命名NSIS安装程序
+          # 重命名NSIS安装程序并复制到上传目录
           $exeFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe"
           foreach ($file in $exeFiles) {
             $newName = $file.Name -replace "-setup\.exe$", "_fixed-webview2-setup.exe"
-            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
+            $newPath = Join-Path -Path $uploadDir -ChildPath $newName
             Copy-Item -Path $file.FullName -Destination $newPath -Force
-            Write-Host "Renamed: $($file.Name) -> $newName"
-          }
-
-          # 重命名签名文件
-          $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\*\*.sig"
-          foreach ($file in $sigFiles) {
-            if ($file.Name -match "-setup\.exe\.sig$") {
-              $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed-webview2-setup.exe.sig"
-              $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Copy-Item -Path $file.FullName -Destination $newPath -Force
-              Write-Host "Renamed: $($file.Name) -> $newName"
-            } 
-            elseif ($file.Name -match "\.msi\.sig$") {
-              $newName = $file.Name -replace "\.msi\.sig$", "_fixed-webview2.msi.sig"
-              $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-              Copy-Item -Path $file.FullName -Destination $newPath -Force
-              Write-Host "Renamed: $($file.Name) -> $newName"
+            Write-Host "Prepared: $($file.Name) -> $newName"
+            
+            # 同时处理签名文件
+            $sigFile = "$($file.FullName).sig"
+            if (Test-Path $sigFile) {
+              $newSigName = $newName + ".sig"
+              $newSigPath = Join-Path -Path $uploadDir -ChildPath $newSigName
+              Copy-Item -Path $sigFile -Destination $newSigPath -Force
+              Write-Host "Prepared: $($file.Name).sig -> $newSigName"
             }
           }
           
-          # 删除原始文件以避免重复上传
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
-            Write-Host "Removing original file: $($_.FullName)"
-            Remove-Item -Path $_.FullName -Force 
-          }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
-            Write-Host "Removing original file: $($_.FullName)"
-            Remove-Item -Path $_.FullName -Force 
-          }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\*\*.sig" | Where-Object { -not $_.Name.Contains("_fixed-webview2") } | ForEach-Object { 
-            Write-Host "Removing original file: $($_.FullName)"
-            Remove-Item -Path $_.FullName -Force 
-          }
+          # 显示准备上传的文件
+          Write-Host "Files to upload:"
+          Get-ChildItem -Path $uploadDir | ForEach-Object { Write-Host $_.FullName }
           
-          # 显示最终文件
-          Write-Host "Final files:"
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*" | ForEach-Object { Write-Host $_.FullName }
-          Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*" | ForEach-Object { Write-Host $_.FullName }
+          # 使用GitHub CLI上传文件到Release
+          Write-Host "Uploading files to GitHub Release..."
+          $tag = "${{ steps.get_version.outputs.version }}"
+          
+          Get-ChildItem -Path $uploadDir | ForEach-Object {
+            Write-Host "Uploading $($_.Name)..."
+            gh release upload $tag $_.FullName --clobber
+          }
