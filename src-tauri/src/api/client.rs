@@ -9,6 +9,7 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
 use tracing::error;
+use tracing::info;
 
 /// HTTP 请求客户端，支持拦截器机制
 pub struct ApiClient {
@@ -70,42 +71,44 @@ impl ApiClient {
             }
         }
 
-        // 第一次尝试
-        let result = self.client.execute(request.try_clone().unwrap()).await;
+        // 检查请求是否可克隆
+        let can_clone = request.try_clone().is_some();
         
-        // 如果第一次请求成功，直接返回
-        if let Ok(response) = result {
-            return self.process_response(response, &method.to_string(), &url).await;
+        if can_clone {
+            // 第一次尝试
+            let cloned_request = request.try_clone().unwrap();
+            let result = self.client.execute(cloned_request).await;
+            
+            if let Ok(response) = result {
+                return self.process_response(response, &method.to_string(), &url).await;
+            }
+            
+            let err = result.unwrap_err();
+            error!(
+                target: "http_client",
+                "第一次请求失败 - 方法: {}, URL: {}, 错误: {}",
+                method, url, err
+            );
+            
+            // 第二次尝试
+            let cloned_request = request.try_clone().unwrap();
+            let result = self.client.execute(cloned_request).await;
+            
+            if let Ok(response) = result {
+                return self.process_response(response, &method.to_string(), &url).await;
+            }
+            
+            let err = result.unwrap_err();
+            error!(
+                target: "http_client",
+                "第二次请求失败 - 方法: {}, URL: {}, 错误: {}",
+                method, url, err
+            );
         }
         
-        // 记录第一次请求失败
-        let err = result.unwrap_err();
-        error!(
-            target: "http_client",
-            "第一次请求失败 - 方法: {}, URL: {}, 错误: {}",
-            method, url, err
-        );
-        
-        // 第二次尝试
-        let result = self.client.execute(request.try_clone().unwrap()).await;
-        
-        // 如果第二次请求成功，直接返回
-        if let Ok(response) = result {
-            return self.process_response(response, &method.to_string(), &url).await;
-        }
-        
-        // 记录第二次请求失败
-        let err = result.unwrap_err();
-        error!(
-            target: "http_client",
-            "第二次请求失败 - 方法: {}, URL: {}, 错误: {}",
-            method, url, err
-        );
-        
-        // 第三次尝试
+        // 第三次尝试 (对于注册请求是第一次)
         let result = self.client.execute(request).await;
         
-        // 无论第三次请求成功与否，处理并返回
         match result {
             Ok(response) => {
                 self.process_response(response, &method.to_string(), &url).await
@@ -113,7 +116,7 @@ impl ApiClient {
             Err(e) => {
                 error!(
                     target: "http_client",
-                    "第三次请求失败 - 方法: {}, URL: {}, 错误: {}",
+                    "请求失败 - 方法: {}, URL: {}, 错误: {}",
                     method, url, e
                 );
                 Err(e)
