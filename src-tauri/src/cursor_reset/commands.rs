@@ -3,11 +3,13 @@ use crate::database::Database;
 use crate::utils::hook::Hook;
 use crate::utils::id_generator::generate_new_ids;
 use crate::utils::paths::AppPaths;
+use crate::utils::retry;
 use crate::utils::ErrorReporter;
 use crate::utils::ProcessManager;
 use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::fs;
+use std::time::Duration;
 use tauri::State;
 use tauri::Manager;
 use tracing::error;
@@ -416,13 +418,13 @@ pub async fn switch_account(
     error!(target: "account", "成功更新数据库中的账户信息");
 
     // 获取机器码（为了新账户使用）
-    let result = match get_machine_ids(db.clone()).await {
-        Ok(r) => r,
-        Err(e) => {
-            error!(target: "account", "获取机器码失败: {}", e);
-            return Err(e);
-        }
-    };
+    let result = retry::retry(
+        || get_machine_ids(db.clone()),
+        3,
+        Duration::from_millis(500),
+        "获取机器码"
+    ).await?;
+    
     let machine_id = result["machineId"].as_str().unwrap_or_default().to_string();
 
     // ### 检查新账户是否需要保存 ###
@@ -507,27 +509,13 @@ pub async fn switch_account(
 /// 获取设备标识符和当前账号信息
 #[tauri::command]
 pub async fn get_machine_ids(db: State<'_, Database>) -> Result<Value, String> {
-    // 添加重试机制解决文件访问竞态条件
-    let max_retries = 3;
-    let mut retry_count = 0;
-    let mut last_error = String::new();
-    
-    // 重试循环
-    while retry_count < max_retries {
-        match try_get_machine_ids(&db) {
-            Ok(result) => return Ok(result),
-            Err(e) => {
-                retry_count += 1;
-                last_error = e.clone();
-                error!(target: "machine_id", "获取机器码失败，尝试重试 ({}/{}): {}", retry_count, max_retries, e);
-                // 短暂延迟后重试
-                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-            }
-        }
-    }
-    
-    // 返回最后一次的错误
-    Err(format!("获取机器码失败(重试{}次): {}", max_retries, last_error))
+    // 使用通用重试函数替代手动重试逻辑
+    retry::retry(
+        || async { try_get_machine_ids(&db) },
+        3,
+        Duration::from_millis(500),
+        "获取机器码"
+    ).await
 }
 
 fn try_get_machine_ids(db: &Database) -> Result<Value, String> {

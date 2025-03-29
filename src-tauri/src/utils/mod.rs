@@ -7,6 +7,7 @@ pub mod logger;
 pub mod paths;
 pub mod privileges;
 pub mod process;
+pub mod retry;
 
 pub use cursor_version::CursorVersion;
 pub use db::update_sqlite_db;
