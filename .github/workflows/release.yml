@@ -175,6 +175,12 @@ jobs:
                 "webviewInstallMode": {
                   "type": "fixedRuntime",
                   "path": "./Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.${{ matrix.arch }}/"
+                },
+                "certificateThumbprint": null,
+                "digestAlgorithm": "sha256",
+                "timestampUrl": "",
+                "wix": {
+                  "language": ["zh-CN", "en-US"]
                 }
               }
             },
