@@ -1,8 +1,8 @@
 [package]
 name = "cursor-pool"
-version = "1.8.1"
+version = "1.8.2"
 description = "Cursor Pool App"
-authors = ["Sanyela"]
+authors = ["Cloxl"]
 edition = "2021"
 rust-version = "1.60"
 
