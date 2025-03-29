@@ -47,8 +47,8 @@ pub async fn close_cursor() -> Result<bool, String> {
 
 /// 启动 Cursor 应用
 #[tauri::command]
-pub async fn launch_cursor() -> Result<bool, String> {
-    let paths = match AppPaths::new() {
+pub async fn launch_cursor(db: State<'_, Database>) -> Result<bool, String> {
+    let paths = match AppPaths::new_with_db(Some(&db)) {
         Ok(p) => p,
         Err(e) => {
             error!(target: "cursor", "获取应用路径失败: {}", e);
@@ -287,7 +287,7 @@ pub async fn switch_account(
         error!(target: "account", "已强制终止Cursor进程");
     }
 
-    let paths = match AppPaths::new() {
+    let paths = match AppPaths::new_with_db(Some(&db)) {
         Ok(p) => p,
         Err(e) => {
             error!(target: "account", "获取应用路径失败: {}", e);
@@ -415,7 +415,7 @@ pub async fn switch_account(
     error!(target: "account", "成功更新数据库中的账户信息");
 
     // 获取机器码（为了新账户使用）
-    let result = match get_machine_ids() {
+    let result = match get_machine_ids(db.clone()) {
         Ok(r) => r,
         Err(e) => {
             error!(target: "account", "获取机器码失败: {}", e);
@@ -505,8 +505,38 @@ pub async fn switch_account(
 
 /// 获取设备标识符和当前账号信息
 #[tauri::command]
-pub fn get_machine_ids() -> Result<Value, String> {
-    let paths = AppPaths::new()?;
+pub fn get_machine_ids(db: State<'_, Database>) -> Result<Value, String> {
+    // 添加重试机制解决文件访问竞态条件
+    let max_retries = 3;
+    let mut retry_count = 0;
+    let mut last_error = String::new();
+    
+    // 重试循环
+    while retry_count < max_retries {
+        match try_get_machine_ids(&db) {
+            Ok(result) => return Ok(result),
+            Err(e) => {
+                retry_count += 1;
+                last_error = e.clone();
+                error!(target: "machine_id", "获取机器码失败，尝试重试 ({}/{}): {}", retry_count, max_retries, e);
+                // 短暂延迟后重试
+                std::thread::sleep(std::time::Duration::from_millis(500));
+            }
+        }
+    }
+    
+    // 返回最后一次的错误
+    Err(format!("获取机器码失败(重试{}次): {}", max_retries, last_error))
+}
+
+fn try_get_machine_ids(db: &Database) -> Result<Value, String> {
+    let paths = match AppPaths::new_with_db(Some(db)) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(target: "machine_id", "获取应用路径失败: {}", e);
+            return Err(e);
+        }
+    };
     let mut result = json!({
         "machineId": "",
         "currentAccount": ""
