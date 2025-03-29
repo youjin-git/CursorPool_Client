@@ -53,6 +53,10 @@
       },
       "webviewInstallMode": {
         "type": "downloadBootstrapper"
+      },
+      "nsis": {
+        "languages": ["SimpChinese", "English"],
+        "displayLanguageSelector": true
       }
     },
     "macOS": {
