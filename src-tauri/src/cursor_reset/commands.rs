@@ -15,6 +15,9 @@ use tauri::Manager;
 use tracing::error;
 use tokio;
 
+const MAX_CURSOR_ATTEMPTS: usize = 3;
+const CURSOR_SLEEP_DURATION: Duration = Duration::from_millis(500);
+
 /// 终止 Cursor 进程
 #[tauri::command]
 pub async fn close_cursor() -> Result<bool, String> {
@@ -33,8 +36,8 @@ pub async fn close_cursor() -> Result<bool, String> {
 
     // 等待进程完全关闭
     let mut attempts = 0;
-    while process_manager.is_cursor_running() && attempts < 10 {
-        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    while process_manager.is_cursor_running() && attempts < MAX_CURSOR_ATTEMPTS {
+        tokio::time::sleep(CURSOR_SLEEP_DURATION).await;
         attempts += 1;
     }
 
@@ -418,12 +421,7 @@ pub async fn switch_account(
     error!(target: "account", "成功更新数据库中的账户信息");
 
     // 获取机器码（为了新账户使用）
-    let result = retry::retry(
-        || get_machine_ids(db.clone()),
-        3,
-        Duration::from_millis(500),
-        "获取机器码"
-    ).await?;
+    let result = get_machine_ids(db.clone()).await?;
     
     let machine_id = result["machineId"].as_str().unwrap_or_default().to_string();
 
@@ -500,7 +498,7 @@ pub async fn switch_account(
     }
 
     // 等待一段时间确保数据库更新完成
-    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    tokio::time::sleep(CURSOR_SLEEP_DURATION).await;
 
     error!(target: "account", "成功切换到账号: {}", email);
     Ok(true)
