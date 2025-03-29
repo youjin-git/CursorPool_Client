@@ -161,15 +161,35 @@ jobs:
       - name: Prepare WebView2 Fixed Runtime
         shell: pwsh
         run: |
-          # Create WebView2 configuration file
+          # Download WebView2 Runtime
+          invoke-webrequest -uri https://github.com/westinyang/WebView2RuntimeArchive/releases/download/109.0.1518.78/Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.${{ matrix.arch }}.cab -outfile Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.${{ matrix.arch }}.cab
+          
+          # Extract WebView2 Runtime to src-tauri directory
+          Expand .\Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.${{ matrix.arch }}.cab -F:* ./src-tauri
+          
+          # Create WebView2 configuration file 
           $webviewConfigContent = @"
           {
             "bundle": {
               "windows": {
                 "webviewInstallMode": {
                   "type": "fixedRuntime",
-                  "path": "./webview2-runtime/${{ matrix.arch }}/"
+                  "path": "./Microsoft.WebView2.FixedVersionRuntime.109.0.1518.78.${{ matrix.arch }}/"
                 }
+              }
+            },
+            "plugins": {
+              "updater": {
+                "active": true,
+                "dialog": false,
+                "pubkey": "${{ secrets.TAURI_UPDATER_PUBKEY }}",
+                "endpoints": [
+                  "${{ secrets.WEBVIEW2_UPDATE_ENDPOINT_PRIMARY }}"
+                ],
+                "windows": {
+                  "installMode": "passive"
+                },
+                "dangerousInsecureTransportProtocol": true
               }
             }
           }
@@ -177,23 +197,6 @@ jobs:
           
           # Save configuration file
           New-Item -Path "src-tauri" -Name "tauri.windows.conf.json" -ItemType "file" -Value $webviewConfigContent -Force
-          
-          # Download WebView2 runtime
-          mkdir -p src-tauri/webview2-runtime/${{ matrix.arch }}
-          
-          # Choose download link based on architecture
-          if ("${{ matrix.arch }}" -eq "x64") {
-            Invoke-WebRequest -Uri "https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/949b4951-7f54-4504-8a73-ccad659afdb1/Microsoft.WebView2.FixedVersionRuntime.134.0.3124.72.x64.cab" -OutFile "webview2-runtime.cab"
-          } else {
-            Invoke-WebRequest -Uri "https://msedge.sf.dl.delivery.mp.microsoft.com/filestreamingservice/files/abc49133-bb96-41e6-a555-8ea087ff4564/Microsoft.WebView2.FixedVersionRuntime.134.0.3124.72.arm64.cab" -OutFile "webview2-runtime.cab"
-          }
-          
-          cmd /c "expand webview2-runtime.cab -F:* .\src-tauri\webview2-runtime\${{ matrix.arch }}\"
-          
-          # Verify files existence
-          if (Test-Path -Path "src-tauri/webview2-runtime/${{ matrix.arch }}") {
-            Write-Host "WebView2 Runtime directory created successfully"
-          }
 
       # Build with tauri action but without uploading artifacts
       - name: Build Tauri App 
@@ -204,8 +207,8 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tauriScript: pnpm
-          args: --target ${{ matrix.target }} --config src-tauri/tauri.windows.conf.json
+          configPath: src-tauri/tauri.windows.conf.json
+          args: --target ${{ matrix.target }}
           includeUpdaterJson: false
 
       - name: Rename Files
@@ -217,7 +220,7 @@ jobs:
           foreach ($file in $msiFiles) {
             $newName = $file.Name -replace "\.msi$", "_fixed_webview2.msi"
             $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Rename-Item -Path $file.FullName -Destination $newPath
+            Rename-Item -Path $file.FullName -NewName $newName
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
@@ -225,8 +228,7 @@ jobs:
           $exeFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe"
           foreach ($file in $exeFiles) {
             $newName = $file.Name -replace "-setup\.exe$", "_fixed_webview2-setup.exe"
-            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Rename-Item -Path $file.FullName -Destination $newPath
+            Rename-Item -Path $file.FullName -NewName $newName
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
@@ -234,16 +236,14 @@ jobs:
           $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\nsis\*-setup.exe.sig"
           foreach ($file in $sigFiles) {
             $newName = $file.Name -replace "-setup\.exe\.sig$", "_fixed_webview2-setup.exe.sig"
-            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Rename-Item -Path $file.FullName -Destination $newPath
+            Rename-Item -Path $file.FullName -NewName $newName
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
           
           $sigFiles = Get-ChildItem -Path ".\src-tauri\target\${{ matrix.target }}\release\bundle\msi\*.msi.sig"
           foreach ($file in $sigFiles) {
             $newName = $file.Name -replace "\.msi\.sig$", "_fixed_webview2.msi.sig"
-            $newPath = Join-Path -Path $file.Directory.FullName -ChildPath $newName
-            Rename-Item -Path $file.FullName -Destination $newPath
+            Rename-Item -Path $file.FullName -NewName $newName
             Write-Host "Renamed: $($file.Name) -> $newName"
           }
 
