@@ -1,24 +1,29 @@
 use crate::api::client::ApiClient;
 use crate::config;
 use crate::cursor_reset::commands;
+use crate::database::Database;
 use crate::utils::ErrorReporter;
+use crate::utils::retry;
 use serde_json::Value;
+use std::time::Duration;
 use tauri::{AppHandle, Emitter, Manager};
 use tracing::error;
-use crate::database::Database;
 
 /// 检查账户使用限制
 pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
     // 获取当前机器码和用户信息
-    let machine_info = match commands::get_machine_ids() {
-        Ok(info) => info,
-        Err(e) => {
-            error!("获取机器码信息失败: {}", e);
-            return Err(e);
-        }
-    };
+    let db = app_handle.state::<Database>();
     
-    let current_account = match machine_info.get("currentAccount") {
+    // 使用 retry 函数获取机器码信息
+    let info = retry::retry(
+        || commands::get_machine_ids(db.clone()),
+        3,
+        Duration::from_millis(500),
+        "获取机器码信息"
+    ).await?;
+    
+    // 提取当前账户信息
+    let current_account = match info.get("currentAccount") {
         Some(Value::String(account)) => account.clone(),
         _ => {
             let err = "无法获取当前账户信息".to_string();
@@ -27,7 +32,7 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
         }
     };
     
-    let token = match machine_info.get("cursorToken") {
+    let token = match info.get("cursorToken") {
         Some(Value::String(token)) => token.clone(),
         _ => {
             let err = "无法获取当前账户Token".to_string();
@@ -45,6 +50,7 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
         token
     ).await;
     
+    // 处理获取的使用情况
     let usage_data = match usage_result {
         Ok(response) => {
             if let Some(data) = response.data {
@@ -72,7 +78,6 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
     };
     
     // 从数据库获取警告阈值
-    let db = app_handle.state::<Database>();
     let account_threshold_key = config::get_db_key("account_usage_threshold");
     let account_usage_threshold = match db.inner().get_item(&account_threshold_key) {
         Ok(Some(val)) => match val.parse::<f64>() {

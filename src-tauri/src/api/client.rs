@@ -9,7 +9,6 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Manager;
 use tracing::error;
-use tracing::info;
 
 /// HTTP 请求客户端，支持拦截器机制
 pub struct ApiClient {

@@ -237,7 +237,7 @@ pub async fn get_account(
         if !account_info.account.is_empty() && !account_info.token.is_empty() {
             // 获取当前机器码
             use crate::cursor_reset::get_machine_ids;
-            let machine_info = get_machine_ids().map_err(|e| {
+            let machine_info = get_machine_ids(db.clone()).await.map_err(|e| {
                 error!(target: "api", "获取机器码失败 - 错误: {}", e);
                 e.to_string()
             })?;

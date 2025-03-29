@@ -3,14 +3,20 @@ use crate::database::Database;
 use crate::utils::hook::Hook;
 use crate::utils::id_generator::generate_new_ids;
 use crate::utils::paths::AppPaths;
+use crate::utils::retry;
 use crate::utils::ErrorReporter;
 use crate::utils::ProcessManager;
 use rusqlite::Connection;
 use serde_json::{json, Value};
 use std::fs;
+use std::time::Duration;
 use tauri::State;
 use tauri::Manager;
 use tracing::error;
+use tokio;
+
+const MAX_CURSOR_ATTEMPTS: usize = 3;
+const CURSOR_SLEEP_DURATION: Duration = Duration::from_millis(500);
 
 /// 终止 Cursor 进程
 #[tauri::command]
@@ -30,8 +36,8 @@ pub async fn close_cursor() -> Result<bool, String> {
 
     // 等待进程完全关闭
     let mut attempts = 0;
-    while process_manager.is_cursor_running() && attempts < 10 {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+    while process_manager.is_cursor_running() && attempts < MAX_CURSOR_ATTEMPTS {
+        tokio::time::sleep(CURSOR_SLEEP_DURATION).await;
         attempts += 1;
     }
 
@@ -47,8 +53,8 @@ pub async fn close_cursor() -> Result<bool, String> {
 
 /// 启动 Cursor 应用
 #[tauri::command]
-pub async fn launch_cursor() -> Result<bool, String> {
-    let paths = match AppPaths::new() {
+pub async fn launch_cursor(db: State<'_, Database>) -> Result<bool, String> {
+    let paths = match AppPaths::new_with_db(Some(&db)) {
         Ok(p) => p,
         Err(e) => {
             error!(target: "cursor", "获取应用路径失败: {}", e);
@@ -287,7 +293,7 @@ pub async fn switch_account(
         error!(target: "account", "已强制终止Cursor进程");
     }
 
-    let paths = match AppPaths::new() {
+    let paths = match AppPaths::new_with_db(Some(&db)) {
         Ok(p) => p,
         Err(e) => {
             error!(target: "account", "获取应用路径失败: {}", e);
@@ -415,13 +421,8 @@ pub async fn switch_account(
     error!(target: "account", "成功更新数据库中的账户信息");
 
     // 获取机器码（为了新账户使用）
-    let result = match get_machine_ids() {
-        Ok(r) => r,
-        Err(e) => {
-            error!(target: "account", "获取机器码失败: {}", e);
-            return Err(e);
-        }
-    };
+    let result = get_machine_ids(db.clone()).await?;
+    
     let machine_id = result["machineId"].as_str().unwrap_or_default().to_string();
 
     // ### 检查新账户是否需要保存 ###
@@ -497,7 +498,7 @@ pub async fn switch_account(
     }
 
     // 等待一段时间确保数据库更新完成
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    tokio::time::sleep(CURSOR_SLEEP_DURATION).await;
 
     error!(target: "account", "成功切换到账号: {}", email);
     Ok(true)
@@ -505,8 +506,24 @@ pub async fn switch_account(
 
 /// 获取设备标识符和当前账号信息
 #[tauri::command]
-pub fn get_machine_ids() -> Result<Value, String> {
-    let paths = AppPaths::new()?;
+pub async fn get_machine_ids(db: State<'_, Database>) -> Result<Value, String> {
+    // 使用通用重试函数替代手动重试逻辑
+    retry::retry(
+        || async { try_get_machine_ids(&db) },
+        3,
+        Duration::from_millis(500),
+        "获取机器码"
+    ).await
+}
+
+fn try_get_machine_ids(db: &Database) -> Result<Value, String> {
+    let paths = match AppPaths::new_with_db(Some(db)) {
+        Ok(p) => p,
+        Err(e) => {
+            error!(target: "machine_id", "获取应用路径失败: {}", e);
+            return Err(e);
+        }
+    };
     let mut result = json!({
         "machineId": "",
         "currentAccount": ""
