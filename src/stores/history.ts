@@ -232,12 +232,13 @@ export const useHistoryStore = defineStore('history', () => {
 
     clearingHighUsage.value = true
     try {
-      // 并发删除高使用量账户
-      const deletePromises = highUsageAccounts.value.map((account) =>
-        removeHistoryAccount(account.email),
-      )
+      // 保存要删除的账户数量
+      const accountsToDelete = highUsageAccounts.value.length
 
-      await Promise.all(deletePromises)
+      // 删除高使用量账户
+      for (const account of highUsageAccounts.value) {
+        await removeHistoryAccount(account.email)
+      }
 
       // 更新账户列表
       accounts.value = accounts.value.filter((account) => {
@@ -247,7 +248,7 @@ export const useHistoryStore = defineStore('history', () => {
       })
 
       return {
-        success: highUsageAccounts.value.length,
+        success: accountsToDelete,
       }
     } catch (error) {
       console.error('清理高使用量账户失败:', error)
