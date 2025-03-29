@@ -20,6 +20,11 @@ where
     Fut: Future<Output = Result<T, E>>,
     E: std::fmt::Debug + Clone,
 {
+    // 如果重试次数为0，直接执行一次并返回结果
+    if retries == 0 {
+        return f().await;
+    }
+    
     let mut last_err = None;
     
     for attempt in 1..=retries {
