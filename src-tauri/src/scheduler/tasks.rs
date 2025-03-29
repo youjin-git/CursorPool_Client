@@ -6,6 +6,7 @@ use crate::utils::ErrorReporter;
 use serde_json::Value;
 use tauri::{AppHandle, Emitter, Manager};
 use tracing::error;
+use tokio;
 
 /// 检查账户使用限制
 pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
@@ -17,7 +18,7 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
     
     // 重试循环
     while retry_count < max_retries {
-        match commands::get_machine_ids(db.clone()) {
+        match commands::get_machine_ids(db.clone()).await {
             Ok(info) => {
                 let current_account = match info.get("currentAccount") {
                     Some(Value::String(account)) => account.clone(),
@@ -127,7 +128,7 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
                 retry_count += 1;
                 error!("获取机器码信息失败，尝试重试 ({}/{}): {}", retry_count, max_retries, e);
                 // 短暂延迟后重试
-                std::thread::sleep(std::time::Duration::from_millis(500));
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
                 
                 if retry_count >= max_retries {
                     error!("获取机器码信息失败，已达到最大重试次数: {}", e);

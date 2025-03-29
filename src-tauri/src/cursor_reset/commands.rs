@@ -11,6 +11,7 @@ use std::fs;
 use tauri::State;
 use tauri::Manager;
 use tracing::error;
+use tokio;
 
 /// 终止 Cursor 进程
 #[tauri::command]
@@ -31,7 +32,7 @@ pub async fn close_cursor() -> Result<bool, String> {
     // 等待进程完全关闭
     let mut attempts = 0;
     while process_manager.is_cursor_running() && attempts < 10 {
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         attempts += 1;
     }
 
@@ -415,7 +416,7 @@ pub async fn switch_account(
     error!(target: "account", "成功更新数据库中的账户信息");
 
     // 获取机器码（为了新账户使用）
-    let result = match get_machine_ids(db.clone()) {
+    let result = match get_machine_ids(db.clone()).await {
         Ok(r) => r,
         Err(e) => {
             error!(target: "account", "获取机器码失败: {}", e);
@@ -497,7 +498,7 @@ pub async fn switch_account(
     }
 
     // 等待一段时间确保数据库更新完成
-    std::thread::sleep(std::time::Duration::from_millis(500));
+    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
     error!(target: "account", "成功切换到账号: {}", email);
     Ok(true)
@@ -505,7 +506,7 @@ pub async fn switch_account(
 
 /// 获取设备标识符和当前账号信息
 #[tauri::command]
-pub fn get_machine_ids(db: State<'_, Database>) -> Result<Value, String> {
+pub async fn get_machine_ids(db: State<'_, Database>) -> Result<Value, String> {
     // 添加重试机制解决文件访问竞态条件
     let max_retries = 3;
     let mut retry_count = 0;
@@ -520,7 +521,7 @@ pub fn get_machine_ids(db: State<'_, Database>) -> Result<Value, String> {
                 last_error = e.clone();
                 error!(target: "machine_id", "获取机器码失败，尝试重试 ({}/{}): {}", retry_count, max_retries, e);
                 // 短暂延迟后重试
-                std::thread::sleep(std::time::Duration::from_millis(500));
+                tokio::time::sleep(std::time::Duration::from_millis(500)).await;
             }
         }
     }
