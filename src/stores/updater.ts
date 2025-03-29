@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { check } from '@tauri-apps/plugin-updater'
 import { relaunch } from '@tauri-apps/plugin-process'
+import { open } from '@tauri-apps/plugin-shell'
 
 export const useUpdaterStore = defineStore('updater', () => {
   // 状态
@@ -15,6 +16,7 @@ export const useUpdaterStore = defineStore('updater', () => {
   const updateVersion = ref('')
   const updateNotes = ref('')
   const error = ref<string | null>(null)
+  const isWebView2Update = ref(false)
 
   // 计算属性
   const isUpdating = computed(() => isChecking.value || isDownloading.value || isInstalling.value)
@@ -42,8 +44,24 @@ export const useUpdaterStore = defineStore('updater', () => {
         await installUpdate(update)
       }
     } catch (err) {
-      // 改进错误处理，获取更多详细信息
-      console.error('更新错误完整信息:', err)
+      // 获取错误消息，处理不同类型的错误
+      const errorMessage = err instanceof Error ? err.message : String(err)
+
+      // 检测是否是WebView2固定版本更新
+      if (
+        (typeof errorMessage === 'string' &&
+          errorMessage.includes('platform') &&
+          (errorMessage.includes('not found') || errorMessage.includes('platforms object'))) ||
+        errorMessage ===
+          'the platform `windows-x86_64` was not found on the response `platforms` object'
+      ) {
+        hasUpdate.value = true
+        isWebView2Update.value = true
+        // 如果是webview2更新 由于返回空platform(cdn费用高) 故设置为固定字符串 此值不会被读取 仅仅作为兼容处理
+        updateVersion.value = '新版本'
+        error.value = null
+        return
+      }
 
       if (err instanceof Error) {
         // 保存完整错误信息
@@ -70,7 +88,7 @@ export const useUpdaterStore = defineStore('updater', () => {
         }
       } else {
         // 未知类型的错误
-        error.value = `检查更新失败: ${JSON.stringify(err)}`
+        error.value = `检查更新失败: ${errorMessage}`
       }
 
       console.error('更新错误:', error.value)
@@ -126,6 +144,9 @@ export const useUpdaterStore = defineStore('updater', () => {
       isDownloading.value = false
       isInstalling.value = false
 
+      // 统一错误消息格式
+      const errorMessage = err instanceof Error ? err.message : String(err)
+
       // 改进错误处理，显示更详细的安装错误
       console.error('安装更新完整错误:', err)
 
@@ -154,10 +175,20 @@ export const useUpdaterStore = defineStore('updater', () => {
         }
       } else {
         // 未知类型的错误
-        error.value = `更新安装失败: ${JSON.stringify(err)}`
+        error.value = `更新安装失败: ${errorMessage}`
       }
 
       console.error('更新安装错误:', error.value)
+    }
+  }
+
+  // 打开官网
+  async function openOfficialWebsite() {
+    try {
+      await open('https://pool.52ai.org')
+    } catch (err) {
+      console.error('打开网站失败:', err)
+      error.value = `无法打开官网: ${err instanceof Error ? err.message : String(err)}`
     }
   }
 
@@ -175,8 +206,10 @@ export const useUpdaterStore = defineStore('updater', () => {
     error,
     isUpdating,
     progressPercentage,
+    isWebView2Update,
 
     // 方法
     checkForUpdates,
+    openOfficialWebsite,
   }
 })
