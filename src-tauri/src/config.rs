@@ -34,7 +34,6 @@ pub struct PathConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WindowsPaths {
     pub cursor_exe: String,
-    pub cursor_resources: String,
     pub cursor_updater: String,
 }
 
@@ -121,8 +120,6 @@ impl Default for AppConfig {
             paths: PathConfig {
                 windows: WindowsPaths {
                     cursor_exe: "%LOCALAPPDATA%\\Programs\\cursor\\Cursor.exe".to_string(),
-                    cursor_resources:
-                        "%LOCALAPPDATA%\\Programs\\cursor\\resources\\app\\out\\main.js".to_string(),
                     cursor_updater: "%LOCALAPPDATA%\\cursor-updater".to_string(),
                 },
                 macos: MacOSPaths {
@@ -204,10 +201,8 @@ pub fn get_os_resources_path() -> PathBuf {
     let config = CONFIG.read().unwrap();
 
     if cfg!(target_os = "windows") {
-        PathBuf::from(config.paths.windows.cursor_resources.replace(
-            "%LOCALAPPDATA%",
-            &env::var("LOCALAPPDATA").unwrap_or_default(),
-        ))
+        // Windows平台使用环境变量
+        PathBuf::new()
     } else if cfg!(target_os = "macos") {
         PathBuf::from(
             config
