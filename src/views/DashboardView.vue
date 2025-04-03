@@ -352,43 +352,54 @@
   }
 
   // 修改账户切换执行函数
-  const executeAccountSwitch = async (force_kill: boolean = false) => {
+  const executeAccountSwitch = async (force_kill: boolean = false): Promise<boolean> => {
     try {
-      await cursorStore.switchCursorAccount(undefined, undefined, force_kill)
-      message.success(i18n.value.dashboard.accountChangeSuccess)
+      const result = await cursorStore.switchCursorAccount(undefined, undefined, force_kill)
 
-      // 发送通知
-      await notificationStore.notify({
-        title: 'Cursor Pool',
-        body: i18n.value.dashboard.accountChangeSuccess,
-      })
+      // 只有当操作成功时才显示成功消息和刷新数据
+      if (result === true) {
+        message.success(i18n.value.dashboard.accountChangeSuccess)
 
-      await fetchUserInfo()
-      updateLocalViewState()
+        // 发送通知
+        await notificationStore.notify({
+          title: 'Cursor Pool',
+          body: i18n.value.dashboard.accountChangeSuccess,
+        })
+
+        await fetchUserInfo()
+        updateLocalViewState()
+        return true
+      }
+      return false
     } catch (error) {
       console.error('账户切换失败:', error)
       message.error(
         error instanceof Error ? error.message : i18n.value.dashboard.accountChangeFailed,
       )
+      return false
     }
   }
 
   // 修改一键切换执行函数
-  const executeQuickChange = async (force_kill: boolean = false) => {
+  const executeQuickChange = async (force_kill: boolean = false): Promise<boolean> => {
     try {
-      await cursorStore.quickChange(undefined, undefined, force_kill)
-      message.success(i18n.value.dashboard.changeSuccess)
+      const result = await cursorStore.quickChange(undefined, undefined, force_kill)
 
-      // 发送通知
-      await notificationStore.notify({
-        title: 'Cursor Pool',
-        body: i18n.value.dashboard.changeSuccess,
-      })
+      // 只有当操作成功时才显示成功消息和刷新数据
+      if (result === true) {
+        message.success(i18n.value.dashboard.changeSuccess)
 
-      await fetchUserInfo()
+        // 发送通知
+        await notificationStore.notify({
+          title: 'Cursor Pool',
+          body: i18n.value.dashboard.changeSuccess,
+        })
 
-      // 更新视图状态
-      updateLocalViewState()
+        await fetchUserInfo()
+        updateLocalViewState()
+        return true
+      }
+      return false
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : String(error)
       if (errorMsg === 'Cursor进程正在运行, 请先关闭Cursor') {
@@ -396,9 +407,10 @@
         pendingForceKillAction.value = {
           type: 'quick',
         }
-        return
+        return false
       }
       message.error(error instanceof Error ? error.message : i18n.value.dashboard.changeFailed)
+      return false
     }
   }
 
@@ -451,14 +463,32 @@
         operationMessage = i18n.value.dashboard.machineChangeSuccess
       } else if (pendingForceKillAction.value.type === 'account') {
         message.loading('正在切换账户...', { duration: 0 })
-        await executeAccountSwitch(true)
-        operationSuccess = true
-        operationMessage = i18n.value.dashboard.accountChangeSuccess
+        try {
+          const success = await executeAccountSwitch(true)
+          if (success) {
+            operationSuccess = true
+            operationMessage = i18n.value.dashboard.accountChangeSuccess
+          }
+        } catch (error) {
+          console.error('强制切换账户失败:', error)
+          message.destroyAll()
+          message.error(error instanceof Error ? error.message : String(error))
+          return
+        }
       } else if (pendingForceKillAction.value.type === 'quick') {
         message.loading('正在一键切换...', { duration: 0 })
-        await executeQuickChange(true)
-        operationSuccess = true
-        operationMessage = i18n.value.dashboard.changeSuccess
+        try {
+          const success = await executeQuickChange(true)
+          if (success) {
+            operationSuccess = true
+            operationMessage = i18n.value.dashboard.changeSuccess
+          }
+        } catch (error) {
+          console.error('强制一键切换失败:', error)
+          message.destroyAll()
+          message.error(error instanceof Error ? error.message : String(error))
+          return
+        }
       } else if (pendingForceKillAction.value.type === 'hook') {
         message.loading('正在注入...', {
           duration: 0,

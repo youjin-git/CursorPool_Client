@@ -10,6 +10,53 @@ use std::env;
 use tauri::State;
 use tracing::error;
 
+/// 通用API响应处理函数，处理成功和失败情况
+async fn handle_api_response<T: serde::de::DeserializeOwned>(
+    response: reqwest::Response, 
+    error_context: &str
+) -> Result<ApiResponse<T>, String> {
+    // 获取响应文本
+    let response_text = response.text().await.map_err(|e| {
+        error!(target: "api", "获取{}响应文本失败 - 错误: {}", error_context, e);
+        e.to_string()
+    })?;
+    
+    // 尝试解析为基本JSON格式以获取status和msg
+    let api_response: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
+        error!(target: "api", "解析{}响应JSON失败 - 错误: {}", error_context, e);
+        e.to_string()
+    })?;
+    
+    // 提取status和msg
+    let status = api_response["status"].as_i64().unwrap_or(500) as i32;
+    let msg = api_response["msg"].as_str().unwrap_or("未知错误").to_string();
+    
+    // 如果status不是200，直接返回错误响应
+    if status != 200 {
+        return Ok(ApiResponse {
+            status,
+            msg,
+            data: None,
+            code: api_response["code"].as_str().map(String::from),
+        });
+    }
+    
+    // 成功情况，尝试解析为完整类型
+    match serde_json::from_str::<ApiResponse<T>>(&response_text) {
+        Ok(typed_response) => Ok(typed_response),
+        Err(e) => {
+            error!(target: "api", "解析{}响应为完整类型失败 - 错误: {}", error_context, e);
+            // 即使解析失败，依然返回成功状态但data为None
+            Ok(ApiResponse {
+                status,
+                msg,
+                data: None,
+                code: api_response["code"].as_str().map(String::from),
+            })
+        }
+    }
+}
+
 // Bug报告请求结构
 #[derive(Serialize, Deserialize)]
 pub struct BugReportRequest {
@@ -42,10 +89,7 @@ pub async fn check_user(
             e.to_string()
         })?;
 
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析检查用户响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "检查用户").await
 }
 
 /// 发送验证码
@@ -65,10 +109,7 @@ pub async fn send_code(
             e.to_string()
         })?;
 
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析发送验证码响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "发送验证码").await
 }
 
 /// 注册用户
@@ -94,15 +135,7 @@ pub async fn register(
             e.to_string()
         })?;
 
-    let response_text = response.text().await.map_err(|e| {
-        error!(target: "api", "获取注册响应文本失败 - 错误: {}", e);
-        e.to_string()
-    })?;
-
-    serde_json::from_str(&response_text).map_err(|e| {
-        error!(target: "api", "解析注册响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "注册用户").await
 }
 
 /// 用户登录
@@ -127,10 +160,7 @@ pub async fn login(
             e.to_string()
         })?;
 
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析登录响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "登录").await
 }
 
 /// 获取用户信息
@@ -145,10 +175,7 @@ pub async fn get_user_info(client: State<'_, ApiClient>) -> Result<ApiResponse<U
             e.to_string()
         })?;
 
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析用户信息响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "获取用户信息").await
 }
 
 /// 激活账户
@@ -167,10 +194,7 @@ pub async fn activate(
             e.to_string()
         })?;
 
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析激活账户响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "激活账户").await
 }
 
 /// 修改密码
@@ -193,10 +217,8 @@ pub async fn change_password(
             error!(target: "api", "修改密码请求失败 - 错误: {}", e);
             e.to_string()
         })?;
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析修改密码响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    
+    handle_api_response(response, "修改密码").await
 }
 
 /// 获取账户信息
@@ -226,14 +248,12 @@ pub async fn get_account(
         e.to_string()
     })?;
 
-    let response: ApiResponse<AccountPoolInfo> = response.json().await.map_err(|e| {
-        error!(target: "api", "解析账户信息响应失败 - 错误: {}", e);
-        e.to_string()
-    })?;
+    // 使用通用函数处理API响应
+    let api_response = handle_api_response::<AccountPoolInfo>(response, "获取账户信息").await?;
 
     // 如果获取成功且有账户信息，将token保存到历史记录
-    if response.status == 200 && response.data.is_some() {
-        let account_info = &response.data.as_ref().unwrap().account_info;
+    if api_response.status == 200 && api_response.data.is_some() {
+        let account_info = &api_response.data.as_ref().unwrap().account_info;
         if !account_info.account.is_empty() && !account_info.token.is_empty() {
             // 获取当前机器码
             use crate::cursor_reset::get_machine_ids;
@@ -260,7 +280,7 @@ pub async fn get_account(
         }
     }
 
-    Ok(response)
+    Ok(api_response)
 }
 
 /// 获取 Cursor 使用情况
@@ -359,10 +379,7 @@ pub async fn reset_password(
             e.to_string()
         })?;
 
-    response.json().await.map_err(|e| {
-        error!(target: "api", "解析重置密码响应失败 - 错误: {}", e);
-        e.to_string()
-    })
+    handle_api_response(response, "重置密码").await
 }
 
 /// 报告错误

@@ -303,11 +303,17 @@ export const useCursorStore = defineStore('cursor', () => {
       // 检查 Cursor 是否在运行
       await ensureCursorNotRunning(forceKill)
 
+      // 保存原始机器码，以便失败时恢复
+      const originalMachineId = machineCode.value
+
+      let machineResetSuccess = false
+
       // 先重置机器码
       try {
         await resetMachine({
           forceKill,
         })
+        machineResetSuccess = true
       } catch (error) {
         await Logger.error('一键换号时重置机器码失败')
         throw error
@@ -319,6 +325,21 @@ export const useCursorStore = defineStore('cursor', () => {
         await Logger.info('一键换号完成')
       } catch (error) {
         await Logger.error('一键换号时切换账户失败')
+
+        // 机器码重置成功 但账户切换失败 恢复原始机器码
+        if (machineResetSuccess && originalMachineId) {
+          try {
+            await resetMachineId({
+              forceKill,
+              machineId: originalMachineId,
+            })
+            await Logger.info('恢复原始机器码成功')
+            await fetchMachineIds() // 刷新机器码信息
+          } catch (restoreError) {
+            await Logger.error(`恢复原始机器码失败: ${restoreError}`)
+          }
+        }
+
         throw error
       }
 
