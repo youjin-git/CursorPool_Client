@@ -223,6 +223,29 @@ pub async fn reset_machine_id(
         }
     };
 
+    // 检查并移除文件的只读属性
+    if paths.storage.exists() {
+        match std::fs::metadata(&paths.storage) {
+            Ok(metadata) => {
+                let mut permissions = metadata.permissions();
+                if permissions.readonly() {
+                    error!(target: "reset", "storage.json是只读文件，尝试移除只读属性");
+                    permissions.set_readonly(false);
+                    if let Err(e) = std::fs::set_permissions(&paths.storage, permissions) {
+                        let err = format!("无法移除storage.json的只读属性: {}", e);
+                        error!(target: "reset", "{}", err);
+                    } else {
+                        error!(target: "reset", "成功移除storage.json的只读属性");
+                    }
+                }
+            }
+            Err(e) => {
+                let err = format!("获取storage.json权限失败: {}", e);
+                error!(target: "reset", "{}", err);
+            }
+        }
+    }
+
     if let Err(e) = fs::write(&paths.storage, &storage_content_str) {
         let err = format!("写入 storage.json 失败: {}", e);
         error!(target: "reset", "{}", err);
