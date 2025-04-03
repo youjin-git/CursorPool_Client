@@ -100,6 +100,24 @@ export const useCursorStore = defineStore('cursor', () => {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
   }
 
+  /**
+   * 安全地获取Cursor使用情况
+   * 失败时只记录日志，不会抛出异常
+   * @param operationName 当前执行的操作名称，用于日志记录
+   * @returns 获取是否成功
+   */
+  async function safelyFetchCursorUsage(operationName: string): Promise<boolean> {
+    try {
+      await fetchCursorUsage()
+      return true
+    } catch (error) {
+      // 仅记录日志，不影响主流程
+      await Logger.info(`获取Cursor使用情况失败，但不影响${operationName}流程`)
+      console.error(`获取Cursor使用情况失败:`, error)
+      return false
+    }
+  }
+
   // Actions
   /**
    * 获取机器码信息
@@ -209,9 +227,9 @@ export const useCursorStore = defineStore('cursor', () => {
         operator: '用户',
       })
 
-      // 重置成功后刷新数据
       await fetchMachineIds()
-      await fetchCursorUsage()
+      await safelyFetchCursorUsage('机器码重置')
+
       return true
     } catch (error) {
       await Logger.error(`重置机器码失败: ${error}`)
@@ -256,9 +274,9 @@ export const useCursorStore = defineStore('cursor', () => {
         operator: '用户',
       })
 
-      // 切换成功后刷新数据
       await fetchMachineIds()
-      await fetchCursorUsage()
+      await safelyFetchCursorUsage('账户切换')
+
       return true
     } catch (error) {
       await Logger.error(`账户切换失败: ${error}`)
@@ -299,9 +317,8 @@ export const useCursorStore = defineStore('cursor', () => {
         throw error
       }
 
-      // 刷新数据
       await fetchMachineIds()
-      await fetchCursorUsage()
+      await safelyFetchCursorUsage('一键换号')
 
       return true
       // eslint-disable-next-line no-useless-catch
@@ -453,7 +470,8 @@ export const useCursorStore = defineStore('cursor', () => {
     try {
       isLoading.value = true
       await fetchMachineIds()
-      await fetchCursorUsage()
+      await safelyFetchCursorUsage('数据刷新')
+
       return true
     } catch (error) {
       console.error('刷新数据失败:', error)
@@ -506,9 +524,8 @@ export const useCursorStore = defineStore('cursor', () => {
         operator: '用户',
       })
 
-      // 刷新数据
       await fetchMachineIds()
-      await fetchCursorUsage()
+      await safelyFetchCursorUsage('历史账户切换')
 
       return {
         status: 'success',
@@ -558,9 +575,8 @@ export const useCursorStore = defineStore('cursor', () => {
         operator: '用户',
       })
 
-      // 刷新数据
       await fetchMachineIds()
-      await fetchCursorUsage()
+      await safelyFetchCursorUsage('强制切换账户')
 
       // 启动 Cursor
       await launchCursorApp()
