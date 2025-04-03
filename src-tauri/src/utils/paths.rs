@@ -210,17 +210,12 @@ impl AppPaths {
 
     // 新增：寻找main.js路径的方法
     fn find_main_js_path() -> Result<PathBuf, String> {
-        let default_path = if cfg!(target_os = "windows") {
-            let local_app_data = std::env::var("LOCALAPPDATA")
-                .map_err(|e| format!("获取 LOCALAPPDATA 路径失败: {}", e))?;
-            let resources_path_str = config::CONFIG
-                .read()
-                .unwrap()
-                .paths
-                .windows
-                .cursor_resources
-                .clone();
-            PathBuf::from(resources_path_str.replace("%LOCALAPPDATA%", &local_app_data))
+        if cfg!(target_os = "windows") {
+            // Windows系统下，直接从环境变量PATH中查找
+            match Self::find_cursor_from_env_path() {
+                Ok(path) => Ok(path),
+                Err(e) => Err(format!("从环境变量中查找Cursor路径失败: {}", e))
+            }
         } else if cfg!(target_os = "macos") {
             let resources_path_str = config::CONFIG
                 .read()
@@ -229,7 +224,12 @@ impl AppPaths {
                 .macos
                 .cursor_resources
                 .clone();
-            PathBuf::from(resources_path_str)
+            let path = PathBuf::from(resources_path_str);
+            if path.exists() {
+                Ok(path)
+            } else {
+                Err("macOS系统下未找到main.js文件".to_string())
+            }
         } else {
             // Linux 路径
             let resources_path_str = config::CONFIG
@@ -239,23 +239,13 @@ impl AppPaths {
                 .linux
                 .cursor_resources
                 .clone();
-            PathBuf::from(resources_path_str)
-        };
-
-        // 检查默认路径是否存在
-        if default_path.exists() {
-            return Ok(default_path);
-        }
-
-        // 在Windows上，尝试从PATH环境变量查找
-        if cfg!(target_os = "windows") {
-            if let Ok(path) = Self::find_cursor_from_env_path() {
-                return Ok(path);
+            let path = PathBuf::from(resources_path_str);
+            if path.exists() {
+                Ok(path)
+            } else {
+                Err("Linux系统下未找到main.js文件".to_string())
             }
         }
-
-        // 所有方法都失败，返回"找不到Cursor路径"错误
-        Err("找不到Cursor的main.js文件，请手动选择Cursor安装目录".to_string())
     }
 
     // 新增：从环境变量PATH查找Cursor路径
@@ -314,33 +304,6 @@ impl AppPaths {
                         return Ok(main_js_path);
                     }
                 }
-            }
-        }
-
-        // 还可以尝试常见的安装位置
-        let local_app_data = std::env::var("LOCALAPPDATA")
-            .map_err(|e| format!("获取LOCALAPPDATA路径失败: {}", e))?;
-
-        let possible_paths = [
-            // 标准安装路径
-            PathBuf::from(&local_app_data)
-                .join("Programs")
-                .join("cursor"),
-            // 其他可能的安装路径
-            PathBuf::from(&local_app_data).join("cursor"),
-            PathBuf::from("C:\\Program Files").join("cursor"),
-            PathBuf::from("C:\\Program Files (x86)").join("cursor"),
-        ];
-
-        for base_path in possible_paths.iter() {
-            let main_js_path = base_path
-                .join("resources")
-                .join("app")
-                .join("out")
-                .join("main.js");
-
-            if main_js_path.exists() {
-                return Ok(main_js_path);
             }
         }
 
