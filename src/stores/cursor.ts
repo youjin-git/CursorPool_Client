@@ -166,6 +166,11 @@ export const useCursorStore = defineStore('cursor', () => {
       isLoading.value = true
       const usageData = await getUsage(cursorToken.value)
 
+      // TODO: 临时处理，Cursor高级模型使用量上限为50 适配cursor最新政策
+      if (usageData && usageData['gpt-4'] && usageData['gpt-4'].maxRequestUsage === 150) {
+        usageData['gpt-4'].maxRequestUsage = 50
+      }
+
       cursorInfo.value = {
         userInfo: {
           email: currentAccount.value,
