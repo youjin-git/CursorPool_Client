@@ -204,7 +204,7 @@
         const errorMsg = error instanceof Error ? error.message : String(error)
 
         // 检查是否包含MAIN_JS_NOT_FOUND
-        if (errorMsg.includes('MAIN_JS_NOT_FOUND')) {
+        if (errorMsg.includes('MAIN_JS_NOT_FOUND') || errorMsg.includes('创建应用路径失败')) {
           cursorStore.setPendingAction(action, { forceKill: force_kill })
           return
         }
