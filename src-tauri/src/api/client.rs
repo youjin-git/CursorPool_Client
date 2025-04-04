@@ -20,9 +20,21 @@ pub struct ApiClient {
 impl ApiClient {
     /// 创建 API 客户端实例
     pub fn new(app_handle: Option<AppHandle>) -> Self {
+        // 从配置中读取是否验证SSL证书
+        let verify_ssl = config::CONFIG.read().unwrap().api.verify_ssl;
+        
+        // 创建客户端构建器并根据配置决定是否验证证书
+        let mut client_builder = Client::builder()
+            .timeout(config::get_request_timeout());
+            
+        // 如果不验证SSL证书，添加跳过验证选项
+        if !verify_ssl {
+            client_builder = client_builder.danger_accept_invalid_certs(true);
+        }
+        
+        // 构建HTTP客户端
         let client = Arc::new(
-            Client::builder()
-                .timeout(config::get_request_timeout())
+            client_builder
                 .build()
                 .expect("Failed to create HTTP client"),
         );

@@ -18,6 +18,8 @@ pub struct ApiConfig {
     pub public_endpoints: Vec<String>,
     // API请求超时时间(秒)
     pub request_timeout: u64,
+    // 是否验证SSL证书
+    pub verify_ssl: bool,
 }
 
 // 路径配置结构
@@ -116,6 +118,7 @@ impl Default for AppConfig {
                     "/api/usage".to_string(),
                 ],
                 request_timeout: 10,
+                verify_ssl: false,
             },
             paths: PathConfig {
                 windows: WindowsPaths {
@@ -284,4 +287,9 @@ pub fn get_db_key(key_name: &str) -> String {
         "lang" => config.db_keys.lang_key.clone(),
         _ => panic!("Unknown key name: {}", key_name),
     }
+}
+
+// 获取是否验证SSL证书的配置
+pub fn get_verify_ssl() -> bool {
+    CONFIG.read().unwrap().api.verify_ssl
 }
