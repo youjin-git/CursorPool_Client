@@ -41,3 +41,4 @@ DEBUG.md
 # ESLint and Prettier cache files
 .eslintcache
 .prettierrc.cache
+.history
