@@ -26,10 +26,10 @@ async fn handle_api_response<T: serde::de::DeserializeOwned>(
         error!(target: "api", "解析{}响应JSON失败 - 错误: {}", error_context, e);
         e.to_string()
     })?;
-    
+    println!("api_response: {:#?}", api_response);
     // 提取status和msg
-    let status = api_response["status"].as_i64().unwrap_or(500) as i32;
-    let msg = api_response["msg"].as_str().unwrap_or("未知错误").to_string();
+    let status = api_response["code"].as_i64().unwrap_or(200) as i32;
+    let msg = api_response["message"].as_str().unwrap_or("未知错误").to_string();
     
     // 如果status不是200，直接返回错误响应
     if status != 200 {
@@ -166,15 +166,17 @@ pub async fn login(
 /// 获取用户信息
 #[tauri::command]
 pub async fn get_user_info(client: State<'_, ApiClient>) -> Result<ApiResponse<UserInfo>, String> {
+    let url = client.get_base_url();
+    println!("url: {}", url);
     let response = client
-        .get(format!("{}/user", client.get_base_url()))
+        .post(format!("{}/api-key/detail", client.get_base_url()))
         .send()
         .await
         .map_err(|e| {
             error!(target: "api", "获取用户信息失败 - 错误: {}", e);
             e.to_string()
         })?;
-
+    println!("response: {:#?}", response);
     handle_api_response(response, "获取用户信息").await
 }
 

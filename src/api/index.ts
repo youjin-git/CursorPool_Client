@@ -123,7 +123,7 @@ export async function login(
 export async function getUserInfo(): Promise<UserInfo> {
   try {
     const response = await invoke<ApiResponse<UserInfo>>('get_user_info')
-
+    console.log('response', response)
     if (response.status !== 200) {
       throw new ApiError(response.msg || '链接服务器失败')
     }
@@ -547,6 +547,7 @@ export async function clearUserApiToken(): Promise<void> {
  * @param value 值
  */
 export async function setUserData(key: string, value: string): Promise<void> {
+  console.log(key, value)
   try {
     await invoke<ApiResponse<any>>('set_user_data', { key, value })
   } catch (error) {

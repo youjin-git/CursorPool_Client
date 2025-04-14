@@ -43,8 +43,8 @@
       appCloseStore.handleCloseRequest()
     })
 
-    // 初始化开发者工具
-    initializeDevToolsProtection()
+    // // 初始化开发者工具
+    // initializeDevToolsProtection()
 
     // 初始化事件监听器
     await initEventListeners()
