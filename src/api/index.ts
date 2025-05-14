@@ -261,12 +261,13 @@ export async function getMachineIds(): Promise<MachineInfo> {
 }
 
 export async function checkCursorRunning(): Promise<boolean> {
-  try {
-    return await invoke<boolean>('check_cursor_running')
-  } catch (error) {
-    await Logger.error('检查Cursor状态失败', { file: 'api/index.ts' })
-    throw new ApiError(error instanceof Error ? error.message : '检查Cursor状态失败')
-  }
+  return false
+  // try {
+  //   return await invoke<boolean>('check_cursor_running')
+  // } catch (error) {
+  //   await Logger.error('检查Cursor状态失败', { file: 'api/index.ts' })
+  //   throw new ApiError(error instanceof Error ? error.message : '检查Cursor状态失败')
+  // }
 }
 
 // 管理员权限相关 API

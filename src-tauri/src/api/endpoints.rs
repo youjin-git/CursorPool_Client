@@ -166,8 +166,6 @@ pub async fn login(
 /// 获取用户信息
 #[tauri::command]
 pub async fn get_user_info(client: State<'_, ApiClient>) -> Result<ApiResponse<UserInfo>, String> {
-    let url = client.get_base_url();
-    println!("url: {}", url);
     let response = client
         .post(format!("{}/api-key/detail", client.get_base_url()))
         .send()
@@ -176,7 +174,6 @@ pub async fn get_user_info(client: State<'_, ApiClient>) -> Result<ApiResponse<U
             error!(target: "api", "获取用户信息失败 - 错误: {}", e);
             e.to_string()
         })?;
-    println!("response: {:#?}", response);
     handle_api_response(response, "获取用户信息").await
 }
 
@@ -231,28 +228,28 @@ pub async fn get_account(
     account: Option<String>,
     usage_count: Option<String>,
 ) -> Result<ApiResponse<AccountPoolInfo>, String> {
-    let mut url = format!("{}/accountpool/get", client.get_base_url());
-
-    let mut query_params = Vec::new();
-    if let Some(acc) = account {
-        query_params.push(format!("account={}", acc));
-    }
-    if let Some(count) = usage_count {
-        query_params.push(format!("usage_count={}", count));
-    }
-
-    if !query_params.is_empty() {
-        url = format!("{}?{}", url, query_params.join("&"));
-    }
-
+    // error!(target: "api", "开始获取账户信息请求");
+    let mut url = format!("{}/cursor/account/get", client.get_base_url());
+    // error!(url);
+    // let mut query_params = Vec::new();
+    // if let Some(acc) = account {
+    //     query_params.push(format!("account={}", acc));
+    // }
+    // if let Some(count) = usage_count {
+    //     query_params.push(format!("usage_count={}", count));
+    // }
+    // if !query_params.is_empty() {
+    //     url = format!("{}?{}", url, query_params.join("&"));
+    // }
     let response = client.get(&url).send().await.map_err(|e| {
         error!(target: "api", "获取账户信息请求失败 - 错误: {}", e);
         e.to_string()
     })?;
-
+    
     // 使用通用函数处理API响应
     let api_response = handle_api_response::<AccountPoolInfo>(response, "获取账户信息").await?;
-
+    // error!(target: "api", "获取账户信息响应处理完成 - 状态码: {}", api_response.status);
+ 
     // 如果获取成功且有账户信息，将token保存到历史记录
     if api_response.status == 200 && api_response.data.is_some() {
         let account_info = &api_response.data.as_ref().unwrap().account_info;

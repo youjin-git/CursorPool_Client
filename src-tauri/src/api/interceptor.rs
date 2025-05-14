@@ -35,8 +35,8 @@ impl Interceptor for AuthInterceptor {
         };
 
         request.headers_mut().insert(
-            "Authorization",
-            format!("Bearer {}", token).parse().unwrap(),
+            "X-API-Key",
+            token.parse().unwrap(),
         );
 
         let lang_key = config::get_db_key("lang");

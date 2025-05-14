@@ -257,15 +257,15 @@ export const useCursorStore = defineStore('cursor', () => {
       await ensureCursorNotRunning(forceKill)
 
       // 如果未提供邮箱和token，则自动获取
-      if (!email || !token) {
-        const accountInfo = await getAccount(undefined, '1')
-        if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
-          await Logger.error('获取账户信息失败，无法进行切换')
-          throw new Error('获取账户信息失败')
-        }
-        email = accountInfo.account_info.account
-        token = accountInfo.account_info.token
+
+      const accountInfo = await getAccount(undefined, '1')
+      Logger.info(accountInfo)
+      if (!accountInfo.account_info.account || !accountInfo.account_info.token) {
+        await Logger.error('获取账户信息失败，无法进行切换')
+        throw new Error('获取账户信息失败')
       }
+      email = accountInfo.account_info.account
+      token = accountInfo.account_info.token
 
       await switchAccount(email, token, forceKill)
       await Logger.info(`账户切换成功: ${email}`)

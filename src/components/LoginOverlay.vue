@@ -94,7 +94,7 @@
             class="login-button"
             @click="handleActivation"
           >
-            {{ currentLang === 'zh-CN' ? '激活并登录' : 'Activate and Login' }}
+            激活并登录
           </n-button>
           <!-- <inbound-selector compact :show-label="false" /> -->
         </n-space>
