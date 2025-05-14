@@ -29,10 +29,18 @@ impl Interceptor for AuthInterceptor {
         let db = self.app_handle.state::<Database>();
 
         let token_key = config::get_db_key("token");
+        
+        //header 添加X-API-Key = token 
         let token = match db.get_item(&token_key) {
             Ok(Some(token)) => token,
             _ => return Ok(()),
         };
+
+        // 添加 X-API-Key 到请求头
+        request.headers_mut().insert(
+            "X-API-Key",
+            token.parse().unwrap(),
+        );
 
         request.headers_mut().insert(
             "Authorization",

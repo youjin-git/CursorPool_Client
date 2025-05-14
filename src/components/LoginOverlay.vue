@@ -25,7 +25,7 @@
    */
   async function handleActivation() {
     if (!activationCode.value) {
-      message.error(currentLang.value === 'zh-CN' ? '请输入激活码' : 'Please enter activation code')
+      message.error('请输入激活码')
       return
     }
 
