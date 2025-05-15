@@ -21,23 +21,22 @@ async fn handle_api_response<T: serde::de::DeserializeOwned>(
         e.to_string()
     })?;
     
-    // 尝试解析为基本JSON格式以获取status和msg
+    // 尝试解析为基本JSON格式以获取code和message
     let api_response: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
         error!(target: "api", "解析{}响应JSON失败 - 错误: {}", error_context, e);
         e.to_string()
     })?;
     println!("api_response: {:#?}", api_response);
-    // 提取status和msg
-    let status = api_response["code"].as_i64().unwrap_or(200) as i32;
-    let msg = api_response["message"].as_str().unwrap_or("未知错误").to_string();
+    // 提取code和message
+    let code = api_response["code"].as_i64().unwrap_or(200) as i32;
+    let message = api_response["message"].as_str().unwrap_or("未知错误").to_string();
     
-    // 如果status不是200，直接返回错误响应
-    if status != 200 {
+    // 如果code不是200，直接返回错误响应
+    if code != 200 {
         return Ok(ApiResponse {
-            status,
-            msg,
+            code,
+            message,
             data: None,
-            code: api_response["code"].as_str().map(String::from),
         });
     }
     
@@ -46,8 +45,54 @@ async fn handle_api_response<T: serde::de::DeserializeOwned>(
         Ok(typed_response) => Ok(typed_response),
         Err(e) => {
             error!(target: "api", "解析{}响应为完整类型失败 - 错误: {}", error_context, e);
-            // 即使解析失败，依然返回成功状态但data为None
+            // 如果解析失败，尝试手动构造响应
             Ok(ApiResponse {
+                code,
+                message,
+                data: None,
+            })
+        }
+    }
+}
+
+/// 兼容旧的API响应处理函数，用于还未迁移到新格式的API
+async fn handle_old_api_response<T: serde::de::DeserializeOwned>(
+    response: reqwest::Response, 
+    error_context: &str
+) -> Result<OldApiResponse<T>, String> {
+    // 获取响应文本
+    let response_text = response.text().await.map_err(|e| {
+        error!(target: "api", "获取{}响应文本失败 - 错误: {}", error_context, e);
+        e.to_string()
+    })?;
+    
+    // 尝试解析为基本JSON格式以获取status和msg
+    let api_response: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
+        error!(target: "api", "解析{}响应JSON失败 - 错误: {}", error_context, e);
+        e.to_string()
+    })?;
+    println!("api_response: {:#?}", api_response);
+    // 提取status和msg
+    let status = api_response["status"].as_i64().unwrap_or(200) as i32;
+    let msg = api_response["msg"].as_str().unwrap_or("未知错误").to_string();
+    
+    // 如果status不是200，直接返回错误响应
+    if status != 200 {
+        return Ok(OldApiResponse {
+            status,
+            msg,
+            data: None,
+            code: api_response["code"].as_str().map(String::from),
+        });
+    }
+    
+    // 成功情况，尝试解析为完整类型
+    match serde_json::from_str::<OldApiResponse<T>>(&response_text) {
+        Ok(typed_response) => Ok(typed_response),
+        Err(e) => {
+            error!(target: "api", "解析{}响应为完整类型失败 - 错误: {}", error_context, e);
+            // 即使解析失败，依然返回成功状态但data为None
+            Ok(OldApiResponse {
                 status,
                 msg,
                 data: None,
@@ -230,7 +275,7 @@ pub async fn get_account(
     db: State<'_, Database>,
     account: Option<String>,
     usage_count: Option<String>,
-) -> Result<ApiResponse<AccountPoolInfo>, String> {
+) -> Result<ApiResponse<AccountData>, String> {
     let mut url = format!("{}/cursor/account/get", client.get_base_url());
 
     let mut query_params = Vec::new();
@@ -251,12 +296,13 @@ pub async fn get_account(
     })?;
 
     // 使用通用函数处理API响应
-    let api_response = handle_api_response::<AccountPoolInfo>(response, "获取账户信息").await?;
+    let api_response = handle_api_response::<AccountData>(response, "获取账户信息").await?;
     info!(target: "api", "获取到账户信息响应: {:?}", api_response);
+
     // 如果获取成功且有账户信息，将token保存到历史记录
-    if api_response.status == 200 && api_response.data.is_some() {
-        let account_info = &api_response.data.as_ref().unwrap().account_info;
-        if !account_info.account.is_empty() && !account_info.token.is_empty() {
+    if api_response.code == 200 && api_response.data.is_some() {
+        let account_data = api_response.data.as_ref().unwrap();
+        if !account_data.email.is_empty() && !account_data.token.is_empty() {
             // 获取当前机器码
             use crate::cursor_reset::get_machine_ids;
             let machine_info = get_machine_ids(db.clone()).await.map_err(|e| {
@@ -271,8 +317,8 @@ pub async fn get_account(
             // 保存到历史记录
             if let Err(e) = save_cursor_token_to_history(
                 &db,
-                &account_info.account,
-                &account_info.token,
+                &account_data.email,
+                &account_data.token,
                 &machine_id,
             )
             .await
@@ -330,10 +376,9 @@ pub async fn get_usage(
 
     match serde_json::from_str::<CursorUsageInfo>(&response_text) {
         Ok(usage_info) => Ok(ApiResponse {
-            status: 200,
-            msg: "获取使用情况成功".to_string(),
+            code: 460001,
+            message: "获取使用情况成功".to_string(),
             data: Some(usage_info),
-            code: Some("460001".to_string()),
         }),
         Err(e) => {
             error!(target: "api", "解析Cursor使用情况失败 - 响应: {}, 错误: {}", response_text, e);
@@ -436,10 +481,9 @@ pub async fn logout(db: State<'_, Database>) -> Result<ApiResponse<()>, String> 
     })?;
 
     Ok(ApiResponse {
-        status: 200,
-        msg: "登出成功".to_string(),
+        message: "登出成功".to_string(),
         data: None,
-        code: Some("460001".to_string()),
+        code: 200,
     })
 }
 
@@ -452,10 +496,10 @@ pub async fn set_user_data(
 ) -> Result<ApiResponse<()>, String> {
     match db.set_item(&key, &value) {
         Ok(_) => Ok(ApiResponse {
-            status: 200,
-            msg: "成功设置用户数据".to_string(),
+            code: 200,
+            message : "成功设置用户数据".to_string(),
             data: None,
-            code: Some("SUCCESS".to_string()),
+           
         }),
         Err(e) => {
             error!(target: "api", "设置用户数据失败 - 键: {}, 错误: {}", key, e);
@@ -472,10 +516,9 @@ pub async fn get_user_data(
 ) -> Result<ApiResponse<serde_json::Value>, String> {
     match db.get_item(&key) {
         Ok(value) => Ok(ApiResponse {
-            status: 200,
-            msg: "成功获取用户数据".to_string(),
+            code: 200,
+            message: "成功获取用户数据".to_string(),
             data: Some(json!({ "value": value })),
-            code: Some("SUCCESS".to_string()),
         }),
         Err(e) => {
             error!(target: "api", "获取用户数据失败 - 键: {}, 错误: {}", key, e);
@@ -492,10 +535,9 @@ pub async fn del_user_data(
 ) -> Result<ApiResponse<()>, String> {
     match db.delete_item(&key) {
         Ok(_) => Ok(ApiResponse {
-            status: 200,
-            msg: "成功删除用户数据".to_string(),
+            code: 200,
+            message: "成功删除用户数据".to_string(),
             data: None,
-            code: Some("SUCCESS".to_string()),
         }),
         Err(e) => {
             error!(target: "api", "删除用户数据失败 - 键: {}, 错误: {}", key, e);
@@ -514,19 +556,17 @@ pub async fn get_article_list(
 
     match result {
         Ok(articles) => Ok(ApiResponse {
-            status: 200,
-            msg: "获取公告成功".to_string(),
+            code: 200,
+            message: "获取公告成功".to_string(),
             data: Some(articles),
-            code: Some("SUCCESS".to_string()),
         }),
         Err(e) => {
             // 接口错误时，返回空列表而不是错误
             error!(target: "api", "获取公告列表失败，返回空列表 - 错误: {}", e);
             Ok(ApiResponse {
-                status: 200,
-                msg: "获取公告成功".to_string(),
-                data: Some(Vec::new()),
-                code: Some("SUCCESS".to_string()),
+                code: 200,
+                message: "获取公告成功".to_string(),
+                data: Some(Vec::new())
             })
         }
     }
@@ -605,9 +645,8 @@ pub async fn mark_article_read(
     }
 
     Ok(ApiResponse {
-        status: 200,
-        msg: "文章已标记为已读".to_string(),
+        code: 200,
+        message: "文章已标记为已读".to_string(),
         data: None,
-        code: Some("SUCCESS".to_string()),
     })
 }

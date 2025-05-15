@@ -3,6 +3,15 @@ use serde::{Deserialize, Serialize};
 // RESTful API响应结构
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiResponse<T> {
+    pub code: i32,
+    pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub data: Option<T>,
+}
+
+// 旧的API响应结构（保留以兼容旧代码）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OldApiResponse<T> {
     pub status: i32,
     pub msg: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -271,6 +280,19 @@ pub struct AccountPoolInfo {
     pub account_info: AccountInfo,
     #[serde(rename = "activation_code")]
     pub activation_code: ActivationCode,
+}
+
+// 账户数据（新API返回格式）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AccountData {
+    pub api_key_id: i32,
+    pub create_time: Option<String>,
+    pub email: String,
+    pub id: i32,
+    pub password: String,
+    pub request: i32,
+    pub token: String,
+    pub update_time: String,
 }
 
 // 激活码信息

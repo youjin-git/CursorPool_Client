@@ -56,7 +56,7 @@ pub async fn check_account_limit(app_handle: &AppHandle) -> Result<(), String> {
             if let Some(data) = response.data {
                 Value::Object(serde_json::to_value(data).unwrap_or_default().as_object().unwrap_or(&serde_json::Map::new()).clone())
             } else {
-                let err_msg = format!("获取使用情况失败: {}", response.msg);
+                let err_msg = format!("获取使用情况失败: {}", response.message);
                 error!("{}", err_msg);
                 return Err(err_msg);
             }

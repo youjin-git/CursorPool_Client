@@ -82,7 +82,7 @@ pub async fn save_auth_token(
             Err(_) => return Ok(()),
         };
 
-    if api_response.status == 200 && api_response.data.is_some() {
+    if api_response.code == 200 && api_response.data.is_some() {
         let data = api_response.data.unwrap();
         if let Some(token) = data.token {
             let token_key = config::get_db_key("token");
