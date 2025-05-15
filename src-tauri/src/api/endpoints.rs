@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::env;
 use tauri::State;
-use tracing::error;
+use tracing::{error, info};
 
 /// 通用API响应处理函数，处理成功和失败情况
 async fn handle_api_response<T: serde::de::DeserializeOwned>(
@@ -231,7 +231,7 @@ pub async fn get_account(
     account: Option<String>,
     usage_count: Option<String>,
 ) -> Result<ApiResponse<AccountPoolInfo>, String> {
-    let mut url = format!("{}/accountpool/get", client.get_base_url());
+    let mut url = format!("{}/cursor/account/get", client.get_base_url());
 
     let mut query_params = Vec::new();
     if let Some(acc) = account {
@@ -252,7 +252,7 @@ pub async fn get_account(
 
     // 使用通用函数处理API响应
     let api_response = handle_api_response::<AccountPoolInfo>(response, "获取账户信息").await?;
-
+    info!(target: "api", "获取到账户信息响应: {:?}", api_response);
     // 如果获取成功且有账户信息，将token保存到历史记录
     if api_response.status == 200 && api_response.data.is_some() {
         let account_info = &api_response.data.as_ref().unwrap().account_info;

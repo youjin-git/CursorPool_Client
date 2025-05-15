@@ -277,20 +277,20 @@
       accountSwitchLoading.value = true
 
       // 检查积分是否足够
-      if (!userStore.checkCredits(50)) {
-        message.error(i18n.value.dashboard.insufficientCredits)
-        router.push('/settings')
-        return
-      }
-
+      // if (!userStore.checkCredits(50)) {
+      //   message.error(i18n.value.dashboard.insufficientCredits)
+      //   router.push('/settings')
+      //   return
+      // }
+      console.log(111111111)
       // 检查 Cursor 是否在运行
-      const isRunning = await checkCursorRunning()
+      // const isRunning = await checkCursorRunning()
 
-      if (isRunning) {
-        showCursorRunningModal.value = true
-        pendingForceKillAction.value = { type: 'account' }
-        return
-      }
+      // if (isRunning) {
+      //   showCursorRunningModal.value = true
+      //   pendingForceKillAction.value = { type: 'account' }
+      //   return
+      // }
 
       // 检查 Hook 状态，如果未注入，直接调用注入
       if (!deviceInfo.value.hookStatus) {
@@ -1066,7 +1066,7 @@
               class="account-switch-button"
               @click="handleAccountSwitch"
             >
-              {{ i18n.dashboard.changeAccount }}
+              更换账号
             </n-button>
             <n-button type="primary" :loading="machineCodeLoading" @click="handleMachineCodeClick">
               {{ i18n.dashboard.changeMachineCode }}
