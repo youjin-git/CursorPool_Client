@@ -44,6 +44,7 @@
       errorType: string | null
     }
     hookStatus: boolean | null
+    activationCode: string | null
   }
 
   // 格式化日期
@@ -92,9 +93,11 @@
       errorType: null,
     },
     hookStatus: null,
+    activationCode: null,
   })
 
   const loading = ref(true)
+  const clearingActivationCode = ref(false)
 
   const message = useMessage()
   const { i18n } = useI18n()
@@ -122,6 +125,7 @@
         errorType: cursorStore.cursorInfo.errorType,
       },
       hookStatus: cursorStore.hookStatus,
+      activationCode: userStore.activationCode,
     }
   }
 
@@ -568,6 +572,21 @@
     await appWindow.close()
   }
 
+  // 清除激活码
+  const clearActivationCode = async () => {
+    try {
+      clearingActivationCode.value = true
+      // 清空激活码
+      userStore.activationCode = ''
+      updateLocalViewState()
+      message.success(i18n.value.dashboard.clearCodeSuccess || '激活码已清除')
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '清除激活码失败')
+    } finally {
+      clearingActivationCode.value = false
+    }
+  }
+
   // 在组件挂载时获取所有信息
   onMounted(async () => {
     try {
@@ -575,9 +594,6 @@
 
       // 检查通知权限
       await notificationStore.checkPermission()
-
-      // 初始化按钮显示状态
-      await appStore.initButtonSettings()
 
       // 检查是否需要强制刷新数据
       const needRefresh = localStorage.getItem('need_refresh_dashboard')
@@ -832,8 +848,6 @@
 
 <template>
   <n-space vertical size="large">
-    <article-list v-if="userStore.userInfo && !appStore.showDisclaimerModal" />
-
     <n-grid :cols="2" :x-gap="24" style="display: grid; grid-template-columns: repeat(2, 1fr)">
       <!-- 用户信息卡片 -->
       <n-grid-item style="display: grid">
@@ -932,6 +946,7 @@
                   }}
                 </span>
               </n-space>
+              <!-- 机器码显示 -->
               <span
                 style="
                   font-size: 12px;
@@ -945,6 +960,30 @@
               >
                 {{ deviceInfo.machineCode }}
               </span>
+
+              <!-- 激活码显示和清除 -->
+              <n-space v-if="deviceInfo.activationCode" vertical :size="6" style="margin-top: 10px">
+                <n-divider style="margin: 0" />
+                <n-space :size="8" style="line-height: 1.2" class="user-info-activation-code">
+                  <span style="width: 70px">{{ i18n.dashboard.activationCode || '激活码' }}</span>
+                  <n-space :size="4" align="center">
+                    <span
+                      style="font-size: 14px; cursor: pointer"
+                      @click="deviceInfo.activationCode && copyText(deviceInfo.activationCode)"
+                    >
+                      {{ deviceInfo.activationCode }}
+                    </span>
+                    <n-button
+                      :loading="clearingActivationCode"
+                      size="tiny"
+                      type="error"
+                      @click="clearActivationCode"
+                    >
+                      {{ i18n.dashboard.clearCode || '清除' }}
+                    </n-button>
+                  </n-space>
+                </n-space>
+              </n-space>
             </n-space>
           </n-space>
         </n-card>

@@ -465,9 +465,7 @@
               >
                 {{ t('settings.changePassword') }}
               </n-button>
-              <n-button type="error" @click="handleLogout">
-                {{ t('common.logout') }}
-              </n-button>
+              <n-button type="error" @click="handleLogout"> 退出 </n-button>
             </n-space>
           </div>
         </n-form>
