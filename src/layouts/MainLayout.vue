@@ -162,9 +162,9 @@
     <login-overlay v-if="showLoginOverlay" @login-success="handleLoginSuccess" />
 
     <!-- 加载指示器 -->
-    <div v-if="isCheckingLogin" class="loading-overlay">
+    <!-- <div v-if="isCheckingLogin" class="loading-overlay">
       <n-spin size="large" />
-    </div>
+    </div> -->
 
     <!-- 窗口控制按钮 -->
     <div

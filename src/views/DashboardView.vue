@@ -571,7 +571,7 @@
   // 在组件挂载时获取所有信息
   onMounted(async () => {
     try {
-      loading.value = true
+      loading.value = false
 
       // 检查通知权限
       await notificationStore.checkPermission()
@@ -1110,35 +1110,6 @@
       </div>
       <template #action>
         <n-button type="error" block @click="handleExit">退出程序</n-button>
-      </template>
-    </n-modal>
-
-    <!-- 添加免责声明模态框 -->
-    <n-modal
-      v-model:show="appStore.showDisclaimerModal"
-      preset="card"
-      style="width: 600px; max-width: 90vw"
-      title="免责声明"
-      :closable="false"
-      :mask-closable="false"
-    >
-      <n-scrollbar style="height: 60vh; overflow: auto">
-        <MarkdownRenderComponent :content="appStore.disclaimerContent" />
-      </n-scrollbar>
-      <template #footer>
-        <n-space justify="end">
-          <n-button
-            type="primary"
-            :disabled="!appStore.canConfirmDisclaimer"
-            @click="handleConfirmDisclaimer"
-          >
-            {{
-              appStore.canConfirmDisclaimer
-                ? '我已阅读并同意'
-                : `请等待 ${appStore.disclaimerCountdown} 秒`
-            }}
-          </n-button>
-        </n-space>
       </template>
     </n-modal>
 

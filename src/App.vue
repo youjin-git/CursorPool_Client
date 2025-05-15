@@ -25,36 +25,30 @@
   // 应用启动时初始化
   onMounted(async () => {
     // 初始化语言设置
-    await initLanguage()
-
-    // 使用统一的初始化方法
-    await historyStore.init()
-
-    // 初始化线路配置
-    await inboundStore.fetchInboundList()
-
-    // 自动检查更新
-    await updaterStore.checkForUpdates()
-
-    // 添加关闭事件监听
-    const appWindow = Window.getCurrent()
-    appWindow.onCloseRequested(async (event) => {
-      event.preventDefault()
-      appCloseStore.handleCloseRequest()
-    })
-
+    // await initLanguage()
+    // // 使用统一的初始化方法
+    // await historyStore.init()
+    // // 初始化线路配置
+    // await inboundStore.fetchInboundList()
+    // // 自动检查更新
+    // await updaterStore.checkForUpdates()
+    // // 添加关闭事件监听
+    // const appWindow = Window.getCurrent()
+    // appWindow.onCloseRequested(async (event) => {
+    //   event.preventDefault()
+    //   appCloseStore.handleCloseRequest()
+    // })
     // // 初始化开发者工具
     // initializeDevToolsProtection()
-
     // 初始化事件监听器
-    await initEventListeners()
+    // await initEventListeners()
   })
 
   // 应用卸载时清理
-  onUnmounted(() => {
-    // 销毁所有事件监听器
-    destroyEventListeners()
-  })
+  // onUnmounted(() => {
+  //   // 销毁所有事件监听器
+  //   destroyEventListeners()
+  // })
 </script>
 
 <template>

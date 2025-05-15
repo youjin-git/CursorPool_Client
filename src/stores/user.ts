@@ -75,19 +75,20 @@ export const useUserStore = defineStore('user', () => {
    * 检查用户登录状态
    */
   async function checkLoginStatus() {
-    try {
-      isCheckingLogin.value = true
-      const info = await getUserInfo()
-      userInfo.value = info
-      isLoggedIn.value = true
-      loginError.value = ''
-    } catch (error) {
-      console.error('Failed to check login status:', error)
-      userInfo.value = null
-      isLoggedIn.value = false
-    } finally {
-      isCheckingLogin.value = false
-    }
+    // console.log('checkLoginStatus')
+    // try {
+    //   isCheckingLogin.value = true
+    //   const info = await getUserInfo()
+    //   userInfo.value = info
+    //   isLoggedIn.value = true
+    //   loginError.value = ''
+    // } catch (error) {
+    //   console.error('Failed to check login status:', error)
+    //   userInfo.value = null
+    //   isLoggedIn.value = false
+    // } finally {
+    //   isCheckingLogin.value = false
+    // }
   }
 
   /**

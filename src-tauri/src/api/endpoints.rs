@@ -222,7 +222,43 @@ pub async fn get_user_info(client: State<'_, ApiClient>) -> Result<ApiResponse<U
             e.to_string()
         })?;
     println!("response: {:#?}", response);
-    handle_api_response(response, "获取用户信息").await
+    
+    // 获取响应文本并打印出来，以查看API实际返回的数据格式
+    let response_text = response.text().await.map_err(|e| {
+        error!(target: "api", "获取用户信息响应文本失败 - 错误: {}", e);
+        e.to_string()
+    })?;
+    info!(target: "api", "实际响应数据: {}", response_text);
+    
+    // 解析为JSON值并检查结构
+    let api_response: serde_json::Value = serde_json::from_str(&response_text).map_err(|e| {
+        error!(target: "api", "解析用户信息JSON失败 - 错误: {}", e);
+        e.to_string()
+    })?;
+    info!(target: "api", "解析后的JSON结构: {:?}", api_response);
+    
+    // 尝试手动构造一个简单的用户信息响应
+    let code = api_response["code"].as_i64().unwrap_or(200) as i32;
+    let message = api_response["message"].as_str().unwrap_or("未知错误").to_string();
+    
+    // 构造用户信息对象
+    // 使用默认值，因为我们还不知道实际的数据结构
+    let user_info = UserInfo {
+        total_count: 0,
+        used_count: 0,
+        expire_time: "".to_string(),
+        level: 0,
+        is_expired: false,
+        username: "".to_string(),
+        code_level: "".to_string(),
+        code_status: 0,
+    };
+    
+    Ok(ApiResponse {
+        code,
+        message,
+        data: Some(user_info),
+    })
 }
 
 /// 激活账户

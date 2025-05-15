@@ -61,17 +61,17 @@ export const useHistoryStore = defineStore('history', () => {
     try {
       isLoading.value = true
 
-      // 1. 同步本地历史记录到后端
-      await syncLocalHistoryToBackend()
+      // // 1. 同步本地历史记录到后端
+      // await syncLocalHistoryToBackend()
 
-      // 2. 同步本地历史账户到后端
-      await syncLocalAccountsToBackend()
+      // // 2. 同步本地历史账户到后端
+      // await syncLocalAccountsToBackend()
 
-      // 3. 加载历史记录
-      await loadHistoryRecords(false) // 传入 false 避免重复同步
+      // // 3. 加载历史记录
+      // await loadHistoryRecords(false) // 传入 false 避免重复同步
 
-      // 4. 设置历史记录更新监听器
-      setupHistoryListener()
+      // // 4. 设置历史记录更新监听器
+      // setupHistoryListener()
 
       initialized.value = true
     } catch (error) {
